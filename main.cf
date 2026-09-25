@@ -1,0 +1,66 @@
+# Receive-only MX for the study domain.
+compatibility_level = 3.6
+
+# --- Identity ----------------------------------------------------------
+myhostname = __MX_HOST__
+myorigin = $myhostname
+mydestination = $myhostname, localhost
+inet_interfaces = all
+inet_protocols = ipv4
+smtpd_banner = $myhostname ESMTP
+biff = no
+append_dot_mydomain = no
+
+# --- Local system mail (cron output, Postfix notices) stays on the box --
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+
+# --- Study domain: accept every address, route by pattern --------------
+virtual_mailbox_domains = __DOMAIN__
+virtual_mailbox_maps = regexp:/etc/postfix/study_accept
+transport_maps = regexp:/etc/postfix/study_transport
+primary_destination_recipient_limit = 1
+quarantine_destination_recipient_limit = 1
+admin_destination_recipient_limit = 1
+recipient_delimiter =
+
+# --- Nothing ever leaves this host by SMTP -----------------------------
+relayhost =
+default_transport = error:outbound delivery disabled on this host
+relay_transport = error:outbound delivery disabled on this host
+
+# --- Relay control: our domain only, from anyone -----------------------
+mynetworks = 127.0.0.0/8
+smtpd_relay_restrictions = reject_unauth_destination
+smtpd_recipient_restrictions =
+disable_vrfy_command = yes
+
+# --- Accept-side policy pinned explicitly, so a package upgrade can't
+# --- change a default into a rejection
+smtpd_forbid_bare_newline = normalize
+smtpd_forbid_unauth_pipelining = no
+
+# --- Never destroy mail ------------------------------------------------
+soft_bounce = yes
+maximal_queue_lifetime = 30d
+bounce_queue_lifetime = 30d
+minimal_backoff_time = 300s
+maximal_backoff_time = 1800s
+delay_warning_time = 0h
+
+# --- Sizes -------------------------------------------------------------
+message_size_limit = 104857600
+mailbox_size_limit = 0
+# Stop accepting new mail (temporarily, 4xx) before the queue's disk is full
+queue_minfree = 2147483648
+
+# --- Resource limits for a 1 GiB host ----------------------------------
+default_process_limit = 25
+smtpd_client_connection_count_limit = 10
+
+# --- Inbound TLS: opportunistic, logged, recorded in Received headers --
+smtpd_tls_security_level = may
+smtpd_tls_chain_files = /etc/ssl/private/ssl-cert-snakeoil.key, /etc/ssl/certs/ssl-cert-snakeoil.pem
+smtpd_tls_loglevel = 1
+smtpd_tls_received_header = yes
+smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
