@@ -1,0 +1,303 @@
+# enfbots_crawler keyword translation for language Croatian (hr)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "pravila o privatnosti":
+  "obavijest o privatnosti":
+  "politika":
+  "izjava o privatnosti":
+  "privatnost":
+# popular paths: privacy policy
+popular_pp_path:
+  "politika-privatnosti":
+  "politika":
+  "o-nama":
+  "privatnost":
+  "drugi-o-nama":
+  "pravila-privatnosti":
+# links: terms and conditions
+terms:
+  "uvjeti i odredbe":
+  "uvjeti korištenja":
+  "uvjeti pružanja usluge":
+  "uvjeti":
+  "korisnički ugovor":
+# popular paths: terms and conditions
+popular_tc_path:
+  "uvjeti-koristenja":
+  "stranica/uvjeti-koristenja":
+  "opci-uvjeti-koristenja":
+# links: registration pages
+registration:
+  "registriraj se":
+  "registruj se":
+  "kreiraj novi račun":
+  "kreiraj račun":
+  "registrirajte se":
+  "pridružite se":
+  "pridruži se":
+  "prijavite se prvi put":
+# links: login/account pages
+login:
+  "prijava":
+  "profil":
+  "korisnik":
+  "račun":
+  "sesija":
+# form label: email
+mail_input:
+  "e-mail":
+  "e-pošta":
+# form label: username
+user_input:
+  "prijava":
+  "korisničko ime":
+  "korisnik":
+  "nadimak":
+# form label: password
+pw_input:
+  "lozinka":
+  "šifra":
+# form label: phone number
+phone_input:
+  "telefon":
+  "telefonski broj":
+# form label: first name
+firstname_input:
+  "ime":
+  "prvo":
+  "dano ime":
+  "dano":
+# form label: last name
+lastname_input:
+  "obitelj":
+  "prezime":
+# form label: full name
+name_input:
+  "puno ime":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "ulica":
+  "cesta":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "ulica br.":
+  "broj ulice":
+  "cesta br.":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "adresni redak 1":
+  "ulica i broj":
+# form label: city
+city_input:
+  "Grad":
+# form label: zip/post code
+zip_input:
+  "poštanski":
+  "kod":
+  "zip":
+# form label: country
+country_input:
+  "zemlja":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "puna adresa":
+  "potpuna adresa":
+# form label: birth day
+birth_day_input:
+  "dan rođenja":
+# form label: birth month
+birth_month_input:
+  "mjesec rođenja":
+# form label: birth year
+birth_year_input:
+  "godina rođenja":
+# form label: birth full date
+birth_full_input:
+  "rođendan":
+  "rođenje":
+  "datum rođenja":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "slanje":
+  "oglašavanje":
+  "ažuriranja":
+  "obavijesti":
+  "pošta":
+  "novosti":
+  "najnovije":
+  "vijesti":
+  "ponude":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "privatnost":
+  "zaštita korisnika":
+  "zaštita privatnosti":
+  "zaštita":
+  "politika privatnosti":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "uvjeti i odredbe":
+  "ugovor o korištenju":
+  "uvjeti usluge":
+  "uvjeti":
+  "uvjeti korištenja":
+  "korisnički ugovor":
+  "usluga":
+# button: submit/next/continue
+submit:
+  "prihvati":
+  "potvrdi":
+  "nastavi":
+  "Sljedeći":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "uspjeh":
+  "potvrda":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "pogreška":
+  "nije uspjelo":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "uspjeh":
+  "uspješan":
+  "potvrda":
+  "potvrđeno":
+  "čestitke":
+  "aktiviran":
+  "aktivan":
+  "spojen":
+  "pretplaćen":
+  "Dobrodošli":
+  "Hvala vam":
+  "Hvala":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "greška":
+  "nije pronađeno":
+  "neuspjeh":
+  "nevažeći":
+  "Registracija nije uspjela":
+  "neuspješno":
+  "nije radilo":
+  "nije radio":
+  "pokušaj ponovno":
+  "vrijeđati":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "hr":
+  "Croatian":
+# links: newsletter signup
+newsletter:
+  "bilten":
+  "naruči se ":
+  "pod":
+  "vijesti":
+# links: contact us, request help
+contact:
+  "Kontaktirajte nas":
+  "kontakt":
+  "Pošalji poruku":
+  "poruka":
+  "traži pomoć":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "verifikacijski kod":
+  "kod za potvrdu":
+  "aktivacijski kod":
+  "kod za provjeru valjanosti":
+  "registracijski kod":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "provjeriti":
+  "verifikacija":
+  "potvrditi":
+  "potvrda":
+  "validacija":
+  "aktiviraj":
+  "aktiviranje":
+  "potpuni":
+  "Završi":
+  "registracija":
+  "račun":
+  "vjerodajnice":
+  "ovjeriti":
+  "jedan klik":
+  "jedan korak":
+  "vaš zahtjev":
+  "Dobrodošli":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "provjeri":
+  "verifikacija":
+  "provjereno":
+  "potvrdi":
+  "potvrda":
+  "validacija":
+  "aktiviraj":
+  "aktiviranje":
+  "ovjeriti":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "odjaviti se":
+  "ukloniti":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "unesite znakove":
+  "tip znakova":
+  "znakova":
+  "karaktera":
+  "izazov":
+  "odgovor":
+# form label: search box
+search_input:
+  "traži":
+  "tražim":
+  "pronaći":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "titula":
+# form input: organization/company name
+organization_input:
+  "društvo":
+  "organizacija":
+  "institucija":
+# form label: age
+age_input:
+  "dob":
+  "star":
+

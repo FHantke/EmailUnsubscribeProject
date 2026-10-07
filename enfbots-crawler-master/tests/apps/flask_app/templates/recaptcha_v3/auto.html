@@ -1,0 +1,30 @@
+<html>
+
+<head>
+    <title>reCAPTCHA demo: Simple page</title>
+    <script type="text/javascript">
+        var submitCall = function () {
+            document.getElementById("formid").submit();
+        }
+        var fakeCall = function (token) {
+            console.log("token");
+        }
+    </script>
+    <script src="https://www.google.com/recaptcha/api.js"></script>
+</head>
+
+<body>
+    <form id="formid" action="/website/submit/recaptcha_v3" method="POST">
+        <div>
+            <label>Username</label>
+            <input type="text" name="username" />
+        </div>
+        <br />
+        <input id="button" class="g-recaptcha" data-sitekey="{{ config.site_key_recaptcha_v3 }}"
+            data-callback="submitCall" data-action="submit_action" type="button" value="Submit" />
+        <input id="fake-button" class="g-recaptcha" data-sitekey="{{ config.site_key_recaptcha_v3 }}"
+            data-callback="fakeCall" data-action="fake_action" type="button" value="Fake" />
+    </form>
+</body>
+
+</html>

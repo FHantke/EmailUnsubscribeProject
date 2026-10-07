@@ -1,0 +1,292 @@
+# enfbots_crawler keyword translation for language Icelandic (is)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "persónuvernd":
+  "persónuverndaryfirlýsing":
+  "persónuverndartilkynning":
+  "persónuverndarstefna":
+  "stefna":
+# links: terms and conditions
+terms:
+  "notkunarskilmálar":
+  "þjónustuskilmálar":
+  "skilmálar":
+  "notendasamningur":
+# links: registration pages
+registration:
+  "create an account":
+  "create a new reikningur":
+  "create new account":
+  "create a account":
+  "skráðu þig inn í fyrsta skipti":
+# links: login/account pages
+login:
+  "prófíll":
+  "minn":
+  "skráðu þig inn":
+  "prófíllinn minn":
+  "notandi":
+  "innskráning":
+  "undirrita":
+  "reikningur":
+  "reikningurinn minn":
+  "fundur":
+# form label: email
+mail_input:
+  "póstur":
+  "tölvupóstur":
+# form label: username
+user_input:
+  "notendanafn":
+  "notandanafn":
+  "notandi":
+  "gælunafn":
+  "skrá inn":
+# form label: password
+pw_input:
+  "lykilorð": 0.5
+# form label: phone number
+phone_input:
+  "sími":
+# form label: first name
+firstname_input:
+  "first name":
+  "first":
+  "given name":
+  "given":
+# form label: last name
+lastname_input:
+  "ættarnafn":
+  "eftirnafn":
+  "fjölskylda":
+# form label: full name
+name_input:
+  "fullt nafn":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "gata":
+  "vegur":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "vegur nr":
+  "gata nr":
+  "veganúmer":
+  "götu númer":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "gata og númer":
+  "heimilisfang lína 1":
+# form label: city
+city_input:
+  "borg":
+# form label: zip/post code
+zip_input:
+  "póstur":
+  "zip":
+  "kóði":
+# form label: country
+country_input:
+  "land":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "fullt heimilisfang":
+  "heill heimilisfang":
+# form label: birth day
+birth_day_input:
+  "afmælisdagur":
+  "fæðingardagur":
+# form label: birth month
+birth_month_input:
+  "fæðingarmánuð":
+  "fæðingarmánuður":
+# form label: birth year
+birth_year_input:
+  "fæðingarár":
+# form label: birth full date
+birth_full_input:
+  "fæðing":
+  "afmælisdagur":
+  "fæðingardagur":
+  "dd-mm-áááá":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "senda":
+  "auglýsingar":
+  "tilboð":
+  "fréttir":
+  "uppfærslur":
+  "tilkynningar":
+  "nýjasta":
+  "póstur":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "vernd":
+  "persónuvernd":
+  "persónuverndarstefna":
+  "notendavernd":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "þjónusta":
+  "þjónustuskilmálar":
+  "notendasamkomulag":
+  "skilmálar":
+  "skilmálar og skilyrði":
+  "notkunarskilyrði":
+  "notendasamningur":
+# button: submit/next/continue
+submit:
+  "leggja fram":
+  "staðfesta":
+  "halda áfram":
+  "næst":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "árangur":
+  "staðfesting":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "virkaði ekki":
+  "villa":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "árangur":
+  "vel heppnað":
+  "staðfesting":
+  "staðfest":
+  "til hamingju":
+  "virkjað":
+  "virkur":
+  "joined":
+  "gerast áskrifandi":
+  "velkominn":
+  "Þakka þér fyrir":
+  "takk":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "villa":
+  "ekki fundið":
+  "mistókst":
+  "ógildur":
+  "skráning mistókst":
+  "misheppnaður":
+  "virkaði ekki":
+  "virkaði ekki":
+  "reyndu aftur":
+  "ánægja":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "is":
+  "Icelandic":
+# links: newsletter signup
+newsletter:
+  "fréttabréf":
+  "gerast áskrifandi":
+  "undir":
+  "fréttir":
+# links: contact us, request help
+contact:
+  "Hafðu samband við okkur":
+  "samband":
+  "Senda skilaboð":
+  "skilaboð":
+  "óska eftir aðstoð":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "Staðfestingarkóði":
+  "staðfestingar kóði":
+  "virkjunarkóði":
+  "staðfestingarkóði":
+  "skráningarkóði":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "sannreyna":
+  "sannprófun":
+  "staðfesta":
+  "staðfestingu":
+  "löggildingu":
+  "virkja":
+  "virkjun":
+  "lokið":
+  "klára":
+  "skráning":
+  "reikning":
+  "skilríki":
+  "sannvotta":
+  "einn smellur":
+  "eitt skref":
+  "beiðni þinni":
+  "velkominn":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "sannreyna":
+  "sannprófun":
+  "staðfest":
+  "staðfesta":
+  "staðfestingu":
+  "löggildingu":
+  "virkja":
+  "virkjun":
+  "sannvotta":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "segja upp áskrift":
+  "fjarlægja":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "slá inn stafi":
+  "stafi":
+  "áskorun":
+  "svara":
+  "svar":
+# form label: search box
+search_input:
+  "leit":
+  "Leita að":
+  "finna":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "titill":
+# form input: organization/company name
+organization_input:
+  "fyrirtæki":
+  "skipulag":
+  "stofnun":
+# form label: age
+age_input:
+  "Aldur":
+  "gamall":
+

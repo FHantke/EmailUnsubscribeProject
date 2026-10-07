@@ -1,0 +1,32 @@
+
+<!-- Store this code in 'register.html' file inside the 'templates' folder -->
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title> Verify email </title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body id="register_page_unique_body_id"></br></br></br></br></br>
+        <div align="center">
+          <div align="center" class="border">
+             <div class="header">
+                <h1 class="word">Verify email</h1>
+             </div></br></br></br>
+            <h2 class="word">
+                <form action="{{ url_for('verify') }}" method="post">
+                  <div class="msg">{{ msg }}</div>
+                    <input id="code" name="code" type="text" placeholder="Enter the verification code" class="textbox"/></br></br>
+                    <input type="submit" class="btn" value="Submit"></br>
+                </form>
+            </h2>
+            <!-- TODO: remove the part below and keep it only in the redirect.
+                       Create a test that fills the form to get redirected. -->
+            <h1 class="word">Your registration was successful</h1>
+            <p>
+                Start browsing with your account now!
+            </p>
+          </div>
+        </div>
+    </body>
+</html>

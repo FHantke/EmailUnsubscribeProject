@@ -1,0 +1,151 @@
+# enfbots_crawler keyword translation for language Xhosa (xh)
+policy:
+  "umgaqo-nkqubo wabucala":
+  "ubumfihlo":
+  "umthetho wabucala":
+terms:
+  "imimiselo nemiqathango":
+  "imiqathango":
+  "imimiselo":
+  "isivumelwano somsebenzisi":
+registration:
+  "bhalisa":
+  "joyina":
+  "yenza i-akhawunti":
+  "dala i-akhawunti":
+  "qalisa":
+login:
+  "ngena":
+  "ngena kwi-akhawunti":
+  "i-akhawunti yam":
+us_pn:
+  "CCPA":
+  "California privacy":
+gdpr:
+  "GDPR":
+mail_input:
+  "i-imeyile":
+  "idilesi ye-imeyile":
+  "imeyile":
+user_input:
+  "igama lomsebenzisi":
+  "umsebenzisi":
+pw_input:
+  "igama lokugqitha":
+  "iphasiwedi":
+  "ikhowudi yemfihlo":
+phone_input:
+  "umnxeba":
+  "ifowuni":
+  "iselula":
+  "inombolo yomnxeba":
+firstname_input:
+  "igama":
+  "igama lokuqala":
+lastname_input:
+  "ifani":
+  "isibongo":
+name_input:
+  "igama elipheleleyo":
+  "amagama akho":
+street_input:
+  "isitrato":
+  "umgwaqo":
+  "idilesi":
+street_nr_input:
+  "inombolo yesitrato":
+  "inombolo yendlu":
+street_full_input:
+  "idilesi yendawo":
+city_input:
+  "isixeko":
+  "idolophu":
+zip_input:
+  "ikhowudi yeposi":
+  "iposi":
+country_input:
+  "ilizwe":
+full_address_input:
+  "idilesi epheleleyo":
+birth_day_input:
+  "usuku":
+birth_month_input:
+  "inyanga":
+birth_year_input:
+  "unyaka":
+birth_full_input:
+  "usuku lokuzalwa":
+  "umhla wokuzalwa":
+checkbox_email:
+  "iindaba":
+  "izaziso":
+  "thumela":
+  "uhlaziyo":
+checkbox_pp:
+  "vumelana nobumfihlo":
+  "umgaqo-nkqubo":
+checkbox_tos:
+  "vumelana nemiqathango":
+  "imimiselo":
+submit:
+  "thumela":
+  "qhubeka":
+  "elandelayo":
+  "qinisekisa":
+  "gqiba":
+submit_success:
+  "iphumelele":
+  "kuthunyelwe":
+  "amkelekile":
+submit_failure:
+  "impazamo":
+  "ayiphumelelanga":
+  "zama kwakhona":
+confirm_success:
+  "uqinisekiso luyiphumelele":
+  "siyakwamukela":
+  "enkosi":
+confirm_failure:
+  "impazamo":
+  "ayifumaneki":
+  "ayisebenzi":
+language:
+  "isixhosa":
+  "xhosa":
+  "xh":
+  "xh-za":
+newsletter:
+  "incwadana yeendaba":
+  "bhalisela":
+contact:
+  "qhagamshelana nathi":
+  "thumela umyalezo":
+verification_code:
+  "ikhowudi yokuqinisekisa":
+  "ikhowudi":
+confirmation_email:
+  "qinisekisa":
+  "ukuqinisekisa":
+  "vula":
+  "i-akhawunti":
+confirmation_link:
+  "qinisekisa":
+  "yenza isebenze":
+unsubscribe:
+  "zikhuphe":
+  "rhoxisa":
+captcha_input:
+  "chwetheza oonobumba":
+  "phendula":
+search_input:
+  "khangela":
+  "funa":
+title_input:
+  "isihloko":
+organization_input:
+  "inkampani":
+  "umbutho":
+  "iziko":
+age_input:
+  "iminyaka":
+  "ubudala":

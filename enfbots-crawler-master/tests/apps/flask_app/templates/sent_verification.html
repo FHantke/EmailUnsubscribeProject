@@ -1,0 +1,25 @@
+<!-- Store this code in 'sent_verification.html' file inside the 'templates' folder -->
+
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title> Sent verification email </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body id="register_page_unique_body_id"></br></br></br></br></br>
+    <div align="center">
+        <div align="center" class="border">
+            <div class="header">
+                <h1 class="word">Sent verification email</h1>
+            </div></br></br></br>
+            <div>
+                <a href="{{ url_for('website.verify_post') }}" class="btn">Enter verification code here</a>
+                <a href="{{ url_for('website.login') }}" class="btn">Userspace</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

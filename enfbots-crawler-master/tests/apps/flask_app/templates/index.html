@@ -1,0 +1,36 @@
+<!-- Store this code in 'index.html' file inside the 'templates' folder-->
+
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title> Index </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body id="index_page_unique_body_id"></br></br></br></br></br>
+    <div align="center">
+        <div align="center" class="border">
+            <div class="header">
+                <h1 class="word">Index</h1>
+            </div></br></br></br>
+            <h1 class="bottom">
+                Welcome to the index page...
+            </h1></br></br></br>
+            <a href="{{ url_for('website.login') }}" class="btn">Login</a>
+            {% if show_links %}
+            {% if redirect_pp_to %}
+            <a href="{{ redirect_pp_to }}" class="btn">Privacy policy</a>
+            {% else %}
+            <a href="{{ url_for('website.policy') }}" class="btn">Privacy policy</a>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    <div align="bottom">
+        Our email is <b>email-prefix2</b>@<em>web.site2</em>
+        email-prefix@web.site
+    </div>
+</body>
+
+</html>

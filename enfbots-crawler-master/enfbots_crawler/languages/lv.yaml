@@ -1,0 +1,305 @@
+# enfbots_crawler keyword translation for language Latvian (lv)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "politika":
+  "privātuma politika":
+  "privātuma paziņojums":
+  "paziņojums par privātumu":
+  "privātums":
+# popular paths: privacy policy
+popular_pp_path:
+  "lv/privacy-policy":
+  "privatuma-politika":
+# links: terms and conditions
+terms:
+  "lietotāja līgums":
+  "pakalpojumu sniegšanas noteikumi":
+  "lietošanas noteikumi":
+  "noteikumi":
+  "noteikumi un nosacījumi":
+# popular paths: terms and conditions
+popular_tc_path:
+  "noteikumi":
+  "lietosanas-noteikumi":
+# links: registration pages
+registration:
+  "izveidot jaunu konts":
+  "izveidot jaunu kontu":
+  "izveidot kontu":
+  "reģistrēties":
+  "pierakstīties pirmo reizi":
+  "pievienoties":
+  "sākt darbu":
+# links: login/account pages
+login:
+  "sesija":
+  "mans":
+  "lietotājs":
+  "konts":
+  "mans konts":
+  "pierakstīties":
+  "pieteikties":
+  "mans profils":
+  "parakstīt":
+  "profils":
+# form label: email
+mail_input:
+  "pasts":
+  "e-pasts":
+# form label: username
+user_input:
+  "lietotājvārds":
+  "Lietotāja ID":
+  "lietotājs":
+  "segvārds":
+  "Pieslēgties":
+# form label: password
+pw_input:
+  "parole":
+# form label: phone number
+phone_input:
+  "tālr":
+  "tālrunis":
+# form label: first name
+firstname_input:
+  "dots":
+  "vārds":
+# form label: last name
+lastname_input:
+  "vārds":
+  "ģimene":
+  "ģimenes vārds":
+  "uzvārds":
+# form label: full name
+name_input:
+  "pilnais vārds":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "iela":
+  "ceļš":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "ielas nr":
+  "ceļa nr":
+  "ceļa numurs":
+  "ielas numurs":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "adreses 1. rinda":
+  "iela un numurs":
+# form label: city
+city_input:
+  "pilsēta":
+# form label: zip/post code
+zip_input:
+  "pasts":
+  "kods":
+  "pasta indekss":
+# form label: country
+country_input:
+  "valsts":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "pilnīga adrese":
+  "pilna adrese":
+# form label: birth day
+birth_day_input:
+  "dzimšanas diena":
+# form label: birth month
+birth_month_input:
+  "dzimšanas mēnesis":
+# form label: birth year
+birth_year_input:
+  "dzimšanas gads":
+  "gggg":
+# form label: birth full date
+birth_full_input:
+  "dzimšanas datums":
+  "dd-mm-gggg":
+  "dzimšanas diena":
+  "dzimšana":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "sūtīt":
+  "pasts":
+  "paziņojumi":
+  "piedāvājumi":
+  "ziņas":
+  "atjauninājumi":
+  "reklāma":
+  "jaunākie":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "lietotāju aizsardzība":
+  "privātuma aizsardzība":
+  "aizsardzība":
+  "privātuma politika":
+  "privātums":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "lietotāja līgums":
+  "lietošanas nosacījumi":
+  "pakalpojumu sniegšanas noteikumi":
+  "noteikumi":
+  "pakalpojums":
+  "noteikumi un nosacījumi":
+# button: submit/next/continue
+submit:
+  "Iesniegt":
+  "Apstiprināt":
+  "Turpināt":
+  "Nākamais":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "apstiprinājums":
+  "veiksme":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "nedarbojās":
+  "kļūda":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "panākumi":
+  "Veiksmīgi":
+  "apstiprinājums":
+  "apstiprināts":
+  "Apsveicam":
+  "aktivizēts":
+  "aktīvs":
+  "pievienojās":
+  "abonēts":
+  "Laipni lūdzam":
+  "Paldies":
+  "Paldies":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "kļūda":
+  "nav atrasts":
+  "neizdevās":
+  "nederīgs":
+  "reģistrācija neizdevās":
+  "neveiksmīgs":
+  "nestrādāja":
+  "nestrādāja":
+  "mēģini vēlreiz":
+  "aizvainot":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "lv":
+  "Latvian":
+# links: newsletter signup
+newsletter:
+  "informatīvais izdevums":
+  "biļetens":
+  "abonēt":
+  "apakš":
+  "ziņas":
+# links: contact us, request help
+contact:
+  "Sazinies ar mums":
+  "kontaktpersona":
+  "sūtīt ziņu":
+  "ziņa":
+  "lūgt palīdzību":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "verifikācijas kods":
+  "apstiprinājuma kods":
+  "Aktivizācijas kods":
+  "validācijas kods":
+  "reģistrācijas kods":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "pārbaudīt":
+  "pārbaude":
+  "Apstiprināt":
+  "apstiprinājums":
+  "apstiprināt":
+  "apstiprināšana":
+  "aktivizēt":
+  "aktivizēšana":
+  "pabeigts":
+  "pabeigt":
+  "reģistrācija":
+  "konts":
+  "akreditācijas dati":
+  "autentificēt":
+  "vienu klikšķi":
+  "viens solis":
+  "Jūsu lūgums":
+  "laipni lūdzam":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "pārbaudīt":
+  "pārbaude":
+  "pārbaudīts":
+  "Apstiprināt":
+  "apstiprinājums":
+  "apstiprināt":
+  "apstiprināšana":
+  "aktivizēt":
+  "aktivizēšana":
+  "autentificēt":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "anulēt abonementu":
+  "noņemt":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "ievadiet rakstzīmes":
+  "tipa rakstzīmes":
+  "rakstzīmes":
+  "izaicinājums":
+  "atbildi":
+# form label: search box
+search_input:
+  "Meklēt":
+  "Meklēju":
+  "atrast":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "virsraksts":
+# form input: organization/company name
+organization_input:
+  "uzņēmums":
+  "organizācija":
+  "iestāde":
+# form label: age
+age_input:
+  "vecums":
+  "vecs":
+

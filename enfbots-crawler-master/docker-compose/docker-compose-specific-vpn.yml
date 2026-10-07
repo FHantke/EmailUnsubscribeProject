@@ -1,0 +1,95 @@
+
+services:
+  job-creator:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.6.16
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./gcredentials-enfbots.json:/crawler/gcredentials-enfbots.json
+    shm_size: 2gb
+    env_file: .env
+    hostname: cc3_vpn_create-jobs
+    deploy:
+      replicas: 1
+
+  crawler1:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.6.16
+    command: >
+      bash -c "echo \"Configuring network\" && \
+               ip route del default && \
+               ip route add default via 172.62.0.1 && \
+               ip route add 192.168.162.162 via 172.21.0.1 && \
+               echo \"Finished setup\" && \
+               ./enfbots_crawler/scripts/run-crawler.sh 30m 20m 10"
+    stop_grace_period: 1m
+    stop_signal: SIGINT # Same as Ctrl+C
+    volumes:
+      - /mnt/data/jakob-font-emails-current:/crawler/enfbots_output
+    shm_size: 2gb
+    env_file: .env
+    cap_add: # Needed to change default gateway
+      - NET_ADMIN
+    networks:
+      - enfbots-open  # interface address: 172.21.0.1
+      - passau2       # interface address: 172.62.0.1
+    hostname: cc3_vpn_crawler
+    deploy:
+      replicas: 10X     # TODO: set this
+
+  # Service to check if the entire crawl is finished
+  is-finished:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.6.16
+    env_file: .env
+    command: enfbot --is-finished
+    tty: true
+    deploy:
+      replicas: 1
+
+  backup:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.6.16
+    volumes:
+      - /mnt/data/jakob-font-emails-compressed/:/crawler/compressed_output/
+      - /mnt/data/jakob-font-emails-current:/crawler/enfbots_output
+    command: python /crawler/scripts/backup.py --remove-after -n 8 --from /crawler/enfbots_output/ --to /crawler/compressed_output/
+    tty: true
+    deploy:
+      replicas: 1
+
+networks:
+  passau2:
+    external: true
+    name: passau2
+  passau3:
+    external: true
+    name: passau3
+  passau4:
+    external: true
+    name: passau4
+  passau5:
+    external: true
+    name: passau5
+  passau6:
+    external: true
+    name: passau6
+  passau7:
+    external: true
+    name: passau7
+  passau8:
+    external: true
+    name: passau8
+  passau12:
+    external: true
+    name: passau12
+  enfbots-open:
+    name: enfbots-open
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.21.21.0/24
+          ip_range: 172.21.21.0/24
+          gateway: 172.21.21.254

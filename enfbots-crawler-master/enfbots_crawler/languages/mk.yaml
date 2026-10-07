@@ -1,0 +1,293 @@
+# enfbots_crawler keyword translation for language Macedonian (CYRILIC) (mk_cyrilic)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly.
+#
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "приватност":
+  "политика":
+  "политика за приватност":
+  "известување за приватност":
+  "изјава за приватност":
+# links: terms and conditions
+terms:
+  "услови и услови":
+  "услови на услуга":
+  "договор за корисник":
+  "услови на користење":
+  "услови":
+# links: registration pages
+registration:
+  "креирај нова сметка":
+  "придружи се":
+  "најавете се за прв пат":
+  "започнете":
+  "креирај сметка":
+  "регистрирај се":
+# links: login/account pages
+login:
+  "знак":
+  "мој профил":
+  "сметка":
+  "моја сметка":
+  "моја":
+  "корисник":
+  "профил":
+  "сесија":
+  "најавете се":
+# form label: email
+mail_input:
+  "пошта":
+  "е-пошта":
+# form label: username
+user_input:
+  "најава":
+  "корисничко име":
+  "прекар":
+  "корисник":
+# form label: password
+pw_input:
+  "лозинка":
+# form label: phone number
+phone_input:
+  "телефон":
+  "тел":
+# form label: first name
+firstname_input:
+  "прво име":
+  "име":
+  "прво":
+  "дадено име":
+  "дадено":
+# form label: last name
+lastname_input:
+  "презиме":
+  "семејство":
+  "име":
+# form label: full name
+name_input:
+  "целосно име":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "пат":
+  "улица":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "пат бр.":
+  "улица бр":
+  "број на пат":
+  "број на улица":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "улица и број":
+  "ред на адреса 1":
+# form label: city
+city_input:
+  "град":
+# form label: zip/post code
+zip_input:
+  "код":
+  "поштенски":
+# form label: country
+country_input:
+  "земја":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "целосна адреса":
+# form label: birth day
+birth_day_input:
+  "роденден":
+  "ден на раѓање":
+# form label: birth month
+birth_month_input:
+  "мм":
+  "месец на раѓање":
+# form label: birth year
+birth_year_input:
+  "ехеее":
+  "раѓање":
+  "година на раѓање":
+# form label: birth full date
+birth_full_input:
+  "датум на раѓање":
+  "роденден":
+  "раѓање":
+  "дд-мм-год":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "новости":
+  "пошта":
+  "испрати":
+  "понуди":
+  "рекламирање":
+  "најнови":
+  "ажурирања":
+  "известувања":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "приватност":
+  "заштита на приватност":
+  "политика на приватност":
+  "заштита на корисник":
+  "заштита":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "услови на услуга":
+  "договор за корисник":
+  "правила и услови":
+  "услови на употреба":
+  "услуга":
+  "тос":
+  "услови":
+# button: submit/next/continue
+submit:
+  "поднесете":
+  "потврди":
+  "продолжи":
+  "следно":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "успех":
+  "потврда":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "грешка":
+  "не работеше":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "успех":
+  "успешно":
+  "потврда":
+  "потврдено":
+  "Честитки":
+  "активирано":
+  "активен":
+  "се приклучи":
+  "претплатен":
+  "добредојдовте":
+  "Ви благодарам":
+  "благодарам":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "грешка":
+  "не е најдено":
+  "не успеа":
+  "неважечки":
+  "регистрацијата не успеа":
+  "неуспешно":
+  "не работеше":
+  "не работеше":
+  "обиди се повторно":
+  "повторен":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "mk":
+  "Makedonian":
+# links: newsletter signup
+newsletter:
+  "билтен":
+  "се претплатите":
+  "под":
+  "Вести":
+# links: contact us, request help
+contact:
+  "Контактирајте не":
+  "контакт":
+  "Испрати порака":
+  "порака":
+  "побарајте помош":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "код за верификација":
+  "код за потврда":
+  "код за активирање":
+  "код за валидација":
+  "код за регистрација":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "потврди":
+  "верификација":
+  "потврда":
+  "валидација":
+  "активирај":
+  "активирање":
+  "заврши":
+  "регистрација":
+  "сметка":
+  "ингеренциите":
+  "автентицираат":
+  "еден клик":
+  "еден чекор":
+  "вашето барање":
+  "добредојде":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "потврди":
+  "верификација":
+  "потврдена":
+  "потврда":
+  "валидација":
+  "активирај":
+  "активирање":
+  "автентицираат":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "отпишете се":
+  "отстрани":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "капча":
+  "внесете знаци":
+  "напишете знаци":
+  "ликови":
+  "предизвик":
+  "одговори":
+  "одговор":
+# form label: search box
+search_input:
+  "пребарување":
+  "барајќи":
+  "најдете":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "Наслов":
+# form input: organization/company name
+organization_input:
+  "компанија":
+  "организација":
+  "институција":
+# form label: age
+age_input:
+  "возраста":
+  "стар":

@@ -1,0 +1,293 @@
+# enfbots_crawler keyword translation for language Galician (gl)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "privacidade":
+  "declaración de privacidade":
+  "política de privacidade":
+  "aviso de privacidade":
+  "política":
+# links: terms and conditions
+terms:
+  "termos":
+  "termos e condicións":
+  "termos de uso":
+  "acordo de usuario":
+  "termos de servizo":
+# links: registration pages
+registration:
+  "crear unha conta":
+  "inicia sesión por primeira vez":
+  "inscribirse":
+  "rexistrarse":
+  "comezar":
+  "crear unha nova conta":
+  "unirse":
+# links: login/account pages
+login:
+  "perfil":
+  "a miña conta":
+  "conta":
+  "usuario":
+  "sesión":
+  "iniciar sesión":
+  "rexistro":
+  "asinar":
+  "a miña":
+  "o meu perfil":
+# form label: email
+mail_input:
+  "correo":
+  "correo electrónico":
+# form label: username
+user_input:
+  "nome de usuario":
+  "usuario":
+  "alcume":
+  "inicio de sesión":
+# form label: password
+pw_input:
+  "contrasinal":
+  "frase de acceso":
+# form label: phone number
+phone_input:
+  "teléfono":
+# form label: first name
+firstname_input:
+  "dado":
+  "nome":
+  "f nome":
+  "primeiro":
+# form label: last name
+lastname_input:
+  "nome familiar":
+  "familia":
+  "apelido":
+# form label: full name
+name_input:
+  "nome completo":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "rúa":
+  "estrada":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "número da rúa":
+  "número da estrada":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "rúa e número":
+  "dirección fila 1":
+# form label: city
+city_input:
+  "cidade":
+# form label: zip/post code
+zip_input:
+  "código":
+  "zip":
+# form label: country
+country_input:
+  "país":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "enderezo completo":
+# form label: birth day
+birth_day_input:
+  "día de nacemento":
+  "aniversario":
+# form label: birth month
+birth_month_input:
+  "mes de nacemento":
+# form label: birth year
+birth_year_input:
+  "ano de nacemento":
+  "aaaa":
+# form label: birth full date
+birth_full_input:
+  "nacemento":
+  "data de nacemento":
+  "dd-mm-aaaa":
+  "aniversario":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "correo":
+  "noticias":
+  "últimas":
+  "ofertas":
+  "actualizacións":
+  "publicidade":
+  "enviar":
+  "notificacións":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "protección":
+  "protección da privacidade":
+  "privacidade":
+  "política de privacidade":
+  "protección do usuario":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "termos":
+  "termos e condicións":
+  "acordo de usuario":
+  "termos de servizo":
+  "servizo":
+  "condicións de uso":
+# button: submit/next/continue
+submit:
+  "enviar":
+  "confirmar":
+  "continuar":
+  "seguinte":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "confirmación":
+  "éxito":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "non funcionou":
+  "erro":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "éxito":
+  "exitoso":
+  "confirmación":
+  "confirmado":
+  "parabéns":
+  "activado":
+  "activo":
+  "unido":
+  "subscrito":
+  "benvido":
+  "grazas":
+  "grazas":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "erro":
+  "non atopado":
+  "fallou":
+  "non válido":
+  "fallou o rexistro":
+  "sen éxito":
+  "non funcionou":
+  "non funcionou":
+  "Téntao de novo":
+  "resentir":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "gl":
+  "Galician":
+# links: newsletter signup
+newsletter:
+  "boletín informativo":
+  "boletín":
+  "subscribirse":
+  "noticias":
+# links: contact us, request help
+contact:
+  "Contacte connosco":
+  "contacto":
+  "enviar mensaxe":
+  "mensaxe":
+  "solicitar axuda":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "código de verificación":
+  "código de confirmación":
+  "código de activación":
+  "código de validación":
+  "código de rexistro":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "verificar":
+  "verificación":
+  "confirmar":
+  "confirmación":
+  "validar":
+  "validación":
+  "activar":
+  "activación":
+  "completo":
+  "rematar":
+  "rexistro":
+  "conta":
+  "credenciais":
+  "autenticar":
+  "un clic":
+  "un paso":
+  "a súa solicitude":
+  "benvido":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "verificar":
+  "verificación":
+  "verificado":
+  "confirmar":
+  "confirmación":
+  "validar":
+  "validación":
+  "activar":
+  "activación":
+  "autenticar":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "cancelar a subscrición":
+  "quitar":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "introducir caracteres":
+  "escriba caracteres":
+  "personaxes":
+  "reto":
+  "resposta":
+# form label: search box
+search_input:
+  "buscar":
+  "Buscar":
+  "atopar":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "título":
+# form input: organization/company name
+organization_input:
+  "empresa":
+  "organización":
+  "institución":
+# form label: age
+age_input:
+  "idade":
+  "vello":
+

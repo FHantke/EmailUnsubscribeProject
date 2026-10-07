@@ -1,0 +1,321 @@
+# enfbots_crawler keyword translation for language Italian (it)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "informativa":
+  "informativa sulla protezione":
+  "trattamento dei dati personali":
+  "informativa sul trattamento dei dati":
+  "trattamento dei dati":
+  "informativa Privacy":
+  "informativa sulla privacy":
+  "privacy":
+  "Norme sulla privacy":
+# popular paths: privacy policy
+popular_pp_path:
+  "informativa-privacy":
+# links: terms and conditions
+terms:
+  "termini e condizioni":
+  "i termini e le condizioni":
+  "condizioni del servizio":
+  "modalita d'uso":
+  "termini di servizio":
+  "condizioni generali":
+# popular paths: terms and conditions
+popular_tc_path:
+  "termini-e-condizioni":
+  "servizi":
+# links: registration pages
+registration:
+  "registrarsi":
+  "registrati":
+  "registrazione":
+  "abbonarsi":
+  "abbonati":
+  "inizia":
+  "nuovo":
+  "iscriviti":
+  "iscrizione":
+  "crea account":
+  "crea un nuovo account":
+  "accedi per la prima volta":
+# links: login/account pages
+login:
+  "accedere":
+  "accedi":
+  "inserisci":
+  "credenziali":
+  "accesso":
+  "invia":
+  "sign in":
+  "account":
+  "profilo":
+  "connessione":
+# form label: email
+mail_input:
+  "e-mail":
+  "indirizzo email":
+  "posta":
+  "posta elettronica":
+# form label: username
+user_input:
+  "nome utente":
+  "ID utente":
+  "utente":
+  "soprannome":
+  "Accedere":
+# form label: password
+pw_input:
+  "conferma password":
+# form label: phone number
+phone_input:
+  "numero cellulare":
+  "cellulare":
+  "telefono":
+# form label: first name
+firstname_input:
+  "nome":
+# form label: last name
+lastname_input:
+  "cognome":
+# form label: full name
+name_input:
+  "nome e cognome":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "strada":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "numero":
+  "numero civico":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "indirizzo":
+  "via e numero":
+# form label: city
+city_input:
+  "città":
+# form label: zip/post code
+zip_input:
+  "CAP":
+  "Codice Postale":
+# form label: country
+country_input:
+  "nazione":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "indirizzo":
+  "indirizzo completo":
+# form label: birth day
+birth_day_input:
+  "gg":
+  "giorno":
+# form label: birth month
+birth_month_input:
+  "mese":
+# form label: birth year
+birth_year_input:
+  "aaaa":
+  "anno":
+  "anno di nascita":
+# form label: birth full date
+birth_full_input:
+  "data di nascita":
+  "gg-mm-aaaa":
+  "compleanno":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "aggiornamenti":
+  "posta":
+  "invio":
+  "notifiche":
+  "notizie":
+  "offerte":
+  "ultime":
+  "pubblicità":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "dichiaro":
+  "consenso":
+  "consento":
+  "approvo":
+  "privacy policy":
+  "informativa Privacy":
+  "protezione":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "dichiaro":
+  "consenso":
+  "consento":
+  "leggi":
+  "preso visione":
+  "approva":
+  "presto il consenso":
+  "acconsentire":
+  "condizioni di utilizzo":
+  "termini di servizio":
+  "rifiutare":
+  "revocare":
+  "accettare":
+  "termini e condizioni":
+  "servizio":
+  "termini":
+# button: submit/next/continue
+submit:
+  "Invia":
+  "Confermare":
+  "Continua":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "conferma":
+  "successo":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "errore":
+  "non ha funzionato":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "successo":
+  "riuscito":
+  "conferma":
+  "confermato":
+  "congratulazioni":
+  "attivato":
+  "attivo":
+  "partecipato":
+  "iscritto":
+  "Benvenuto":
+  "grazie":
+  "Grazie":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "errore":
+  "non trovato":
+  "fallito":
+  "non valido":
+  "registrazione fallita":
+  "senza esito":
+  "non ha funzionato":
+  "non ha funzionato":
+  "riprova":
+  "risentirsi di":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "ita":
+  "italiano":
+  "it":
+  "Italian":
+# links: newsletter signup
+newsletter:
+  "bollettino":
+  "abbonati":
+  "sottoscrivi":
+# links: contact us, request help
+contact:
+  "Contattaci":
+  "contatto":
+  "invia messaggio":
+  "Messaggio":
+  "pagina di contatto":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "codice di verifica":
+  "codice di conferma":
+  "codice di attivazione":
+  "codice di validazione":
+  "codice di registrazione":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "verificare":
+  "verifica":
+  "Confermare":
+  "conferma":
+  "convalidare":
+  "convalida":
+  "attivare":
+  "Attivazione":
+  "completare":
+  "finire":
+  "registrazione":
+  "autenticare":
+  "fare clic":
+  "la tua richiesta":
+  "Benvenuto":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "verificare":
+  "verifica":
+  "verificato":
+  "Confermare":
+  "conferma":
+  "convalidare":
+  "convalida":
+  "attivare":
+  "fare clic":
+  "attivazione utenza":
+  "codice di attivazione":
+  "attivazione":
+  "autenticare":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "disiscriviti":
+  "disiscriversi":
+  "disdire":
+  "disdetta":
+  "[Annullare|disdire] l'[iscrizione|abbonamento]":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "inserisci i caratteri":
+  "digita caratteri":
+  "caratteri":
+# form label: search box
+search_input:
+  "ricerca":
+  "cerca":
+  "trovare":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "titolo":
+# form input: organization/company name
+organization_input:
+  "società":
+  "organizzazione":
+  "istituzione":
+# form label: age
+age_input:
+  "età":
+

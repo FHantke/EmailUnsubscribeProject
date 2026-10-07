@@ -1,0 +1,297 @@
+# enfbots_crawler keyword translation for language Luxembourgish (lb)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "Privatsphär":
+  "Privatsphär Ausso":
+  "Privatsphär Politik":
+  "Privatsphär Avis":
+  "Politik":
+# links: terms and conditions
+terms:
+  "Benotzungsbedingungen":
+  "Bedéngungen":
+  "Servicebedingungen":
+  "Benotzerofkommes":
+# links: registration pages
+registration:
+  "Kont erstellen":
+  "fir d'éischt umellen":
+  "Umeldung":
+  "aschreiwen":
+  "e neien Kont":
+  "bäitrieden":
+  "umellen":
+  "unzefänken":
+  "e Kont erstellen":
+  "Neie Kont erstellen":
+# links: login/account pages
+login:
+  "Benotzer":
+  "aloggen":
+  "Sëtzung":
+  "mäi Kont":
+  "mäin":
+  "Profil":
+  "ënnerschreiwen":
+  "umellen":
+  "Kont":
+  "mäi Profil":
+# form label: email
+mail_input:
+  "Mail":
+  "E-Mail":
+# form label: username
+user_input:
+  "Benotzernumm":
+  "Benotzer ID":
+  "Benotzer":
+  "Spëtznumm":
+  "aloggen":
+# form label: password
+pw_input:
+  "Passwuert":
+  "Passphrase":
+# form label: phone number
+phone_input:
+  "Tel":
+  "Telefon":
+# form label: first name
+firstname_input:
+  "éischt":
+  "Virnumm":
+  "uginn":
+# form label: last name
+lastname_input:
+  "Famill":
+  "lescht":
+  "Familljennumm":
+  "Schname":
+# form label: full name
+name_input:
+  "ganzen Numm":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "Strooss":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "Strooss Nr":
+  "Stroossennummer":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "Adress Rei 1":
+  "Strooss an Nummer":
+# form label: city
+city_input:
+  "Stad":
+# form label: zip/post code
+zip_input:
+  "zip":
+# form label: country
+country_input:
+  "Land":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "voll Adress":
+  "komplett Adress":
+# form label: birth day
+birth_day_input:
+  "Gebuertsdag":
+# form label: birth month
+birth_month_input:
+  "Gebuertsmount":
+  "Gebuertsméint":
+# form label: birth year
+birth_year_input:
+  "Gebuertsjoer":
+  "Jojj":
+# form label: birth full date
+birth_full_input:
+  "Gebuert":
+  "Gebuertsdag":
+  "Gebuertsdatum":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "Notifikatiounen":
+  "Mail":
+  "Offeren":
+  "Neiegkeeten":
+  "Annoncéieren":
+  "lescht":
+  "schécken":
+  "Aktualiséierungen":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "Privatsphär":
+  "Schutz":
+  "Privatsphär Politik":
+  "Benotzer Schutz":
+  "Privatsphär Schutz":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "Service":
+  "Terms":
+  "conditions of use":
+  "useragreement":
+  "Terms of Service":
+  "Terms and conditions":
+  "use conditions":
+  "User Agreement":
+# button: submit/next/continue
+submit:
+  "ofginn":
+  "confirméieren":
+  "weider":
+  "nächste":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "Bestätegung":
+  "Erfolleg":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "Feeler":
+  "huet net geschafft":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "Erfolleg":
+  "erfollegräich":
+  "Confirmatioun":
+  "confirméiert":
+  "gratulatioun":
+  "aktivéiert":
+  "aktiv":
+  "joined":
+  "abonnéiert":
+  "Wëllkomm":
+  "merci":
+  "merci":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "Feeler":
+  "net fonnt":
+  "ausgefall":
+  "invalid":
+  "Registrierung gescheitert":
+  "net erfollegräich":
+  "huet net geschafft":
+  "huet net geschafft":
+  "versich et nach eng Kéier":
+  "rezent":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "lb":
+  "Luxembourgish":
+# links: newsletter signup
+newsletter:
+  "Newsletter":
+  "abonnéieren":
+  "Neiegkeeten":
+# links: contact us, request help
+contact:
+  "Kontaktéiert eis":
+  "kontaktéieren":
+  "schécken Message":
+  "Message":
+  "Hëllef ufroen":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "Sëcherheetscode":
+  "Confirmatiouns-Code":
+  "Aktivéierungscode":
+  "Validatioun Code":
+  "Aschreiwung Code":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "z'iwwerpréiwen":
+  "Verifikatioun":
+  "confirméieren":
+  "Confirmatioun":
+  "validéieren":
+  "Validatioun":
+  "aktivéieren":
+  "Aktivatioun":
+  "komplett":
+  "fäerdeg":
+  "Aschreiwung":
+  "Kont":
+  "Umeldungsinformatiounen":
+  "authentifizéieren":
+  "engem Klick":
+  "ee Schrëtt":
+  "Är Ufro":
+  "Wëllkomm":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "z'iwwerpréiwen":
+  "Verifikatioun":
+  "verifizéiert":
+  "confirméieren":
+  "Confirmatioun":
+  "validéieren":
+  "Validatioun":
+  "aktivéieren":
+  "Aktivatioun":
+  "authentifizéieren":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "auszeschreiwen":
+  "ewechzehuelen":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "Zeechen anzeginn":
+  "Typ Zeechen":
+  "Zeechen":
+  "erauszefuerderen":
+  "äntweren":
+  "Äntwert":
+# form label: search box
+search_input:
+  "sichen":
+  "sichen no":
+  "fannen":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "Titel":
+# form input: organization/company name
+organization_input:
+  "Firma":
+  "Organisatioun":
+  "Institutioun":
+# form label: age
+age_input:
+  "Alter":
+  "al":
+

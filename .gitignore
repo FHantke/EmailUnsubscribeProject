@@ -5,7 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
-.python-version
+.pytest_cache/
 
 # Virtual environments
 .venv
@@ -13,9 +13,17 @@ wheels/
 # Some tests
 stalwart-etc
 test-backups
-test*
 emails/
+conf/ssh*
+
 
 # Other
 .DS_Store
-
+.claude/
+/enfbots-crawler-master/static_resources/
+/enfbots-crawler-master/doc/
+# Raw (uncompressed) site lists stay local; study samples are tracked
+/enfbots-crawler-master/static_lists/*.csv
+!/enfbots-crawler-master/static_lists/study_*.csv
+/enfbots-crawler-master/usage_screenshots/
+/enfbots-crawler-master.zip

@@ -1,0 +1,22 @@
+
+# Development documentation
+
+# When changing something in the database
+
+* Adapt `database.py` and then run:
+```bash
+alembic -c enfbots_crawler/alembic.ini revision -m "[describe update in the database]"
+```
+
+And then adapt the newly created script in `versions/` to reflect the changes in an existing database.
+
+Afterwards to upgrade a database you have to configure the database via environment variables and run
+```bash
+enfbot --update-database
+```
+
+OR alternatively:
+
+```bash
+alembic -c enfbots_crawler/alembic.ini upgrade head"
+```

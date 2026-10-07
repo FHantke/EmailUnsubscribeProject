@@ -1,0 +1,169 @@
+# enfbots_crawler keyword translation for language Japanese (ja)
+policy:
+  "プライバシーポリシー":
+  "個人情報保護方針":
+  "プライバシーについて":
+  "個人情報の取り扱い":
+terms:
+  "利用規約":
+  "会員規約":
+  "使用条件":
+  "約款":
+registration:
+  "登録":
+  "新規登録":
+  "会員登録":
+  "アカウント作成":
+  "サインアップ":
+  "入会":
+login:
+  "ログイン":
+  "サインイン":
+  "マイページ":
+  "ログオン":
+us_pn:
+  "カリフォルニア州消費者プライバシー法":
+  "CCPA":
+gdpr:
+  "GDPR":
+  "一般データ保護規則":
+mail_input:
+  "メールアドレス":
+  "メール":
+  "Eメール":
+  "メアド":
+user_input:
+  "ユーザー名":
+  "ユーザーID":
+  "アカウント名":
+  "ログインID":
+pw_input:
+  "パスワード":
+  "暗証番号":
+phone_input:
+  "電話番号":
+  "携帯電話":
+  "電話":
+  "ケータイ":
+firstname_input:
+  "名":
+  "メイ":
+  "名前":
+lastname_input:
+  "姓":
+  "セイ":
+  "名字":
+name_input:
+  "氏名":
+  "お名前":
+  "フルネーム":
+street_input:
+  "住所":
+  "市区町村":
+  "町名":
+street_nr_input:
+  "番地":
+  "丁目":
+street_full_input:
+  "住所":
+  "それ以降の住所":
+city_input:
+  "都市":
+  "市":
+  "区":
+zip_input:
+  "郵便番号":
+country_input:
+  "国":
+  "国籍":
+full_address_input:
+  "住所全般":
+birth_day_input:
+  "日":
+birth_month_input:
+  "月":
+birth_year_input:
+  "年":
+birth_full_input:
+  "生年月日":
+  "誕生日":
+checkbox_email:
+  "ニュース":
+  "お知らせ":
+  "メールマガジン":
+  "メルマガ":
+  "配信":
+  "キャンペーン":
+checkbox_pp:
+  "プライバシーポリシー":
+  "個人情報保護方針":
+checkbox_tos:
+  "利用規約":
+  "規約":
+submit:
+  "送信":
+  "確認":
+  "次へ":
+  "登録する":
+  "申し込む":
+submit_success:
+  "完了":
+  "成功":
+  "登録しました":
+submit_failure:
+  "エラー":
+  "失敗":
+confirm_success:
+  "確認完了":
+  "成功":
+  "ようこそ":
+confirm_failure:
+  "無効":
+  "エラー":
+  "見つかりません":
+language:
+  "日本語":
+  "ja":
+  "ja-jp":
+  "japanese":
+newsletter:
+  "メールマガジン":
+  "ニュースレター":
+  "購読":
+contact:
+  "お問い合わせ":
+  "コンタクト":
+  "ヘルプ":
+verification_code:
+  "認証コード":
+  "確認コード":
+  "検証コード":
+confirmation_email:
+  "確認":
+  "認証":
+  "有効化":
+  "本登録":
+confirmation_link:
+  "確認":
+  "認証":
+  "有効にする":
+  "アクティブ化":
+unsubscribe:
+  "退会":
+  "配信停止":
+  "解約":
+captcha_input:
+  "キャプチャ":
+  "文字を入力":
+search_input:
+  "検索":
+  "探す":
+title_input:
+  "敬称":
+  "役職":
+organization_input:
+  "会社名":
+  "組織":
+  "法人名":
+age_input:
+  "年齢":

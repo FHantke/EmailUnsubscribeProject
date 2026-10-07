@@ -1,0 +1,26 @@
+<html>
+
+<head>
+    <title>reCAPTCHA demo: Simple page</title>
+    <script type="text/javascript">
+        // store sitekey globally anyway for usage in external script
+        var mysitekey = "{{ config.site_key_recaptcha_v3 }}";
+    </script>
+    <script type="text/javascript" src="{{ url_for('static', filename='recaptchav3.js') }}"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render={{ config.site_key_recaptcha_v3 }}"></script>
+</head>
+
+<body>
+    <form id="formid" action="/website/submit/recaptcha_v3?my" method="POST">
+        <div>
+            <label>Username</label>
+            <input type="text" name="username" />
+        </div>
+        <input id="resp" type="hidden" name="my-captcha-response" />
+        <br />
+        <input id="button" type="button" value="Submit" />
+        <input id="fake-button" type="button" value="Fake" />
+    </form>
+</body>
+
+</html>

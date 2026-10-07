@@ -1,0 +1,17 @@
+<html>
+<head>
+    <title>reCAPTCHA demo: Simple page</title>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+</head>
+<body>
+<form action="/submit/hcaptcha" method="POST">
+    <div class="h-captcha" data-size="invisible" data-sitekey="{{ config.site_key_hcaptcha }}"></div>
+    <div>
+        <label>Username</label>
+        <input type="text" name="username"/>
+    </div>
+    <br/>
+    <input type="submit" value="Submit">
+</form>
+</body>
+</html>

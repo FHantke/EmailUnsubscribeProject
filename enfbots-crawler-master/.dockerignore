@@ -1,0 +1,62 @@
+# Ignore git
+/.git
+.gitignore
+
+# Gitlab
+.gitlab-ci.yml
+
+/notebooks
+
+.sync-exclude.lst
+
+# Ignore IDE configuration
+/.idea
+/.vscode
+/scratch
+/stubs
+
+# Python runtime
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ipynb_checkpoints
+*.egg-info
+*.py[cod]
+/venv
+/.venv
+
+# secret files
+*.env
+gcredentials-enfbots.json
+
+# Node
+/interceptor/node_modules
+
+# Crawler output
+/output
+/enfbots_output
+
+# Data on my machine of previous crawls
+/data/
+
+# Other data
+/crawl.sqlite
+/enfbots_crawler.log
+/geckodriver.log
+/resources
+/usage_screenshots
+docker-compose
+
+# Test outputs
+/htmlcov
+/.coverage
+/report_enfbots.xml
+/report_pptc.xml
+/report.xml
+/coverage.xml
+
+# Lists
+*.csv
+*.txt
+
+.claude/

@@ -1,0 +1,299 @@
+# enfbots_crawler keyword translation for language Danish (da)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "fortrolighedserklæring":
+  "politik":
+  "privatliv":
+  "privatlivspolitik":
+  "fortrolighedsmeddelelse":
+# popular paths: privacy policy
+popular_pp_path:
+  "politik":
+  "privatlivspolitik":
+# links: terms and conditions
+terms:
+  "brugsvilkår":
+  "vilkår":
+  "vilkår og betingelser":
+  "brugeraftale":
+  "servicevilkår":
+  "betingelser":
+# links: registration pages
+registration:
+  "kom godt i gang":
+  "deltag":
+  "opret ny konto":
+  "log ind for første gang":
+  "tilmeld":
+  "tilmelding":
+  "opret en ny konto":
+  "opret konto":
+  "tilmeld dig":
+  "opret en konto":
+# links: login/account pages
+login:
+  "profil":
+  "konto":
+  "tegn":
+  "bruger":
+  "log ind":
+  "log":
+  "min konto":
+  "min profil":
+  "min":
+# form label: email
+mail_input:
+  "e-mail":
+# form label: username
+user_input:
+  "brugernavn":
+  "kaldenavn":
+  "bruger":
+  "bruger-id":
+# form label: password
+pw_input:
+  "adgangskode": 0.5
+  "adgangssætning": 0.5
+# form label: phone number
+phone_input:
+  "telefon":
+# form label: first name
+firstname_input:
+  "first name":
+  "first":
+  "given name":
+  "given":
+# form label: last name
+lastname_input:
+  "lnavn":
+  "efternavn":
+  "familie":
+# form label: full name
+name_input:
+  "fulde navn":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "gade":
+  "vej":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "vejnummer":
+  "vej nr":
+  "gadenummer":
+  "gade nr":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "gade og nummer":
+  "adresserække 1":
+# form label: city
+city_input:
+  "by":
+# form label: zip/post code
+zip_input:
+  "post":
+  "zip":
+# form label: country
+country_input:
+  "Land":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "fuld adresse":
+  "komplet adresse":
+# form label: birth day
+birth_day_input:
+  "fødselsdag":
+# form label: birth month
+birth_month_input:
+  "fødselsmåned":
+# form label: birth year
+birth_year_input:
+  "åååå":
+  "fødselsår":
+# form label: birth full date
+birth_full_input:
+  "fødsel":
+  "fødselsdato":
+  "fødselsdag":
+  "dd-mm-åååå":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "nyheder":
+  "reklame":
+  "tilbud":
+  "meddelelser":
+  "seneste":
+  "opdateringer":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "brugerbeskyttelse":
+  "beskyttelse":
+  "privatliv":
+  "privatlivspolitik":
+  "privatlivsbeskyttelse":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "brugsbetingelser":
+  "vilkår":
+  "vilkår og betingelser":
+  "service":
+  "brugeraftale":
+  "servicevilkår":
+# button: submit/next/continue
+submit:
+  "Indsend":
+  "bekræfte":
+  "Blive ved":
+  "Næste":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "succes":
+  "bekræftelse":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "fungerede ikke":
+  "fejl":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "succes":
+  "vellykket":
+  "bekræftelse":
+  "bekræftet":
+  "tillykke":
+  "aktiveret":
+  "aktiv":
+  "joined":
+  "abonneret":
+  "Velkommen":
+  "tak skal du have":
+  "tak":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "fejl":
+  "ikke fundet":
+  "mislykkedes":
+  "ugyldig":
+  "registreringen fejlede":
+  "mislykket":
+  "virkede ikke":
+  "virkede ikke":
+  "Prøv igen":
+  "harmes over":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "da":
+  "Danish":
+# links: newsletter signup
+newsletter:
+  "nyhedsbrev":
+  "opslag":
+  "abonnere":
+  "nyheder":
+# links: contact us, request help
+contact:
+  "kontakt os":
+  "kontakt":
+  "Send besked":
+  "besked":
+  "anmode om hjælp":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "verifikationskode":
+  "bekræftelseskode":
+  "aktiveringskode":
+  "valideringskode":
+  "registreringskode":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "verificere":
+  "verifikation":
+  "bekræfte":
+  "bekræftelse":
+  "validere":
+  "validering":
+  "aktivere":
+  "aktivering":
+  "komplet":
+  "Afslut":
+  "registrering":
+  "konto":
+  "legitimationsoplysninger":
+  "autentificere":
+  "et klik":
+  "et skridt":
+  "Din anmodning":
+  "Velkommen":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "verificere":
+  "verifikation":
+  "verificeret":
+  "bekræfte":
+  "bekræftelse":
+  "validere":
+  "validering":
+  "aktivere":
+  "aktivering":
+  "autentificere":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "opsige abonnement":
+  "fjerne":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "indtaste tegn":
+  "skriv tegn":
+  "tegn":
+  "udfordring":
+  "svar":
+  "respons":
+# form label: search box
+search_input:
+  "Søg":
+  "leder efter":
+  "finde":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "titel":
+# form input: organization/company name
+organization_input:
+  "Selskab":
+  "organisation":
+# form label: age
+age_input:
+  "alder":
+  "gammel":
+

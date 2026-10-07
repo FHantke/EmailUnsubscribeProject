@@ -1,0 +1,41 @@
+<html>
+<head>
+    <title>reCAPTCHA demo: Simple page</title>
+    <script src="https://www.google.com/recaptcha/api.js?render={{ config.site_key_recaptcha_v3 }}"></script>
+</head>
+<body>
+<form id="formid" action="/submit/recaptcha_v3?my" method="POST">
+    <div>
+        <label>Username</label>
+        <input type="text" name="username"/>
+    </div>
+    <br/>
+    <input id="button" type="button" value="Submit"/>
+    <input id="fake-button" type="button" value="Fake"/>
+</form>
+<script type="text/javascript">
+    document.getElementById("button").addEventListener("click", function (e) {
+        e.preventDefault()
+        grecaptcha.ready(function () {
+            grecaptcha.execute("{{ config.site_key_recaptcha_v3 }}", {action: "submit_action"}).then(function (token) {
+                var form = document.getElementById("formid");
+                var data = new FormData(form);
+                data.append("my-captcha-response", token);
+                fetch(form.action, {method: 'post', body: data}).then(response => {
+                    // follow the redirect
+                    window.location = response.url;
+                });
+            });
+        });
+    });
+    document.getElementById("fake-button").addEventListener("click", function (e) {
+        e.preventDefault()
+        grecaptcha.ready(function () {
+            grecaptcha.execute("{{ config.site_key_recaptcha_v3 }}", {action: "fake_action"}).then(function (token) {
+                console.log(token);
+            });
+        });
+    });
+</script>
+</body>
+</html>

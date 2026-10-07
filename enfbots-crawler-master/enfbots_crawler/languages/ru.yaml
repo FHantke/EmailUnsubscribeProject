@@ -1,0 +1,276 @@
+# links: privacy policy
+policy:
+  "политика конфиденциальности":
+  "правила конфиденциальности": 1.5
+  "заявление о конфиденциальности":
+  "политика":
+  "конфиденциальность":
+  "уведомление о конфиденциальности":
+# links: terms and conditions
+terms:
+  "пользовательское соглашение":
+  "условия использования":
+  "правила и условия":
+  "условия":
+  "условия обслуживания":
+  "положения и условия":
+# links: registration pages
+registration:
+  "создать новую учетную запись":
+  "зарегистрироваться":
+  "создать учетную запись":
+  "создать новую аккаунт":
+  "присоединиться":
+  "начать работу":
+  "войти в первый раз":
+# links: login/account pages
+login:
+  "учетная запись":
+  "логин/ страница входа":
+  "войти в":
+  "подписать":
+  "войти":
+  "мой аккаунт":
+  "пользователь":
+  "мой":
+  "сеанс":
+  "профиль":
+  "мой профиль":
+# form label: email
+mail_input:
+  "почта":
+  "и-мейл":
+  "электронная почта":
+# form label: username
+user_input:
+  "имя пользователя":
+  "логин":
+  "идентификатор пользователя":
+  "никнейм":
+  "пользователь":
+# form label: password
+pw_input:
+  "кодовая фраза":
+  "пароль":
+  "пассворд":
+# form label: phone number
+phone_input:
+  "телефон":
+  "номер телефона":
+  "тел":
+# form label: first name
+firstname_input:
+  "имя":
+# form label: last name
+lastname_input:
+  "фамилия":
+# form label: full name
+name_input:
+  "полное имя":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "улица":
+  "название улицы":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "номер дома": 1.5
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "улица и номер дома":
+  "улица и номер":
+# form label: city
+city_input:
+  "город":
+  "населенный пункт":
+# form label: zip/post code
+zip_input:
+  "почтовый индекс":
+  "почтовый":
+  "индекс":
+# form label: country
+country_input:
+  "страна":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "полный адрес":
+# form label: birth day
+birth_day_input:
+  "дата рождения":
+  "дд":
+  "день рождения":
+# form label: birth month
+birth_month_input:
+  "мм":
+  "месяц рождения":
+# form label: birth year
+birth_year_input:
+  "год рождения":
+  "гггг":
+# form label: birth full date
+birth_full_input:
+  "дата рождения":
+  "дд-мм-гггг":
+  "день рождения":
+  "рождение":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "соглашение на получение новостей, обновлений, уведомлений и предложений":
+  "рассылка уведомлений":
+  "новости":
+  "последние":
+  "реклама":
+  "почта":
+  "обновления":
+  "предложения":
+  "отправка":
+  "уведомления":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "соглашение с правилами конфиденциальности":
+  "защита":
+  "защита конфиденциальности":
+  "политика конфиденциальности":
+  "конфиденциальность":
+  "защита пользователей":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "согласиться с условиями пользования":
+  "условия использования":
+  "условия":
+  "пользовательское соглашение":
+  "услуга":
+  "условия обслуживания":
+  "положения и условия":
+# button: submit/next/continue
+submit:
+  "Отправить":
+  "подтверждать":
+  "Продолжить":
+  "следующий":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "подтверждение регистрации":
+  "успешная регистрация":
+  "успех":
+  "подтверждение":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "не сработало":
+  "ошибка":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "успех":
+  "успешный":
+  "подтверждение":
+  "подтвержденный":
+  "поздравление":
+  "активировано":
+  "активный":
+  "присоединился":
+  "подписался":
+  "добро пожаловать":
+  "благодарю вас":
+  "Благодарность":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "ошибка":
+  "не найден":
+  "не удалось":
+  "инвалид":
+  "Регистрация не удалась":
+  "неудачный":
+  "не сработало":
+  "не получилось":
+  "Попробуйте еще раз":
+  "возмущаться":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "ru":
+  "Russian":
+  "русский":
+# links: newsletter signup
+newsletter:
+  "соглашение на получение рассылки":
+  "Новостная рассылка":
+  "бюллетень":
+  "подписываться":
+  "суб":
+  "Новости":
+# links: contact us, request help
+contact:
+  "связаться с нами":
+  "контакт":
+  "Отправить сообщение":
+  "сообщение":
+  "запросить помощь":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "код верификации":
+  "код подтверждения":
+  "код активации":
+  "Код проверки":
+  "Регистрационный код":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "проверять":
+  "проверка":
+  "подтверждать":
+  "подтверждение":
+  "Проверка":
+  "активировать":
+  "активация":
+  "полный":
+  "финиш":
+  "Регистрация":
+  "Счет":
+  "реквизиты для входа":
+  "подтверждать подлинность":
+  "один клик":
+  "один шаг":
+  "ваш запрос":
+  "Добро пожаловать":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "проверять":
+  "верифицировать":
+  "проверка":
+  "проверено":
+  "подтверждать":
+  "подтверждение":
+  "Проверка":
+  "активировать":
+  "активация":
+  "подтверждать подлинность":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "отказаться от подписки":
+  "отписаться от рассылки":
+  "Удалить":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "капча":
+  "введите символы":
+  "символы":
+  "вызов":
+  "отвечать":
+  "отклик":
+# form label: search box
+search_input:
+  "поиск":
+  "строка поиска":
+  "находясь в поиске":
+  "найти":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "обращение":
+  "заглавие":
+# form input: organization/company name
+organization_input:
+  "Компания":
+  "организация":
+  "учреждение":
+# form label: age
+age_input:
+  "возраст":

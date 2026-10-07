@@ -1,0 +1,154 @@
+# enfbots_crawler keyword translation for language Korean (ko)
+policy:
+  "개인정보 처리방침":
+  "개인정보 보호정책":
+  "프라이버시 정책":
+terms:
+  "이용약관":
+  "이용 약관":
+  "서비스 약관":
+  "약관":
+registration:
+  "회원가입": 1.5
+  "가입":
+  "등록":
+  "계정 만들기":
+  "시작하기":
+login:
+  "로그인":
+  "접속":
+  "마이페이지":
+us_pn:
+  "캘리포니아 소비자 프라이버시법":
+  "CCPA":
+gdpr:
+  "일반 데이터 보호 규정":
+  "GDPR":
+mail_input:
+  "이메일":
+  "전자우편":
+  "이메일 주소":
+user_input:
+  "아이디": 1.2
+  "ID":
+  "계정":
+  "사용자명":
+  "닉네임":
+pw_input:
+  "비밀번호":
+  "암호":
+  "패스워드":
+phone_input:
+  "휴대전화":
+  "휴대폰":
+  "전화번호":
+  "연락처":
+firstname_input:
+  "이름":
+lastname_input:
+  "성":
+name_input:
+  "성명":
+  "이름":
+street_input:
+  "주소":
+  "도로명 주소":
+street_nr_input:
+  "번지":
+  "건물번호":
+street_full_input:
+  "상세주소":
+  "나머지 주소":
+city_input:
+  "시":
+  "도시":
+zip_input:
+  "우편번호":
+country_input:
+  "국가":
+  "나라":
+full_address_input:
+  "전체 주소":
+birth_day_input:
+  "일":
+birth_month_input:
+  "월":
+birth_year_input:
+  "년":
+birth_full_input:
+  "생년월일":
+  "생일":
+checkbox_email:
+  "뉴스레터":
+  "소식":
+  "이벤트":
+  "광고성 정보":
+  "수신 동의":
+  "마케팅":
+checkbox_pp:
+  "개인정보 수집":
+  "개인정보 처리방침":
+checkbox_tos:
+  "이용약관":
+  "약관 동의":
+submit:
+  "제출":
+  "확인":
+  "다음":
+  "완료":
+  "가입하기":
+submit_success:
+  "성공":
+  "완료되었습니다":
+  "환영합니다":
+submit_failure:
+  "실패":
+  "오류":
+  "잘못된":
+confirm_success:
+  "인증 성공":
+  "확인되었습니다":
+confirm_failure:
+  "인증 실패":
+  "유효하지 않음":
+language:
+  "한국어":
+  "ko":
+  "ko-kr":
+  "korean":
+newsletter:
+  "뉴스레터":
+  "구독":
+contact:
+  "고객센터":
+  "문의하기":
+  "연락처":
+verification_code:
+  "인증번호": 1.5
+  "확인코드":
+confirmation_email:
+  "인증":
+  "확인":
+  "계정 활성화":
+confirmation_link:
+  "인증하기":
+  "확인하기":
+unsubscribe:
+  "수신거부":
+  "구독취소":
+  "탈퇴":
+captcha_input:
+  "보안문자":
+  "자동입력 방지":
+search_input:
+  "검색":
+  "찾기":
+title_input:
+  "직함":
+organization_input:
+  "회사명":
+  "소속":
+  "기업명":
+age_input:
+  "연령":
+  "나이":

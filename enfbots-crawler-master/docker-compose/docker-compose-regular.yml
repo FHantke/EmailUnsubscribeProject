@@ -1,0 +1,158 @@
+###############################################################################
+# This file is the docker-compose used for the regular crawls.
+# Prerequisites:
+#         * The user running this needs to be in the docker group
+#             * `sudo usermod -aG docker USERNAME`
+#         * Setup of the VPNs (passauX)
+#         * Folder at /mnt/data/regular-crawl-current/ 
+#             * will contain the current output data
+#         * Folder at /mnt/data/regular-crawl-compressed/
+#             * will be filled with the compressed output data
+###############################################################################
+
+services:
+  job-creator:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.9
+    command: python ./enfbots_crawler/scripts/load_database.py --raw ./static_lists/static_list_2024_02.csv.xz --num-websites-per-countryrank 5000 --force-recrawl --threads 8 --id regular-2024-04
+    stop_signal: SIGINT             # Same as Ctrl+C
+    volumes:
+                                    # This is needed when downloading the CruX list
+      - "./gcredentials-enfbots.json:/crawler/gcredentials-enfbots.json:ro"
+    env_file: .env                  # Contains configuration such as database-connection, if it should try to register, classifier, mail service, ...
+    networks:
+      - enfbots-open                # interface address: 172.21.0.1; Needed for internet access
+    dns: # This is needed to not use some host DNS which may not be working
+      - 8.8.8.8
+      - 1.1.1.1
+    hostname: cc3_create-jobs
+    deploy:
+      replicas: 1
+      resources: # This can use much more memory
+        limits:
+          memory: 64G
+          pids: 500
+
+  regular1:
+    # ATTENTION: This is the template for one crawler service
+    # When using a different VPN adapt the IP of the command "... ip route add default via 172.72.0.1" to point to the new
+    # VPN interface.
+    # Also set regular1.deploy.replicas to the desired amount of crawlers of this type
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.9
+    command: >
+      sh -c "echo \"Configuring network\" && \
+               sleep $$((RANDOM % 10)) && \
+               ip route del default && \
+               ip route add default via 172.72.0.1 && \
+               ip route add 192.168.162.162 via 172.21.21.1 && \
+               echo \"Finished setup\" && \
+               if [ \"$$(curl ipinfo.io 2>&1 | grep \"AS680 Verein zur Foerderung eines Deutschen Forschungsnetzes\")\" = \"\" ]; then
+                  echo \"Not connected to the VPN\" && exit 1
+               fi && \
+               ./enfbots_crawler/scripts/run-crawler.sh 30m 20m 10 --id regular-2024-01 --stats /crawler/enfbots_output/000_stats_regular-2024-01"
+    stop_grace_period: 1m           # Leaves some time to stop the crawler
+    stop_signal: SIGINT             # Same as Ctrl+C
+    volumes:
+      - /mnt/data/regular-crawl-current:/crawler/enfbots_output
+    shm_size: 2gb                   # Needed by chrome/chromedriver
+    env_file: .env                  # Contains configuration such as database-connection, if it should try to register, classifier, mail service, ...
+    cap_add:                        # Needed to change default gateway to the VPN interface
+      - NET_ADMIN
+    networks:
+      - enfbots-open                # interface address: 172.21.21.1
+      - passau12                    # passau12 interface address: 172.72.0.1
+    dns:            # This is needed to not use some host DNS which may not be working or may be overwhelmed
+      - 8.8.8.8
+      - 1.1.1.1
+    hostname: ccX_regularX
+    deploy:
+      replicas: 10X
+      resources:
+        limits:
+          memory: 2G
+          pids: 500
+  # Have more regularX containers here
+
+  # Service to check if the entire crawl is finished, used in run_regular_crawl.sh
+  is-finished:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.9
+    env_file: .env                  # Contains configuration such as database-connection, if it should try to register, classifier, mail service, ...
+    command: enfbot --id regular-2023-11 --is-finished
+    tty: true
+    deploy:
+      replicas: 1
+
+  # Service to get progress, speed and expected time of finish for the crawl; used in run_regular_crawl.sh
+  status:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.9
+    command: >
+          sh -c 'enfbot --id regular-2024-01 --get-progress && \
+                   enfbot --id regular-2024-01 --eta && \
+                   enfbot --id regular-2024-01 --get-speed'
+    tty: true
+    env_file: .env                  # Contains configuration such as database-connection, if it should try to register, classifier, mail service, ...
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2G
+          pids: 100
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 50M
+
+  # Service used to create a backup into /mnt/data/regular-crawl-compressed/CRAWL_ID
+  backup:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.9
+    volumes:        # Needs the normal output folder of the crawl (regular-crawl-current)
+                    # And the compressed folder as mount point
+      - /mnt/data/regular-crawl-compressed/:/crawler/compressed_output/
+      - /mnt/data/regular-crawl-current:/crawler/enfbots_output
+    command: python /crawler/enfbots_crawler/scripts/backup.py --xz --id regular-2024-01 --remove-after -n 32 --from /crawler/enfbots_output/ --to /crawler/compressed_output/
+    tty: true
+    deploy:
+      replicas: 1
+      resources:      # Allow a lot of memory and many pids
+        limits:
+          memory: 32G
+          pids: 1000
+
+networks:
+  passau2:
+    external: true
+    name: passau2
+  passau3:
+    external: true
+    name: passau3
+  passau4:
+    external: true
+    name: passau4
+  passau5:
+    external: true
+    name: passau5
+  passau6:
+    external: true
+    name: passau6
+  passau7:
+    external: true
+    name: passau7
+  passau8:
+    external: true
+    name: passau8
+  passau12:
+    external: true
+    name: passau12
+  enfbots-open:         # Allows internet access via this the fixed gateway address 172.21.21.1
+    name: enfbots-open
+    internal: false
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.21.21.0/24
+          ip_range: 172.21.21.0/24
+          gateway: 172.21.21.1

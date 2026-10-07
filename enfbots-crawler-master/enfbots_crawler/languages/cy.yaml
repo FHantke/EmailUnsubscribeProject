@@ -1,0 +1,293 @@
+# enfbots_crawler keyword translation for language Welsh (cy)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "polisi preifatrwydd":
+  "polisi":
+  "hysbysiad preifatrwydd":
+  "datganiad preifatrwydd":
+  "preifatrwydd":
+# links: terms and conditions
+terms:
+  "cytundeb defnyddiwr":
+  "telerau gwasanaeth":
+  "telerau defnyddio":
+  "telerau ac amodau":
+  "telerau":
+# links: registration pages
+registration:
+  "mewngofnodi am y tro cyntaf":
+  "arwyddo":
+  "creu cyfrif newydd cyfrif":
+  "cychwyn arni":
+  "creu cyfrif newydd":
+  "creu cyfrif":
+# links: login/account pages
+login:
+  "fy nghyfrif":
+  "fy":
+  "mewngofnodi":
+  "fy mhroffil":
+  "proffil":
+  "arwydd":
+  "sesiwn":
+  "defnyddiwr":
+  "cyfrif":
+# form label: email
+mail_input:
+  "post":
+  "e-bost":
+# form label: username
+user_input:
+  "llysenw":
+  "mewngofnodi":
+  "enw defnyddiwr":
+  "defnyddiwr":
+# form label: password
+pw_input:
+  "cyfrinair":
+# form label: phone number
+phone_input:
+  "ffôn":
+# form label: first name
+firstname_input:
+  "rhoi":
+  "enw cyntaf":
+  "enw a roddir":
+  "cyntaf":
+  "enw":
+# form label: last name
+lastname_input:
+  "enw olaf":
+  "enw teulu":
+  "olaf":
+  "cyfenw":
+  "teulu":
+  "enw":
+# form label: full name
+name_input:
+  "enw llawn":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "stryd":
+  "ffordd":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "stryd nr":
+  "rhif stryd":
+  "rhif ffordd":
+  "ffordd nr":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "cyfeiriad rhes 1":
+  "stryd a rhif":
+# form label: city
+city_input:
+  "dinas":
+# form label: zip/post code
+zip_input:
+  "cod":
+  "post":
+  "zip":
+# form label: country
+country_input:
+  "gwlad":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "cyfeiriad cyflawn":
+  "cyfeiriad llawn":
+# form label: birth day
+birth_day_input:
+  "pen-blwydd":
+  "diwrnod geni":
+# form label: birth month
+birth_month_input:
+  "genedigaeth":
+  "mis geni":
+# form label: birth year
+birth_year_input:
+  "blwyddyn geni":
+  "genedigaeth":
+# form label: birth full date
+birth_full_input:
+  "dyddiad geni":
+  "pen-blwydd":
+  "genedigaeth":
+  "dd-mm-bbbb":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "post":
+  "newyddion":
+  "diweddaraf":
+  "cynigion":
+  "hysbysiadau":
+  "anfon":
+  "hysbysebu":
+  "diweddariadau":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "amddiffyn preifatrwydd":
+  "polisi preifatrwydd":
+  "tt":
+  "amddiffyn":
+  "amddiffyn defnyddwyr":
+  "preifatrwydd":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "amodau defnyddio":
+  "cytundeb defnyddiwr":
+  "telerau gwasanaeth":
+  "defnyddiau":
+  "gwasanaeth":
+  "telerau ac amodau":
+  "telerau":
+# button: submit/next/continue
+submit:
+  "cyflwyno":
+  "cadarnhau":
+  "parhau":
+  "nesaf":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "cadarnhad":
+  "llwyddiant":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "heb weithio":
+  "gwall":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "llwyddiant":
+  "llwyddiannus":
+  "cadarnhad":
+  "cadarnhawyd":
+  "Llongyfarchiadau":
+  "actifadu":
+  "gweithredol":
+  "ymuno":
+  "tanysgrifio":
+  "croeso":
+  "Diolch":
+  "diolch":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "gwall":
+  "heb ei ddarganfod":
+  "methu":
+  "annilys":
+  "Methodd y cofrestriad":
+  "aflwyddiannus":
+  "ddim yn gweithio":
+  "ddim yn gweithio":
+  "ceisio eto":
+  "digio":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "cy":
+  "Welsh":
+# links: newsletter signup
+newsletter:
+  "cylchlythyr":
+  "bwletin":
+  "tanysgrifiwch":
+  "is":
+  "newyddion":
+# links: contact us, request help
+contact:
+  "cysylltwch â ni":
+  "cysylltwch":
+  "anfon neges":
+  "neges":
+  "gofyn am help":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "cod gwirio":
+  "cod cadarnhau":
+  "cod actifadu":
+  "cod dilysu":
+  "cod cofrestru":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "gwirio":
+  "dilysu":
+  "cadarnhau":
+  "cadarnhad":
+  "actifadu":
+  "cyflawn":
+  "gorffen":
+  "cofrestru":
+  "cyfrif":
+  "cymwysterau":
+  "un clic":
+  "un cam":
+  "eich cais":
+  "croeso":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "gwirio":
+  "dilysu":
+  "cadarnhau":
+  "cadarnhad":
+  "actifadu":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "dad-danysgrifio":
+  "tynnu":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "nodwch gymeriadau":
+  "cymeriadau teip":
+  "cymeriadau":
+  "her":
+  "ateb":
+  "ymateb":
+# form label: search box
+search_input:
+  "chwilio":
+  "edrych am":
+  "dod o hyd":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "teitl":
+# form input: organization/company name
+organization_input:
+  "cwmni":
+  "sefydliad":
+# form label: age
+age_input:
+  "oed":
+  "hen":
+

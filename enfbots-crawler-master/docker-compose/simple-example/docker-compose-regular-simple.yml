@@ -1,0 +1,177 @@
+###############################################################################
+# This file is the docker-compose used for the regular crawls.
+# Prerequisites:
+#         * The user running this needs to be in the docker group
+#             * `sudo usermod -aG docker USERNAME`
+#         * Folder at ./models/
+#             * containing the models as defined in the service 'classifier'
+#         * Folder at ./regular-crawl-current/ 
+#             * will contain the current output data
+#         * Folder at ./regular-crawl-compressed/
+#             * will be filled with the compressed output data
+###############################################################################
+
+services:
+  job-creator:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.13
+    command: python ./enfbots_crawler/scripts/load_database.py --raw ./static_lists/static_list_2024_02.csv.xz --num-websites-per-countryrank 5000 --force-recrawl --threads 8 --id regular-2024-04
+    stop_signal: SIGINT             # Same as Ctrl+C
+    volumes:
+                                    # This is needed when downloading the CruX list
+      - ./gcredentials-enfbots.json:/crawler/gcredentials-enfbots.json
+    env_file: .env                  # Contains configuration such as database-connection, if it should try to register, classifier, mail service, ...
+    networks:
+      - enfbots-open
+    dns: # This is needed to not use some host DNS which may not be working
+      - 8.8.8.8
+      - 1.1.1.1
+    hostname: create-jobs
+    deploy:
+      replicas: 1
+      resources: # This can use much more memory
+        limits:
+          memory: 64G
+          pids: 500
+
+  test:
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.13
+    command: tail -f /dev/null
+    stop_grace_period: 0m
+    volumes:
+      - ../../../enfbots_crawler/:/crawler/
+      - ./regular-crawl-current:/crawler/enfbots_output
+    shm_size: 2gb                   # Needed by chrome/chromedriver
+    env_file: .env                  # Contains configuration such as database-connection, if it should try to register, classifier, mail service, ...
+    networks:
+      - enfbots-open                # interface address: 172.21.21.1
+    dns:            # This is needed to not use some host DNS which may not be working or may be overwhelmed
+      - 8.8.8.8
+      - 1.1.1.1
+    hostname: crawler
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2G
+          pids: 500
+    
+  crawler:
+    # ATTENTION: This is the template for one crawler service
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.13
+    command: ./enfbots_crawler/scripts/run-crawler.sh 30m 20m 10 --id regular-2024-01 --stats /crawler/enfbots_output/000_stats_regular-2024-01
+    stop_grace_period: 1m           # Leaves some time to stop the crawler
+    stop_signal: SIGINT             # Same as Ctrl+C
+    volumes:
+      - ../../enfbots_crawler/:/crawler/
+      - ./regular-crawl-current:/crawler/enfbots_output
+    shm_size: 2gb                   # Needed by chrome/chromedriver
+    env_file: .env                  # Contains configuration such as database-connection, if it should try to register, classifier, mail service, ...
+    networks:
+      - enfbots-open                # interface address: 172.21.21.1
+    dns:            # This is needed to not use some host DNS which may not be working or may be overwhelmed
+      - 8.8.8.8
+      - 1.1.1.1
+    hostname: crawler
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2G
+          pids: 500
+
+  # Service to check if the entire crawl is finished, used in run_regular_crawl.sh
+  is-finished:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.13
+    env_file: .env                  # Contains configuration such as database-connection, if it should try to register, classifier, mail service, ...
+    command: enfbot --id regular-2023-11 --is-finished
+    tty: true
+    deploy:
+      replicas: 1
+
+  # Service to get progress, speed and expected time of finish for the crawl; used in run_regular_crawl.sh
+  status:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.13
+    command: >
+          bash -c 'enfbot --id regular-2024-01 --get-progress && \
+                   enfbot --id regular-2024-01 --eta && \
+                   enfbot --id regular-2024-01 --get-speed'
+    tty: true
+    env_file: .env                  # Contains configuration such as database-connection, if it should try to register, classifier, mail service, ...
+    networks:
+      enfbots-open:
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2G
+          pids: 100
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 50M
+
+  # Service used to create a backup into /mnt/data/regular-crawl-compressed/CRAWL_ID
+  backup:
+    restart: "no"
+    image: infsec-server.inf.ethz.ch/enfbots/crawler:0.7.13
+    volumes:        # Needs the normal output folder of the crawl (regular-crawl-current)
+                    # And the compressed folder as mount point
+      - ./regular-crawl-compressed/:/crawler/compressed_output/
+      - ./regular-crawl-current:/crawler/enfbots_output
+    command: python /crawler/enfbots_crawler/scripts/backup.py --xz --id regular-2024-01 --remove-after -n 32 --from /crawler/enfbots_output/ --to /crawler/compressed_output/
+    tty: true
+    deploy:
+      replicas: 1
+      resources:      # Allow a lot of memory and many pids
+        limits:
+          memory: 32G
+          pids: 1000
+
+  database:
+    restart: "unless-stopped"
+    image: postgres:16.2
+    hostname: postgres
+    container_name: postgres
+    volumes:
+      - ./database_data/:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: crawler
+      POSTGRES_PASSWORD: database_stuff
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - 5434:5432
+    networks:
+      enfbots-open:
+        aliases:
+          - postgres
+
+  classifier:
+    image: infsec-server.inf.ethz.ch/enfbots/classifier:0.4
+    container_name: classifier
+    restart: unless-stopped
+    command: pptc_classifier -token classifier_stuff -user crawler -pp-model ./models/PP_2024-04-12.pkl -tc-model ./models/TC_2024-04-12.pkl -port 8082 -workers 1
+    volumes:
+      - "./models/:/classifier/models/:ro"
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          pids:  400
+          cpus: '8.0'
+    networks:
+      enfbots-open:
+        aliases:
+          - classifier
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: 300m
+
+networks:
+  enfbots-open:
+    internal: false
+    name: enfbots-open

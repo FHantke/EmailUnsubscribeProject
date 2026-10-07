@@ -9,3 +9,46 @@ dependencies = [
     "fast-mail-parser>=0.10.0",
     "requests>=2.34.2",
 ]
+
+[dependency-groups]
+dev = [
+    "2captcha-python>=1.5.1,<2",
+    "alembic>=1.17.2,<2",
+    "babel>=2.17.0,<3",
+    "beautifulsoup4>=4.14.3,<5",
+    "blinker==1.7.0",
+    "cyrtranslit>=1.2.0,<2",
+    "en-core-web-md",
+    "flask>=3.0.3,<3.1",
+    "html2text==2024.2.26",
+    "hyperlink>=21.0.0,<22",
+    "lemmagen3>=3.5.1,<4",
+    "lxml>=6.0.2,<7",
+    "numpy>=2.0.2,<3",
+    "packaging>=25.0",
+    "pdfminer-six==20240706",
+    "pre-commit>=4.6.2",
+    "psutil>=6.1.1,<7",
+    "psycopg2-binary>=2.9.11,<3",
+    "pytest>=8.4.2,<9",
+    "pytest-mock>=3.15.1,<4",
+    "pyvirtualdisplay>=3.0,<4",
+    "pyyaml>=6.0.3,<7",
+    "readabilipy",
+    "regex>=2025.11.3",
+    "rstr>=3.2.2,<4",
+    "selenium==4.39.0",
+    "selenium-stealth>=1.0.6,<2",
+    "selenium-wire==5.1.0",
+    "setuptools>=80.9.0,<81",
+    "spacy>=3.8.2,<4",
+    "sqlalchemy==2.0.45",
+    "tldextract>=5.3.0,<6",
+    "undetected-chromedriver==3.5.5",
+    "unidecode>=1.4.0,<2",
+    "urllib3>=2.6.2,<3",
+]
+
+[tool.uv.sources]
+readabilipy = { git = "https://github.com/dbernhard-0x7CD/ReadabiliPy.git" }
+en-core-web-md = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl" }

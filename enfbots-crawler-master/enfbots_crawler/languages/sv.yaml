@@ -1,0 +1,326 @@
+# enfbots_crawler keyword translation for language Swedish (sv)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "policy":
+  "sekretess":
+  "sekretesspolicy":
+  "personuppgiftspolicy":
+  "dataskydd":
+# popular paths: privacy policy
+popular_pp_path:
+  "personuppgiftspolicy":
+# links: terms and conditions
+terms:
+  "villkor":
+  "användarvillkor":
+  "användaravtal":
+# popular paths: terms and conditions
+popular_tc_path:
+  "om/villkor":
+  "villkor":
+# links: registration pages
+registration:
+  "skapa ett konto":
+  "skapa nytt konto":
+  "skapa konto":
+  "skapa ett nytt konto":
+  "gå med":
+  "komma igång":
+  "kom igång":
+  "registrera":
+  "registrera dig":
+  "logga in för första gången":
+  "bli kund":
+# links: login/account pages
+login:
+  "användare":
+  "användarnamn":
+  "profil":
+  "konto":
+  "underteckna":
+  "mitt konto":
+  "min profil":
+  "mitt":
+  "logga in":
+  "fyll i din E-postadress":
+  "fyll i ditt lösenord":
+  "personnummer":
+# form label: email
+mail_input:
+  "e-post":
+  "mejladress":
+  "e-postadress":
+  "fyll i din E-postadress":
+# form label: username
+user_input:
+  "användarnamn":
+  "användare":
+# form label: password
+pw_input:
+  "lösenord":
+  "fyll i ditt lösenord":
+# form label: phone number
+phone_input:
+  "telefon":
+  "telefonnummer":
+# form label: first name
+firstname_input:
+  "förnamn":
+  "namn":
+# form label: last name
+lastname_input:
+  "efternamn":
+  "familj":
+# form label: full name
+name_input:
+  "fullständiga namn":
+  "fullständigt namn":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "gatuadress":
+  "adress":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "gatunummer":
+  "nummer":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "adressrad 1":
+  "gata och nummer":
+# form label: city
+city_input:
+  "stad":
+  "postort":
+  "ort":
+# form label: zip/post code
+zip_input:
+  "postnummer":
+# form label: country
+country_input:
+  "Land":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "fullständig adress":
+  "adress":
+# form label: birth day
+birth_day_input:
+  "födelsedag":
+  "dag":
+  "födelsedatum":
+# form label: birth month
+birth_month_input:
+  "månad":
+# form label: birth year
+birth_year_input:
+  "åååå":
+  "födelseår":
+# form label: birth full date
+birth_full_input:
+  "födelse":
+  "dd-mm-åååå":
+  "åååå-mm-dd":
+  "födelsedag":
+  "födelsedatum":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "e-post":
+  "reklam":
+  "nyheter":
+  "aviseringar":
+  "senaste":
+  "uppdateringar":
+  "skicka":
+  "erbjudanden":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "integritet":
+  "användarskydd":
+  "integritetsskydd":
+  "skydd":
+  "integritetspolicy":
+  "personuppgiftspolicy":
+  "acceptera avtal":
+  "acceptera användaravtal":
+  "acceptera":
+  "jag har läst och förstått villkoren":
+  "jag accepterar [villkoren|användaravtalet]":
+  "jag samtycker":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "villkor":
+  "användaravtal":
+  "tjänst":
+  "användningsvillkor":
+  "användarvillkor":
+  "acceptera [användaravtal | användarvillkor]":
+  "bekräfta":
+  "jag samtycker":
+# button: submit/next/continue
+submit:
+  "Skicka in":
+  "bekräfta":
+  "Fortsätt":
+  "Nästa":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "bekräftelse":
+  "bekräfta":
+  "klar":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "fungerade inte":
+  "fel":
+  "ett fel har uppstått":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "Framgång":
+  "framgångsrik":
+  "Bekräftelse":
+  "bekräftad":
+  "grattis":
+  "aktiverad":
+  "aktiva":
+  "joined":
+  "prenumererade":
+  "Välkommen":
+  "tack":
+  "tack":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "fel":
+  "hittades inte":
+  "misslyckades":
+  "ogiltig":
+  "registreringen misslyckades":
+  "misslyckad":
+  "fungerade inte":
+  "fungerade inte":
+  "försök igen":
+  "harmas över":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "sv":
+  "svenska":
+  "sve":
+  "sverige":
+# links: newsletter signup
+newsletter:
+  "nyhetsbrev":
+  "prenumerera":
+  "nyheter":
+  "utskick":
+  "nyhetsutskick":
+  "prenumerationsutskick":
+  "bli prenumerant":
+# links: contact us, request help
+contact:
+  "kontakta oss":
+  "Kontakt":
+  "skicka meddelande":
+  "meddelande":
+  "be om hjälp":
+  "hjälp":
+  "kundtjänst":
+  "kundservice":
+  "support":
+  "kundsupport":
+  "kundärenden":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "verifieringskod":
+  "bekräftelsekod":
+  "aktiveringskod":
+  "registreringskod":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "kontrollera":
+  "verifiering":
+  "bekräfta":
+  "Bekräftelse":
+  "godkännande":
+  "Aktivera":
+  "aktivering":
+  "komplett":
+  "Avsluta":
+  "registrering":
+  "konto":
+  "referenser":
+  "autentisera":
+  "ett klick":
+  "ett steg":
+  "din förfrågan":
+  "Välkommen":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "kontrollera":
+  "verifiering":
+  "verifierad":
+  "bekräfta":
+  "Bekräftelse":
+  "godkännande":
+  "Aktivera":
+  "aktivering":
+  "autentisera":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "säga upp":
+  "avsluta":
+  "sluta prenumerera":
+  "[avsluta|säg upp] prenumeration":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "ange tecken":
+  "skriv tecken":
+  "tecken":
+  "utmaning":
+  "svar":
+# form label: search box
+search_input:
+  "Sök":
+  "letar efter":
+  "hitta":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "titel":
+# form input: organization/company name
+organization_input:
+  "företag":
+  "organisation":
+# form label: age
+age_input:
+  "ålder":
+

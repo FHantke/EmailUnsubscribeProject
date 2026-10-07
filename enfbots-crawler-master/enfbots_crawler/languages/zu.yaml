@@ -1,0 +1,142 @@
+# enfbots_crawler keyword translation for language Zulu (zu)
+policy:
+  "inqubomgomo yobumfihlo":
+  "ubumfihlo":
+  "imfihlo":
+terms:
+  "imigomo nemibandela":
+  "imigomo yokusebenzisa":
+  "imigomo":
+  "imibandela":
+registration:
+  "bhalisa":
+  "joyina":
+  "dala i-akhawunti":
+  "qala":
+login:
+  "ngena":
+  "ngena ngemvume":
+  "i-akhawunti yami":
+us_pn:
+  "CCPA":
+  "california privacy":
+gdpr:
+  "GDPR":
+mail_input:
+  "i-imeyili":
+  "ikheli le-imeyili":
+  "imeyili":
+user_input:
+  "igama lomsebenzisi":
+  "umsebenzisi":
+pw_input:
+  "iphasiwedi":
+  "inombolo yemfihlo":
+phone_input:
+  "ucingo":
+  "inombolo yocingo":
+  "iselula":
+firstname_input:
+  "igama":
+  "igama lokuqala":
+lastname_input:
+  "isibongo":
+name_input:
+  "igama eliphelele":
+  "amagama aphelele":
+street_input:
+  "umgwaqo":
+  "ikheli":
+street_nr_input:
+  "inombolo yomgwaqo":
+  "inombolo yendlu":
+street_full_input:
+  "ikheli lasekhaya":
+city_input:
+  "idolobha":
+zip_input:
+  "ikhodi yeposi":
+  "iposi":
+country_input:
+  "izwe":
+  "isifunda":
+full_address_input:
+  "ikheli eliphelele":
+birth_day_input:
+  "usuku":
+birth_month_input:
+  "inyanga":
+birth_year_input:
+  "unyaka":
+birth_full_input:
+  "usuku lokuzalwa":
+checkbox_email:
+  "izindaba":
+  "izaziso":
+  "okusha":
+  "thumela":
+checkbox_pp:
+  "vumelana nobumfihlo":
+  "inqubomgomo":
+checkbox_tos:
+  "vumelana nemibandela":
+  "imigomo":
+submit:
+  "thumela":
+  "qhubeka":
+  "okulandelayo":
+  "qinisekisa":
+submit_success:
+  "impumelelo":
+  "kuphumelele":
+  "kuthunyelwe":
+submit_failure:
+  "iphutha":
+  "akusebenzi":
+  "zama futhi":
+confirm_success:
+  "kuqinisekisiwe":
+  "siyakwamukela":
+  "ngiyabonga":
+confirm_failure:
+  "iphutha":
+  "akutholakalanga":
+  "okungavumelekile":
+language:
+  "isizulu":
+  "zulu":
+  "zu":
+  "zu-za":
+newsletter:
+  "iphephandaba":
+  "bhalisela":
+contact:
+  "xhumana nathi":
+  "sithinte":
+  "thumela umyalezo":
+verification_code:
+  "ikhodi yokuqinisekisa":
+  "ikhodi":
+confirmation_email:
+  "qinisekisa":
+  "ukuqinisekisa":
+  "vula":
+confirmation_link:
+  "qinisekisa":
+  "yenza kusebenze":
+unsubscribe:
+  "zibheke":
+  "khipha":
+captcha_input:
+  "bhala izinhlamvu":
+  "phendula":
+search_input:
+  "cinga":
+  "funa":
+title_input:
+  "isihloko":
+organization_input:
+  "inkampani":
+  "inhlangano":
+age_input:
+  "iminyaka":

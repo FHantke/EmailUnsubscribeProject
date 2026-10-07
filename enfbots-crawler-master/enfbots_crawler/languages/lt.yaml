@@ -1,0 +1,297 @@
+# enfbots_crawler keyword translation for language Lithuanian (lt)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "politika":
+  "privatumo politika":
+  "privatumo pranešimas":
+  "privatumo pareiškimas":
+  "privatumas":
+# popular paths: privacy policy
+popular_pp_path:
+  "privatumo-politika":
+  "privatumo-politika.html":
+# links: terms and conditions
+terms:
+  "Paslaugos sąlygos":
+  "Naudojimo sąlygos":
+  "Vartotojo sutartis":
+  "Sąlygos":
+# popular paths: terms and conditions
+popular_tc_path:
+  "dalyvio-taisykles":
+  "informacija/terms":
+# links: registration pages
+registration:
+  "sukurti paskyrą":
+  "prisijunkite pirmą kartą":
+  "užsiregistruoti":
+  "prisiregistruoti":
+  "sukurti naują paskyrą":
+  "sukurti naują'paskyra":
+  "pradėti":
+  "prisijungti":
+# links: login/account pages
+login:
+  "sesija":
+  "profilis":
+  "mano profilis":
+  "paskyra":
+  "mano sąskaita":
+  "vartotojas":
+  "pasirašyti":
+  "prisijungti":
+  "mano":
+# form label: email
+mail_input:
+  "paštas":
+  "el. paštas":
+# form label: username
+user_input:
+  "Vartotojo vardas":
+  "Vartotojo ID":
+  "Vartotojas":
+  "slapyvardis":
+  "Prisijungti":
+# form label: password
+pw_input:
+  "slaptafrazė":
+  "slaptažodis":
+# form label: phone number
+phone_input:
+  "telefonas":
+  "mobilusis":
+# form label: first name
+firstname_input:
+  "vardas":
+  "suteiktas":
+# form label: last name
+lastname_input:
+  "vardas":
+  "šeima":
+  "pavardė":
+  "šeimos vardas":
+# form label: full name
+name_input:
+  "pilnas vardas":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "kelias":
+  "gatvė":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "kelio numeris":
+  "kelio nr":
+  "gatvės numeris":
+  "gatvės nr":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "gatvė ir numeris":
+  "1 adreso eilutė":
+# form label: city
+city_input:
+  "miestas":
+# form label: zip/post code
+zip_input:
+  "Pašto kodas / ZIP":
+# form label: country
+country_input:
+  "Šalis":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "visas adresas":
+# form label: birth day
+birth_day_input:
+  "gimimo diena":
+  "gimtadienis":
+# form label: birth month
+birth_month_input:
+  "gimimo mėnuo":
+# form label: birth year
+birth_year_input:
+  "metai":
+  "gimimo metai":
+# form label: birth full date
+birth_full_input:
+  "gimimas":
+  "gimimo data":
+  "gimtadienis":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "reklama":
+  "pranešimai":
+  "paštas":
+  "siųsti":
+  "naujienos":
+  "atnaujinimai":
+  "naujausi":
+  "pasiūlymai":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "privatumo apsauga":
+  "privatumo politika":
+  "apsauga":
+  "vartotojo apsauga":
+  "privatumas":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "paslauga":
+  "vartotojo sutartis":
+  "sąlygos ir sąlygos":
+  "naudojimo sąlygos":
+  "sąlygos":
+  "vartotojo susitarimas":
+  "paslaugų teikimo sąlygos":
+# button: submit/next/continue
+submit:
+  "Pateikti":
+  "patvirtinti":
+  "Tęsti":
+  "Kitas":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "patvirtinimas":
+  "sėkmė":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "klaida":
+  "neveikė":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "sėkmė":
+  "sėkmingai":
+  "patvirtinimas":
+  "patvirtinta":
+  "sveikinu":
+  "aktyvuota":
+  "aktyvus":
+  "prisijungė":
+  "užsiprenumeravęs":
+  "Sveiki":
+  "Ačiū":
+  "dėkoju":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "klaida":
+  "nerastas":
+  "nepavyko":
+  "negaliojantis":
+  "Registracija nepavyko":
+  "nesėkmingas":
+  "nesuveikė":
+  "neveikė":
+  "Bandyk iš naujo":
+  "piktinti":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "lt":
+  "Lithuanian":
+# links: newsletter signup
+newsletter:
+  "naujienlaiškis":
+  "biuletenis":
+  "Prenumeruoti":
+  "žinios":
+# links: contact us, request help
+contact:
+  "Susisiekite su mumis":
+  "kontaktas":
+  "Siųsti žinutę":
+  "žinutę":
+  "prašyti pagalbos":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "patvirtinimo kodas":
+  "aktyvavimo kodas":
+  "registracijos kodas":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "patikrinti":
+  "patikrinimas":
+  "patvirtinti":
+  "patvirtinimas":
+  "aktyvuoti":
+  "aktyvinimas":
+  "užbaigti":
+  "baigti":
+  "Registracija":
+  "sąskaitą":
+  "kredencialus":
+  "autentifikuoti":
+  "vienu paspaudimu":
+  "vienas žingsnis":
+  "Jūsų užklausa":
+  "Sveiki":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "patikrinti":
+  "patikrinimas":
+  "patikrinta":
+  "patvirtinti":
+  "patvirtinimas":
+  "aktyvuoti":
+  "aktyvinimas":
+  "autentifikuoti":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "atsisakyti prenumeratos":
+  "pašalinti":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "įveskite simbolius":
+  "tipo simboliai":
+  "personažai":
+  "iššūkis":
+  "atsakyti":
+  "atsakymą":
+# form label: search box
+search_input:
+  "Paieška":
+  "Ieškoti":
+  "rasti":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "titulą":
+# form input: organization/company name
+organization_input:
+  "tel":
+  "telephone":
+  "telefonas":
+# form label: age
+age_input:
+  "amžiaus":
+  "senas":
+

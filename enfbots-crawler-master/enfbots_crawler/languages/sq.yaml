@@ -1,0 +1,297 @@
+# enfbots_crawler keyword translation for language Albanian (sq)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "politika":
+  "njoftimi i privatësisë":
+  "privatësia":
+  "deklarata e privatësisë":
+  "politika e privatësisë":
+# popular paths: privacy policy
+popular_pp_path:
+  "politika-e-privatesise":
+# links: terms and conditions
+terms:
+  "kushtet e shërbimit":
+  "termat dhe kushtet":
+  "kushtet":
+  "marrëveshja e përdoruesit":
+  "kushtet e përdorimit":
+# popular paths: terms and conditions
+popular_tc_path:
+  "kushtet-e-perdorimit":
+# links: registration pages
+registration:
+  "identifikohu për herë të parë":
+  "krijoni një llogari":
+  "filloni":
+  "krijoni llogari të re":
+  "bashkohuni":
+  "krijoni llogari":
+  "regjistrohuni":
+  "krijoni një të re llogari":
+# links: login/account pages
+login:
+  "llogari":
+  "profil":
+  "profili im":
+  "shenja":
+  "imja":
+  "llogaria ime":
+  "log":
+  "sesion":
+  "identifikohu":
+  "përdorues":
+# form label: email
+mail_input:
+  "postë":
+  "e-mail":
+# form label: username
+user_input:
+  "user name":
+  "pseudonimi":
+# form label: password
+pw_input:
+  "fjalëkalim":
+  "fraza e kalimit":
+# form label: phone number
+phone_input:
+  "telefoni":
+# form label: first name
+firstname_input:
+  "emri i dhënë":
+  "i dhënë":
+  "emri i parë":
+  "i pari":
+# form label: last name
+lastname_input:
+  "emër":
+  "familje":
+  "mbiemri":
+  "mbiemër":
+# form label: full name
+name_input:
+  "emri i plotë":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "rrugë":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "rruga nr":
+  "numri i rrugës":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "rruga dhe numri":
+  "rreshti i adresës 1":
+# form label: city
+city_input:
+  "qyteti":
+# form label: zip/post code
+zip_input:
+  "kodi":
+  "zip":
+  "postare":
+# form label: country
+country_input:
+  "vendi":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "adresa e plotë":
+# form label: birth day
+birth_day_input:
+  "ditëlindja":
+  "dita e lindjes":
+# form label: birth month
+birth_month_input:
+  "muaji i lindjes":
+# form label: birth year
+birth_year_input:
+  "viti i lindjes":
+# form label: birth full date
+birth_full_input:
+  "data e lindjes":
+  "dd-mm-vjec":
+  "lindja":
+  "ditëlindja":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "dërgimi":
+  "reklamimi":
+  "lajmet":
+  "ofertat":
+  "më të fundit":
+  "njoftimet":
+  "postat":
+  "azhurnimet":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "mbrojtja":
+  "privatësia":
+  "mbrojtja e privatësisë":
+  "politika e privatësisë":
+  "mbrojtja e përdoruesit":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "kushtet e shërbimit":
+  "shërbimi":
+  "marrëveshja e përdorimit":
+  "termat dhe kushtet":
+  "kushtet":
+  "marrëveshja e përdoruesit":
+  "kushtet e përdorimit":
+# button: submit/next/continue
+submit:
+  "paraqesin":
+  "konfirmoj":
+  "vazhdojnë":
+  "tjetër":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "konfirmimi":
+  "suksesi":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "gabim":
+  "nuk funksionoi":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "sukses":
+  "e suksesshme":
+  "konfirmim":
+  "konfirmuar":
+  "urime":
+  "aktivizuar":
+  "aktiv":
+  "u bashkua":
+  "i abonuar":
+  "mirë se vini":
+  "faleminderit":
+  "Faleminderit":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "gabim":
+  "nuk u gjet":
+  "dështoi":
+  "i pavlefshëm":
+  "Regjistrimi dështoi":
+  "i pasuksesshëm":
+  "nuk punoi":
+  "Nuk funksionoi":
+  "Provo përsëri":
+  "ridëndo":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "sq":
+  "Albanian":
+# links: newsletter signup
+newsletter:
+  "gazete":
+  "buletini":
+  "abonohen":
+  "nën":
+  "Lajme":
+# links: contact us, request help
+contact:
+  "na kontaktoni":
+  "kontakt":
+  "Dërgoni mesazh":
+  "mesazh":
+  "kërkoni ndihmë":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "Kodi i Verifikimit":
+  "Kodi i verifikimit":
+  "Kodi i aktivizimit":
+  "kodi i vlefshmërisë":
+  "Kodi i Regjistrimit":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "verifikuar":
+  "verifikimi":
+  "konfirmoj":
+  "konfirmim":
+  "vërtetoj":
+  "vërtetimi":
+  "aktivizoni":
+  "aktivizimi":
+  "i plotë":
+  "përfundoni":
+  "regjistrimin":
+  "llogari":
+  "kredencialet":
+  "një klikim":
+  "nje hap":
+  "Kërkesa juaj":
+  "mirëseardhje":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "verifikuar":
+  "verifikimi":
+  "konfirmoj":
+  "konfirmim":
+  "vërtetoj":
+  "vërtetimi":
+  "aktivizoni":
+  "aktivizimi":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "çregjistrohu":
+  "hiqni":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "futni karaktere":
+  "tipit karaktere":
+  "personazhet":
+  "sfidë":
+  "përgjigje":
+# form label: search box
+search_input:
+  "kërkimi":
+  "duke kërkuar":
+  "Gjej":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "titullin":
+# form input: organization/company name
+organization_input:
+  "kompania":
+  "organizimi":
+  "institucioni":
+# form label: age
+age_input:
+  "mosha":
+  "e vjetër":
+

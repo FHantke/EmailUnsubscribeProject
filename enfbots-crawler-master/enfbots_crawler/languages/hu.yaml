@@ -1,0 +1,304 @@
+# enfbots_crawler keyword translation for language Hungarian (hu)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "adatvédelmi nyilatkozat":
+  "adatvédelmi irányelvek":
+  "irányelvek":
+  "adatvédelem":
+  "adatvédelmi közlemény":
+# popular paths: privacy policy
+popular_pp_path:
+  "adatvedelem":
+  "adatvedelmi-nyilatkozat":
+  "adatvedelmi-tajekoztato":
+# links: terms and conditions
+terms:
+  "Felhasználói megállapodás":
+  "Szolgáltatási feltételek":
+  "Használati feltételek":
+  "Általános Szerződési Feltételek":
+  "Feltételek":
+  "ÁSZF":
+# popular paths: terms and conditions
+popular_tc_path:
+  "felhasznalasi-feltetelek":
+  "aszf":
+  "altalanos-szerzodesi-feltetelek":
+# links: registration pages
+registration:
+  "csatlakozás":
+  "regisztráció":
+  "kezdés":
+  "fiók létrehozása":
+  "új létrehozás fiók":
+  "új fiók létrehozása":
+  "jelentkezzen be először":
+# links: login/account pages
+login:
+  "jel":
+  "profil":
+  "saját profilom":
+  "felhasználó":
+  "munkamenet":
+  "bejelentkezés":
+  "fiók":
+  "my":
+  "belépés":
+# form label: email
+mail_input:
+  "e-mail":
+# form label: username
+user_input:
+  "felhasználónév":
+  "Felhasználói azonosító":
+  "felhasználó":
+  "becenév":
+  "Belépés":
+# form label: password
+pw_input:
+  "jelszó":
+# form label: phone number
+phone_input:
+  "telefon":
+# form label: first name
+firstname_input:
+  "keresztnév":
+  "megadott":
+# form label: last name
+lastname_input:
+  "keresztnév":
+  "családnév":
+  "vezetéknév":
+  "szipán":
+  "család":
+# form label: full name
+name_input:
+  "teljes név":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "út":
+  "utca":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "utcanév":
+  "utcaszám":
+  "útszám":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "utca és szám":
+  "1. címsor":
+# form label: city
+city_input:
+  "város":
+# form label: zip/post code
+zip_input:
+  "irányítószám":
+  "postai küldemény":
+  "kód":
+# form label: country
+country_input:
+  "ország":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "teljes cím":
+# form label: birth day
+birth_day_input:
+  "születési nap":
+  "születésnap":
+# form label: birth month
+birth_month_input:
+  "születési hónap":
+# form label: birth year
+birth_year_input:
+  "születési év":
+  "éééé":
+# form label: birth full date
+birth_full_input:
+  "születési dátum":
+  "születés":
+  "nn-hh-éééé":
+  "születésnap":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "értesítések":
+  "hirdetések":
+  "frissítések":
+  "levelek":
+  "legújabb":
+  "ajánlatok":
+  "hírek":
+  "küldés":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "védelem":
+  "felhasználói védelem":
+  "adatvédelmi irányelvek":
+  "adatvédelem":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "használati feltételek":
+  "feltételek és feltételek":
+  "szolgáltatási feltételek":
+  "feltételek":
+  "felhasználói megállapodás":
+  "szolgáltatás":
+# button: submit/next/continue
+submit:
+  "Beküldés":
+  "megerősít":
+  "folytatni":
+  "következő":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "megerősítés":
+  "siker":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "hiba":
+  "nem működött":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "siker":
+  "sikeres":
+  "megerősítés":
+  "megerősített":
+  "gratulálok":
+  "aktív":
+  "aktív":
+  "csatlakozott":
+  "feliratkozott":
+  "Üdvözöljük":
+  "köszönöm":
+  "Kösz":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "hiba":
+  "nem található":
+  "nem sikerült":
+  "érvénytelen":
+  "sikertelen regisztráció":
+  "sikertelen":
+  "nem müködik":
+  "nem működött":
+  "próbáld újra":
+  "neheztel":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "hu":
+  "Hungarian":
+# links: newsletter signup
+newsletter:
+  "hírlevél":
+  "közlöny":
+  "Iratkozz fel":
+  "alatti":
+  "hírek":
+# links: contact us, request help
+contact:
+  "lépjen kapcsolatba velünk":
+  "kapcsolatba lépni":
+  "üzenet küldése":
+  "üzenet":
+  "kérjen segítséget":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "ellenőrző kód":
+  "megerősítő kód":
+  "aktiváló kód":
+  "érvényesítési kódot":
+  "regisztrációs kód":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "ellenőrizni":
+  "igazolás":
+  "megerősít":
+  "megerősítés":
+  "érvényesít":
+  "érvényesítés":
+  "aktiválja":
+  "aktiválás":
+  "teljes":
+  "Befejez":
+  "bejegyzés":
+  "fiókot":
+  "hitelesítő adatok":
+  "hitelesíteni":
+  "egy kattintás":
+  "egy lépés":
+  "a kérése":
+  "Üdvözöljük":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "ellenőrizni":
+  "igazolás":
+  "ellenőrizve":
+  "megerősít":
+  "megerősítés":
+  "érvényesít":
+  "érvényesítés":
+  "aktiválja":
+  "aktiválás":
+  "hitelesíteni":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "leiratkozás":
+  "távolítsa el":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "karaktereket írjon be":
+  "típusú karaktereket":
+  "karakterek":
+  "kihívás":
+  "válasz":
+# form label: search box
+search_input:
+  "keresés":
+  "keresni":
+  "megtalálja":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "cím":
+# form input: organization/company name
+organization_input:
+  "vállalat":
+  "szervezet":
+  "intézmény":
+# form label: age
+age_input:
+  "kor":
+  "régi":
+

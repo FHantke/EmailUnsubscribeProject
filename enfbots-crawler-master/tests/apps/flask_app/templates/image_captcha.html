@@ -1,0 +1,24 @@
+<html>
+
+<head>
+    <title>Image demo: Simple page</title>
+</head>
+
+<body>
+    <form action="/website/submit/image_captcha" method="POST">
+        <div class="g-recaptcha" data-sitekey="{{ config.site_key }}"></div>
+        <div>
+            <label>Username</label>
+            <input type="text" name="username" />
+        </div>
+        <div>
+            <label>Enter the characters from the image below</label>
+            <img src="{{ url_for('static', filename='captcha.png') }}">
+            <input type="text" name="captcha" />
+        </div>
+        <br />
+        <input type="submit" value="Submit">
+    </form>
+</body>
+
+</html>

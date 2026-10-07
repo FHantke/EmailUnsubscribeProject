@@ -1,0 +1,297 @@
+# enfbots_crawler keyword translation for language Basque (eu)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "politika":
+  "pribatutasun adierazpena":
+  "pribatutasuna":
+  "pribatutasun politika":
+  "pribatutasun oharra":
+# links: terms and conditions
+terms:
+  "zerbitzu baldintzak":
+  "baldintzak":
+  "erabiltzailearen akordioa":
+  "erabilera baldintzak":
+# links: registration pages
+registration:
+  "batu":
+  "sortu berria kontua":
+  "lehenengo aldiz hasi saioa":
+  "hasi":
+  "sortu kontu berria":
+  "sortu kontua":
+  "izena eman":
+  "erregistratu":
+# links: login/account pages
+login:
+  "profila":
+  "saioa hasi":
+  "kontua":
+  "nire kontua":
+  "saioa":
+  "sinatu":
+  "erabiltzailea":
+  "nire":
+  "nire profila":
+# form label: email
+mail_input:
+  "posta":
+  "posta elektronikoa":
+# form label: username
+user_input:
+  "erabiltzaile-izena":
+  "erabiltzailearen ID":
+  "erabiltzailea":
+  "ezizena":
+  "saioa hasi":
+# form label: password
+pw_input:
+  "pasahitza":
+# form label: phone number
+phone_input:
+  "telefonoa":
+# form label: first name
+firstname_input:
+  "izena":
+  "lehenengoa":
+  "emandako":
+  "fizena":
+# form label: last name
+lastname_input:
+  "izena":
+  "familia izena":
+  "l izena":
+  "familia":
+  "abizena":
+# form label: full name
+name_input:
+  "izen osoa":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "kalea":
+  "errepidea":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "errepide zenbakia":
+  "kalea nr":
+  "kale zenbakia":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "helbide 1 errenkada":
+  "kalea eta zenbakia":
+# form label: city
+city_input:
+  "hiria":
+# form label: zip/post code
+zip_input:
+  "posta":
+  "kodea":
+  "zip":
+# form label: country
+country_input:
+  "herrialdea":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "helbide osoa":
+# form label: birth day
+birth_day_input:
+  "jaiotze eguna":
+  "urtebetetzea":
+# form label: birth month
+birth_month_input:
+  "jaiotze hilabetea":
+  "jaiotza hilabetea":
+# form label: birth year
+birth_year_input:
+  "jaiotze urtea":
+# form label: birth full date
+birth_full_input:
+  "jj-mm-aaaa":
+  "jaiotze data":
+  "jaiotza":
+  "urtebetetzea":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "posta":
+  "eguneratzeak":
+  "bidali":
+  "publizitatea":
+  "azkenak":
+  "eskaintzak":
+  "albisteak":
+  "jakinarazpenak":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "erabiltzailearen babesa":
+  "pribatutasuna":
+  "pribatutasun politika":
+  "pribatutasun babesa":
+  "babesa":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "zerbitzu baldintzak":
+  "erabiltzailearen akordioa":
+  "baldintzak":
+  "zerbitzua":
+  "erabilera baldintzak":
+  "erabiltzailearen adostasuna":
+# button: submit/next/continue
+submit:
+  "aurkeztu":
+  "berretsi":
+  "jarraitu":
+  "hurrengoa":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "berrespena":
+  "arrakasta":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "ez du funtzionatu":
+  "errorea":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "arrakasta":
+  "arrakastatsua":
+  "baiezpena":
+  "baieztatuta":
+  "zorionak":
+  "aktibatuta":
+  "aktibo":
+  "elkartu":
+  "harpidetuta":
+  "ongi etorri":
+  "eskerrik asko":
+  "eskerrik asko":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "errore":
+  "ez da aurkitu":
+  "huts":
+  "baliogabea":
+  "erregistratzeak huts egin du":
+  "arrakastatsua":
+  "ez du funtzionatu":
+  "ez du funtzionatu":
+  "saiatu berriro":
+  "asumindu":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "eu":
+  "Basque":
+# links: newsletter signup
+newsletter:
+  "buletina":
+  "harpidetu":
+  "azpi":
+  "albisteak":
+# links: contact us, request help
+contact:
+  "jarri gurekin harremanetan":
+  "kontaktua":
+  "mezua bidali":
+  "mezua":
+  "laguntza eskatu":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "egiaztapen-kodea":
+  "baieztapen kodea":
+  "aktibazio kodea":
+  "baliozkotze kodea":
+  "erregistro-kodea":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "egiaztatu":
+  "egiaztapena":
+  "berretsi":
+  "berrespena":
+  "balioztatu":
+  "balioztatzea":
+  "aktibatu":
+  "aktibazioa":
+  "osatu":
+  "amaitu":
+  "izen ematea":
+  "kontua":
+  "kredentzialak":
+  "autentifikatu":
+  "klik bat":
+  "urrats bat":
+  "zure eskaera":
+  "ongi etorria":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "egiaztatu":
+  "egiaztapena":
+  "egiaztatuta":
+  "berretsi":
+  "berrespena":
+  "balioztatu":
+  "balioztatzea":
+  "aktibatu":
+  "aktibazioa":
+  "autentifikatu":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "kendu harpidetza":
+  "kendu":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "sartu karaktereak":
+  "idatzi karaktereak":
+  "pertsonaiak":
+  "erronka":
+  "erantzun":
+  "erantzuna":
+# form label: search box
+search_input:
+  "bilatu":
+  "bilatzen":
+  "aurkitu":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "Izenburua":
+# form input: organization/company name
+organization_input:
+  "konpainia":
+  "antolakuntza":
+  "erakunde":
+# form label: age
+age_input:
+  "adina":
+  "zaharra":
+

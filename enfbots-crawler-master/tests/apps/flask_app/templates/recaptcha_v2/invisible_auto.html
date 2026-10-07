@@ -1,0 +1,20 @@
+<html>
+
+<head>
+    <title>reCAPTCHA demo: Simple page</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+
+<body>
+    <form action="/website/submit/recaptcha_v2" method="POST">
+        <div class="g-recaptcha" data-size="invisible" data-sitekey="{{ config.site_key_recaptcha_v2 }}"></div>
+        <div>
+            <label>Username</label>
+            <input type="text" name="username" />
+        </div>
+        <br />
+        <input type="submit" value="Submit">
+    </form>
+</body>
+
+</html>

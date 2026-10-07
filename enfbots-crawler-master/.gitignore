@@ -1,0 +1,63 @@
+# Ignore IDE configuration
+/.idea
+/.vscode
+/scratch
+/stubs
+
+# Python runtime
+**/__pycache__
+*.egg-info
+**/.pytest_cache
+**/.mypy_cache
+**/.ipynb_checkpoints
+.python-version
+/venv
+/.venv
+/dist
+
+# Crawler output
+/output
+/pptc_output
+/enfbots_output
+/crawl.sqlite
+/enfbots_crawler.log
+/geckodriver.log
+
+/docker-compose/simple-example/database_data/
+/docker-compose/simple-example/models/
+
+# Test outputs
+/htmlcov
+/.coverage
+/report_enfbots.xml
+/report_pptc.xml
+/report.xml
+/coverage.xml
+/tests/test_crawl.sqlite
+/tests/enfbots_crawler/test_crawl.sqlite
+/tests/pptc_crawler/test_crawl.sqlite
+
+# Resources
+/notebooks
+    # Used name for analysis by Luka
+/analysis
+    # used name by analysis Karel, Jakob
+/resources
+
+**/node_modules
+
+.env
+*-env
+/data/
+
+# Data files
+crux_all_*.csv
+crux_debug.csv
+trainingdata/*
+trainingdata_*/
+
+chrome/
+chromedriver/
+
+# Secret files
+gcredentials-enfbots.json

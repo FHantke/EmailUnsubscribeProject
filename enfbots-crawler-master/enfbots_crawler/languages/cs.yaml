@@ -1,0 +1,305 @@
+# enfbots_crawler keyword translation for language Czech (cs)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "[oznámení o ochraně|ponaučení o zpracování|prohlášení o ochraně|zásady ochrany|ochrana|zpracování] osobních údajů":
+# popular paths: privacy policy
+popular_pp_path:
+  "o-nas":
+  "o-spolecnosti":
+  "prohlaseni-o-pristupnosti":
+# links: terms and conditions
+terms:
+  "podmínky použití":
+  "smlouva uživatelem":
+  "podmínky služby":
+  "Obchodní podmínky":
+# popular paths: terms and conditions
+popular_tc_path:
+  "obchodni-podminky":
+  "podminky":
+# links: registration pages
+registration:
+  "[vytvořit|založit] účet":
+  "zaregistrovat se":
+  "registrace":
+  "registruj se":
+  "připojit se":
+  "zapojit se":
+  "zapoj se":
+  "poprvé se přihlásit":
+  "první přihlášení":
+  "začít": 0.5
+# links: login/account pages
+login:
+  "přihlásit se":
+  "můj [profil|účet|konto]":
+  "přihlášení":
+  "přihlásit":
+  "vstoupit": 0.7
+  "profil": 0.7
+  "účet": 0.7
+  "uživatel": 0.7
+  "relace": 0.5
+  "konto": 0.5
+  "sezení": 0.5
+# form label: email
+mail_input:
+  "e-mailová adresa":
+  "e-mail":
+  "elektronická adresa":
+# form label: username
+user_input:
+  "uživatelské jméno":
+  "jméno [uživatele|účtu]":
+  "uživatel":
+  "přezdívka":
+  "konto": 0.7
+# form label: password
+pw_input:
+  "heslo":
+# form label: phone number
+phone_input:
+  "[telefonní|mobilní] číslo":
+  "telefon":
+  "tel. č.":
+# form label: first name
+firstname_input:
+  "křestní jméno":
+  "jméno":
+# form label: last name
+lastname_input:
+  "příjmení":
+  "rodné jméno":
+# form label: full name
+name_input:
+  "celé jméno":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "ulice": 2
+  "cesta": 0.3
+# form label: street number (e.g. 101)
+street_nr_input:
+  "popisné číslo":
+  "číslo popisné":
+  "č.p.":
+  "p.č.": 0.7
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "ulice [popisné číslo|číslo popisné|č.p.|p.č.]":
+  "ulice včetně [popisného čísla|čísla popisného|č.p.|p.č.]":
+  "první řádek adresy":
+# form label: city
+city_input:
+  "město":
+  "obec":
+# form label: zip/post code
+zip_input:
+  "PSČ":
+  "poštovní směřovací číslo":
+  "P.S.Č.":
+# form label: country
+country_input:
+  "země":
+  "stát":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "celá adresa":
+  "úplná adresa":
+  "kompletní adresa":
+# form label: birth day
+birth_day_input:
+  "den narození":
+# form label: birth month
+birth_month_input:
+  "měsíc narození":
+# form label: birth year
+birth_year_input:
+  "rok narození":
+  "rrrr":
+# form label: birth full date
+birth_full_input:
+  "datum narození":
+  "dd-mm-rrrr":
+  "narozen": 0.3
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "odebírat [novinky|newsletter|aktualizace]":
+  "zasílání [newsletteru|marketingových materiálů|marketingových sdělení]":
+  "reklamní [sdělení|oznámení]":
+  "nejnovější [nabídky|zprávy]":
+  "nabídky": 0.3
+  "novinky": 0.3
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "ochrana [uživatelů|soukromí]":
+  "[souhlas s|souhlasím se] [zpracování osobních údajů|zásady ochrany soukromí]": 2
+  "souhlasím se zásadami":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "[souhlas|souhlasím s] podmínkami [použití|služby]": 2
+  "uživatelská [smlouva|dohoda]":
+  "[podmínky|podmínkami] [použití|užití|služby]":
+# button: submit/next/continue
+submit:
+  "registrovat se":
+  "zaregistrovat":
+  "vytvořit účet":
+  "odeslat":
+  "pokračovat":
+  "uložit": 0.5
+  "další": 0.5
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "registrace byla úspěšná":
+  "úspěšně zaregistrován":
+  "úspěch":
+  "potvrzení":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "nastala chyba":
+  "registrace nemůže být dokončena":
+  "chybějící pole":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "úspěch":
+  "úspěšný":
+  "potvrzení":
+  "potvrzeno":
+  "blahopřání":
+  "aktivováno":
+  "aktivní":
+  "připojeno":
+  "přihlášeno":
+  "Vítejte":
+  "Děkuji":
+  "dík":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "chyba":
+  "nenalezeno":
+  "nezdařilo se":
+  "neplatný":
+  "registrace se nezdařila":
+  "neúspěšný":
+  "nefunguje":
+  "nefungovalo":
+  "Zkus to znovu":
+  "nesouhlasit":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "cs":
+  "Czech":
+  "Čeština":
+  "Česky":
+# links: newsletter signup
+newsletter:
+  "přihlášení newsletteru":
+  "odebírání [zpráv|novinek]":
+  "novinky": 0.3
+  "zprávy": 0.3
+  "odebírej": 0.3
+  "dostávat newslettery":
+# links: contact us, request help
+contact:
+  "kontaktujte nás":
+  "požádat o pomoc":
+  "pošlete zprávu":
+  "kontakt": 0.5
+  "zpráva": 0.3
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "[verifikační|potvrzující|aktivační|registrační|jednorázový] [kód|heslo]":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "ověřit":
+  "ověření":
+  "potvrzení":
+  "potvrdit":
+  "aktivovat":
+  "aktivace":
+  "dokončit":
+  "dokončení":
+  "autentizace":
+  "jeden [klik|krok]":
+  "registrace":
+  "účet":
+  "údaje":
+  "vítejte":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "ověřit":
+  "ověření":
+  "potvrzení":
+  "potvrdit":
+  "aktivovat":
+  "aktivace":
+  "dokončit":
+  "dokončení":
+  "autentizace":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "odhlásit":
+  "zrušit odběr":
+  "neodebírat":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "nejsem robot":
+  "opište [kód|obrázek]":
+  "ochrana před [roboty|spamem]":
+  "ochrana proti [robotům|spamu]":
+  "napište": 0.5
+# form label: search box
+search_input:
+  "hledat":
+  "vyhledat":
+  "vyhledávání":
+  "co hledáte":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "vysokoškolský titul":
+  "titul":
+# form input: organization/company name
+organization_input:
+  "společnost":
+  "organizace":
+  "instituce":
+# form label: age
+age_input:
+  "stáří":
+  "věk":
+  "kolik let":
+

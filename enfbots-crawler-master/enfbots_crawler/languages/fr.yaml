@@ -1,0 +1,327 @@
+# enfbots_crawler keyword translation for language French (fr)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "politique":
+  "déclaration de confidentialité":
+  "politique de confidentialité":
+  "confidentialité":
+  "politique de protection":
+  "protection des données":
+  "données personnelles":
+# popular paths: privacy policy
+popular_pp_path:
+  "politique-de-confidentialite":
+  "politique":
+# links: terms and conditions
+terms:
+  "termes et conditions":
+  "conditions":
+  "conditions générales":
+  "conditions générales de vente":
+  "conditions générales d'utilisation":
+  "CGU":
+# popular paths: terms and conditions
+popular_tc_path:
+  "cgu":
+  "conditions-generales":
+# links: registration pages
+registration:
+  "s'inscrire":
+  "rejoindre":
+  "commencer":
+  "créer un compte":
+  "nouveau compte":
+  "s'abonner": 2
+  "abonnez":
+# links: login/account pages
+login:
+  "compte":
+  "profil":
+  "utilisateur":
+  "mon":
+  "mon compte":
+  "connexion":
+  "se connecter": 2
+# form label: email
+mail_input:
+  "e-mail":
+  "adresse mail":
+  "adresse":
+# form label: username
+user_input:
+  "nom":
+  "utilisateur":
+# form label: password
+pw_input:
+  "mot de passe":
+# form label: phone number
+phone_input:
+  "téléphone":
+  "numéro":
+# form label: first name
+firstname_input:
+  "prénom":
+# form label: last name
+lastname_input:
+  "nom de famille":
+  "famille":
+  "nom":
+# form label: full name
+name_input:
+  "nom complet":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "rue":
+  "route":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "numéro de route":
+  "numéro de rue":
+  "numéro":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "ligne d'adresse 1":
+  "rue et numéro":
+# form label: city
+city_input:
+  "ville":
+# form label: zip/post code
+zip_input:
+  "code postal":
+  "code":
+  "zip":
+# form label: country
+country_input:
+  "pays":
+  "État":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "adresse complète":
+# form label: birth day
+birth_day_input:
+  "jour de naissance":
+  "jour":
+  "anniversaire":
+  "jj":
+# form label: birth month
+birth_month_input:
+  "mois de naissance":
+  "mois":
+# form label: birth year
+birth_year_input:
+  "aaaa":
+  "année de naissance":
+  "année":
+# form label: birth full date
+birth_full_input:
+  "date de naissance":
+  "anniversaire":
+  "naissance":
+  "jj-mm-aaaa":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "actualités":
+  "mises à jour":
+  "dernières":
+  "offres":
+  "envoyer":
+  "publicité":
+  "nouvelles":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "vie privée":
+  "politique de confidentialité":
+  "protection de la vie privée":
+  "protection de l'utilisateur":
+  "protection":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "termes":
+  "termes et conditions":
+  "conditions":
+  "service":
+# button: submit/next/continue
+submit:
+  "confirmer":
+  "continuer":
+  "suivant":
+  "valider":
+  "ok":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "succès":
+  "confirmé":
+  "réussi":
+  "envoyé":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "n'a pas fonctionné":
+  "erreur":
+  "impossible":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "Succès":
+  "couronné de succès":
+  "confirmation":
+  "confirmé":
+  "félicitation":
+  "activé":
+  "actif":
+  "rejoint":
+  "abonné":
+  "accueillir":
+  "Merci":
+  "Merci":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "Erreur":
+  "pas trouvé":
+  "manqué":
+  "non valide":
+  "échec de l'enregistrement":
+  "infructueux":
+  "n'a pas marché":
+  "n'a pas fonctionné":
+  "réessayer":
+  "ressentir":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "fr":
+  "fre":
+  "french":
+  "français":
+  "fr-be":
+  "fr-ch":
+  "fr-lu":
+  "fr-fr":
+  "fr-ca":
+# links: newsletter signup
+newsletter:
+  "s'abonner":
+  "nouvelles":
+  "lettre":
+  "lettre d'information":
+  "informations":
+# links: contact us, request help
+contact:
+  "nous contacter":
+  "contact":
+  "demander de l'aide":
+  "besoin d'aide":
+  "formulaire de contact":
+  "demander":
+  "envoyer un message":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "code de vérification":
+  "code de confirmation":
+  "code d'activation":
+  "code de validation":
+  "code d'enregistrement":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "vérifier":
+  "vérifie":
+  "vérifiez":
+  "vérification":
+  "confirmer":
+  "confirme":
+  "confirmez":
+  "valide":
+  "valider":
+  "validez":
+  "active":
+  "activer":
+  "activez":
+  "authentifie":
+  "authentifier":
+  "authentifiez":
+  "authentification":
+  "code": 0.5
+  "e-mail": 0.5
+# links: confirm/verify/activate this account
+confirmation_link:
+  "vérifier":
+  "vérifie":
+  "vérifiez":
+  "vérification":
+  "confirmer":
+  "confirme":
+  "confirmez":
+  "valide":
+  "valider":
+  "validez":
+  "active":
+  "activer":
+  "activez":
+  "authentifie":
+  "authentifier":
+  "authentifiez":
+  "authentification":
+  "code": 0.5
+  "lien": 0.5
+  "e-mail": 0.5
+# links: unsubscribe from a newletter
+unsubscribe:
+  "désabonner":
+  "désabonnez":
+  "désabonnement":
+  "supprimez":
+  "supprimer":
+  "plus recevoir":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "vérification":
+  "saisir":
+  "caractères":
+# form label: search box
+search_input:
+  "chercher":
+  "recherche":
+  "trouver":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "titre":
+# form input: organization/company name
+organization_input:
+  "entreprise":
+  "organisation":
+  "société":
+# form label: age
+age_input:
+  "âge":
+

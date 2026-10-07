@@ -1,0 +1,297 @@
+# enfbots_crawler keyword translation for language Estonian (et)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "privaatsusavaldus":
+  "privaatsus":
+  "privaatsusteatis":
+  "privaatsuseeskirjad":
+  "eeskirjad":
+# links: terms and conditions
+terms:
+  "teenusetingimused":
+  "tingimused ja tingimused":
+  "kasutajaleping":
+  "tingimused":
+  "kasutustingimused":
+# popular paths: terms and conditions
+popular_tc_path:
+  "privaatsustingimused":
+  "tingimused":
+# links: registration pages
+registration:
+  "uue loomine'konto":
+  "registreerimine":
+  "liitumine":
+  "alustamine":
+  "uue konto loomine":
+  "logige sisse esimest korda":
+  "konto loomine":
+  "registreerumine":
+# links: login/account pages
+login:
+  "Konto":
+  "märk":
+  "Kasutaja":
+  "minu konto":
+  "Logi sisse":
+  "minu":
+  "Minu profiil":
+  "Profiil":
+  "Seanss":
+# form label: email
+mail_input:
+  "e-post":
+  "post":
+# form label: username
+user_input:
+  "kasutajanimi":
+  "kasutaja":
+  "kasutajatunnus":
+  "sisselogimine":
+  "hüüdnimi":
+# form label: password
+pw_input:
+  "parool":
+  "paroolifraas":
+# form label: phone number
+phone_input:
+  "telefon":
+# form label: first name
+firstname_input:
+  "antud":
+  "eesnimi":
+# form label: last name
+lastname_input:
+  "perekonnanimi":
+  "perekond":
+# form label: full name
+name_input:
+  "täisnimi":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "tänav":
+  "tee":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "tänava nr":
+  "tee number":
+  "tänava number":
+  "tee nr":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "tänav ja number":
+  "aadressirida 1":
+# form label: city
+city_input:
+  "linn":
+# form label: zip/post code
+zip_input:
+  "post":
+  "kood":
+  "postiindeks":
+# form label: country
+country_input:
+  "riik":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "täielik aadress":
+# form label: birth day
+birth_day_input:
+  "sünnipäev":
+# form label: birth month
+birth_month_input:
+  "sünnikuu":
+# form label: birth year
+birth_year_input:
+  "aaaa":
+  "sünniaasta":
+# form label: birth full date
+birth_full_input:
+  "sünd":
+  "sünnipäev":
+  "pp-kk-aaaa":
+  "sünnikuupäev":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "saatmine":
+  "uusimad":
+  "pakkumised":
+  "värskendused":
+  "teatised":
+  "reklaam":
+  "uudised":
+  "post":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "kaitse":
+  "kasutajate kaitse":
+  "privaatsuse kaitse":
+  "privaatsus":
+  "privaatsuseeskirjad":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "teenus":
+  "tingimused ja tingimused":
+  "teenuse tingimused":
+  "kasutajaleping":
+  "tingimused":
+  "kasutustingimused":
+# button: submit/next/continue
+submit:
+  "Esita":
+  "kinnitada":
+  "jätka":
+  "järgmiseks":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "edu":
+  "kinnitus":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "ei töötanud":
+  "viga":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "edu":
+  "edukas":
+  "kinnitamine":
+  "kinnitatud":
+  "Õnnitlused":
+  "aktiveeritud":
+  "aktiivne":
+  "liitunud":
+  "tellitud":
+  "Tere tulemast":
+  "aitäh":
+  "aitäh":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "viga":
+  "ei leitud":
+  "ebaõnnestus":
+  "kehtetu":
+  "Registreerimine ebaõnnestus":
+  "ebaõnnestunud":
+  "ei töötanud":
+  "ei töötanud":
+  "proovi uuesti":
+  "nördida":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "et":
+  "Estonian":
+# links: newsletter signup
+newsletter:
+  "uudiskiri":
+  "bülletään":
+  "tellida":
+  "alam":
+  "uudised":
+# links: contact us, request help
+contact:
+  "võta meiega ühendust":
+  "kontakti":
+  "saada sõnum":
+  "sõnum":
+  "palu abi":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "kinnituskood":
+  "kinnitus kood":
+  "Aktiveerimis kood":
+  "valideerimis kood":
+  "registreerimiskood":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "kontrollida":
+  "kontrollimine":
+  "kinnitada":
+  "kinnitamine":
+  "valideerimine":
+  "aktiveerida":
+  "aktiveerimine":
+  "täielik":
+  "lõpetama":
+  "registreerimine":
+  "konto":
+  "volikirjad":
+  "autentida":
+  "üks klõps":
+  "üks samm":
+  "teie taotlus":
+  "Tere tulemast":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "kontrollida":
+  "kontrollimine":
+  "kontrollitud":
+  "kinnitada":
+  "kinnitamine":
+  "valideerimine":
+  "aktiveerida":
+  "aktiveerimine":
+  "autentida":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "tühistada tellimus":
+  "eemaldada":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "sisestage tähemärgid":
+  "tüüpi tähemärke":
+  "tegelased":
+  "väljakutse":
+  "vastama":
+  "vastuseks":
+# form label: search box
+search_input:
+  "otsing":
+  "Otsin":
+  "leida":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "pealkiri":
+# form input: organization/company name
+organization_input:
+  "ettevõte":
+  "organisatsioon":
+  "institutsioon":
+# form label: age
+age_input:
+  "vanus":
+  "vana":
+

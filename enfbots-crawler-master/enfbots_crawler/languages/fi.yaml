@@ -1,0 +1,294 @@
+# enfbots_crawler keyword translation for language Finnish (fi)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "tietosuojakäytäntö":
+  "tietosuojailmoitus":
+  "käytäntö":
+  "tietosuojalausunto":
+  "tietosuoja":
+# popular paths: privacy policy
+popular_pp_path:
+  "fi/tietosuoja-ja-evastekaytannot":
+  "tietosuoja":
+# links: terms and conditions
+terms:
+  "palveluehdot":
+  "ehdot":
+  "käyttöoikeussopimus":
+  "käyttöehdot":
+# popular paths: terms and conditions
+popular_tc_path:
+  "kayttoehdot":
+  "asiakastuki/yleiset/kayttoehdot":
+# links: registration pages
+registration:
+  "kirjaudu sisään ensimmäisen kerran":
+  "liity":
+  "luo tili":
+  "luo uusi tili":
+  "luo uusi'tili":
+  "aloita":
+  "rekisteröityminen":
+  "rekisteröidy":
+# links: login/account pages
+login:
+  "käyttäjä":
+  "kirjaudu sisään":
+  "merkki":
+  "minun":
+  "istunto":
+  "tilini":
+  "tili":
+  "profiilini":
+  "kirjaudu":
+  "profiili":
+# form label: email
+mail_input:
+  "sähköposti":
+  "posti":
+# form label: username
+user_input:
+  "käyttäjä":
+  "sisäänkirjautuminen":
+  "käyttäjätunnus":
+  "käyttäjänimi":
+  "lempinimi":
+# form label: password
+pw_input:
+  "salasana":
+# form label: phone number
+phone_input:
+  "puh":
+  "puhelin":
+# form label: first name
+firstname_input:
+  "etu":
+  "annettu":
+  "etunimi":
+# form label: last name
+lastname_input:
+  "perhe":
+  "sukunimi":
+# form label: full name
+name_input:
+  "koko nimi":
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "katu":
+  "tie":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "kadun numero":
+  "tien numero":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "katu ja numero":
+  "osoiterivi 1":
+# form label: city
+city_input:
+  "kaupunki":
+# form label: zip/post code
+zip_input:
+  "koodi":
+  "posti":
+  "postinumero":
+# form label: country
+country_input:
+  "maa":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "täydellinen osoite":
+# form label: birth day
+birth_day_input:
+  "syntymäpäivä":
+# form label: birth month
+birth_month_input:
+  "syntymäkuukausi":
+# form label: birth year
+birth_year_input:
+  "vvvv":
+  "syntymävuosi":
+# form label: birth full date
+birth_full_input:
+  "syntymäpäivä":
+  "pp-kk-vvvv":
+  "syntymä":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "tarjoukset":
+  "viimeisin":
+  "päivitykset":
+  "ilmoitukset":
+  "posti":
+  "uutiset":
+  "mainonta":
+  "lähetä":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "tietosuojakäytäntö":
+  "yksityisyyden suoja":
+  "käyttäjän suojaus":
+  "suojaus":
+  "yksityisyys":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "ehdot":
+  "käyttöehdot":
+  "palvelu":
+  "palvelun ehdot":
+  "ehdot ja ehdot":
+  "käyttäjän sopimus":
+# button: submit/next/continue
+submit:
+  "Lähetä":
+  "vahvistaa":
+  "jatkaa":
+  "Seuraava":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "vahvistus":
+  "menestys":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "virhe":
+  "ei toimi":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "menestys":
+  "onnistunut":
+  "vahvistus":
+  "vahvistettu":
+  "onnittelut":
+  "aktivoitu":
+  "aktiivinen":
+  "liittyi":
+  "tilattu":
+  "Tervetuloa":
+  "Kiitos":
+  "Kiitos":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "virhe":
+  "ei löydetty":
+  "epäonnistui":
+  "virheellinen":
+  "Rekisteröityminen epäonnistui":
+  "epäonnistuneita":
+  "ei toiminut":
+  "ei toiminut":
+  "yritä uudelleen":
+  "paheksua":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "fi":
+  "Finnish":
+# links: newsletter signup
+newsletter:
+  "uutiskirje":
+  "tiedote":
+  "tilata":
+  "uutiset":
+# links: contact us, request help
+contact:
+  "ota meihin yhteyttä":
+  "ottaa yhteyttä":
+  "Lähetä viesti":
+  "viesti":
+  "pyytää apua":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "vahvistuskoodi":
+  "aktivointikoodi":
+  "Vahvistuskoodi":
+  "rekisteröintikoodi":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "vahvistaa":
+  "todentaminen":
+  "vahvistus":
+  "validointi":
+  "aktivoida":
+  "aktivointi":
+  "saattaa loppuun":
+  "viedä loppuun":
+  "rekisteröinti":
+  "tili":
+  "valtakirjat":
+  "todentaa":
+  "yksi klikkaus":
+  "yksi askel":
+  "sinun pyyntösi":
+  "Tervetuloa":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "vahvistaa":
+  "todentaminen":
+  "vahvistettu":
+  "vahvistus":
+  "validointi":
+  "aktivoida":
+  "aktivointi":
+  "todentaa":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "Lopeta tilaus":
+  "Poista":
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "syötä merkkejä":
+  "tyyppisiä merkkejä":
+  "hahmoja":
+  "haaste":
+  "vastaus":
+# form label: search box
+search_input:
+  "Hae":
+  "etsii":
+  "löytö":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "otsikko":
+# form input: organization/company name
+organization_input:
+  "yhtiö":
+  "organisaatio":
+  "instituutio":
+# form label: age
+age_input:
+  "ikä":
+  "vanha":
+

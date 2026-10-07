@@ -1,0 +1,26 @@
+<html>
+<head>
+    <title>reCAPTCHA demo: Simple page</title>
+    <script type="text/javascript">
+        var onloadCallback = function () {
+            grecaptcha.render('render-here', {
+                'sitekey': '{{ config.site_key_recaptcha_v2 }}',
+                size: "invisible"
+            });
+        };
+    </script>
+    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
+</head>
+<body>
+<form action="/submit/recaptcha_v2" method="POST">
+    <div id="render-here">
+    </div>
+    <div>
+        <label>Username</label>
+        <input type="text" name="username"/>
+    </div>
+    <br/>
+    <input type="submit" value="Submit">
+</form>
+</body>
+</html>

@@ -1,0 +1,324 @@
+# enfbots_crawler keyword translation for language Dutch (nl)
+#
+# The keywords/phrases in this file will be used to find and classify various elements of a website in order to help a robot
+# navigate websites and automatically fill in forms.
+#
+# Helpful tips:
+#  * Please do not blindly translate from english, what we are interested in are the actual words/phrases
+#    used on websites in your language, so if you have time please check a few example websites first 
+#  * Each category should contain both phrases or single words that match its purpose specified in the latter comments.
+#  * Each category comes with it own description with type and supposed value. Try to provide as many possible phrases one could
+#    use to describe the thing the crawler is looking for.
+#  * Do not worry about the conjugation of the words, the crawler should be able to adapt to any possible conjugation, provide just the most common one.
+#  * If a specific important word can appear both as a verb and a noun try to provide both (e.g. registration, register)
+#  * If the use of an english word is common in your language you do not have to provide it
+#  * Check the english keyword file if you need inspiration for a certain category
+#  * lower/upper case does not matter
+#  * accent marks don't matter (e.g. ä, ö, š, ž,...) but you can use them 
+#  * Optionally, if you find some keywords more important compared to others, you can change the importance (weight) of
+#    the keywords by a multiplier. So "create account": 1.5 means this keywords is 50% better indicator of registration
+#    than other words. Do not worry about too much, even English uses these weight very sparsly. 
+# 
+# Further descriptions to our comment above each keyword type:
+#  * form label - when filling in a form on a webpage (like registration) these are the text associated to input fields
+#    (e.g., *Username:* [ input field ]). These are usually in HTML tag <label>.
+#  * checkbox label - similarly to form label, this would be the label of a form checkbox
+#  * button - a text on a button, which provides a given functionality
+#  * links - the text you expect to find on a link to the page of a certain type (e.g., Read our _privacy policy_)
+#
+# SPECIAL FORMATTING: if multiple phrases contain the same word and ordering you can use the following syntax
+# instead of "privacy policy" and "privacy statement" use "privacy [policy|statement]"
+# any number of words can be enclosed in the square brackets and delimited by |
+#
+# THANK YOU!
+# links: privacy policy
+policy:
+  "privacyverklaring":
+  "beleid":
+  "privacybeleid":
+  "privacy":
+  "privacypagina":
+  "cookieverklaring":
+# popular paths: privacy policy
+popular_pp_path:
+  "privacy-statement":
+  "privacyverklaring":
+# links: terms and conditions
+terms:
+  "voorwaarden":
+  "servicevoorwaarden":
+  "gebruiksvoorwaarden":
+  "leveringsvoorwaarden":
+  "disclaimer":
+# popular paths: terms and conditions
+popular_tc_path:
+  "disclaimer":
+  "algemene-voorwaarden":
+  "voorwaarden":
+# links: registration pages
+registration:
+  "nieuwe":
+  "aanmelden":
+  "meld":
+  "registreren":
+  "registreer":
+  "account aanmaken":
+  "maak":
+  "lid worden":
+  "word lid":
+  "nieuw account aanmaken":
+  "schrijf me in":
+# links: login/account pages
+login:
+  "mijn account":
+  "mijn profiel":
+  "mijn":
+  "gebruiker":
+  "profiel":
+  "inloggen":
+  "log":
+  "account":
+# form label: email
+mail_input:
+  "e-mail":
+  "e-maildres":
+# form label: username
+user_input:
+  "bijnaam":
+  "gebruiker":
+  "gebruikersnaam":
+  "gebruikersid":
+# form label: password
+pw_input:
+  "wachtwoord":
+  "wachtwoordzin":
+# form label: phone number
+phone_input:
+  "telefoon":
+# form label: first name
+firstname_input:
+  "naam": 0.5
+  "voornaam":
+# form label: last name
+lastname_input:
+  "naam": 0.5
+  "achternaam":
+  "familienaam":
+# form label: full name
+name_input:
+  "voor- en achternaam":
+  "naam": 0.5
+# form label: street name (e.g. Rämistrasse)
+street_input:
+  "straat":
+  "weg":
+  "straatnaam":
+# form label: street number (e.g. 101)
+street_nr_input:
+  "nr":
+  "huisnummer":
+  "straatnummer":
+  "wegnummer":
+# form label: street name + number (e. g. Ramistrasse 101)
+street_full_input:
+  "straat en nummer":
+  "adresregel 1":
+# form label: city
+city_input:
+  "stad":
+  "plaatsnaam":
+# form label: zip/post code
+zip_input:
+  "post":
+# form label: country
+country_input:
+  "land":
+# form label: full address (e.g. Ramistrasse 101, 8092 Zurich, Switzerland)
+full_address_input:
+  "volledig adres":
+  "adres":
+# form label: birth day
+birth_day_input:
+  "verjaardag":
+  "geboortedatum":
+# form label: birth month
+birth_month_input:
+  "geboortemaand":
+# form label: birth year
+birth_year_input:
+  "geboortejaar":
+  "jjjj":
+# form label: birth full date
+birth_full_input:
+  "verjaardag":
+  "geboortedatum":
+  "geboorte":
+  "dd-mm-jjjj":
+# checkbox label: allow to send news/updates/notifications/offers
+checkbox_email:
+  "nieuws":
+  "advertenties":
+  "laatste":
+  "meldingen":
+  "verzenden":
+  "aanbiedingen":
+  "nieuwsbrief":
+# checkbox label: agree to privacy policy
+checkbox_pp:
+  "gebruikersbescherming":
+  "privacybeleid":
+  "privacy":
+  "privacybescherming":
+  "verklaring":
+# checkbox label: agree to terms and conditions
+checkbox_tos:
+  "gebruikersovereenkomst":
+  "voorwaarden":
+  "servicevoorwaarden":
+  "gebruiksvoorwaarden":
+  "leveringsvoorwaarden":
+  "disclaimer":
+# button: submit/next/continue
+submit:
+  "indienen":
+  "bevestigen":
+  "doorgaan":
+  "aanmelden":
+  "inloggen":
+# keywords representing successful registration - anything that could represent a successfull registration,
+# check english version for inspiration, not really important and can be skipped
+submit_success:
+  "succes":
+  "bevestiging":
+# keywords representing failed registration - anything that could represent a failed registrations,
+# check english version for inspiration, not really important and can be skipped
+submit_failure:
+  "werkte niet":
+  "fout":
+  "probleem":
+# keywords representing successful confirmation/activation of email address
+confirm_success:
+  "succes":
+  "succesvol":
+  "bevestiging":
+  "bevestigd":
+  "gefeliciteerd":
+  "geactiveerd":
+  "actief":
+  "aangesloten":
+  "geabonneerd":
+  "welkom":
+  "bedankt":
+  "Met dank":
+# keywords representing failed confirmation/activation of email address
+confirm_failure:
+  "fout":
+  "niet gevonden":
+  "mislukt":
+  "ongeldig":
+  "registratie mislukt":
+  "mislukt":
+  "werkte niet":
+  "werkte niet":
+  "probeer het nog eens":
+  "aanstoot nemen":
+# keywords representing this language, also shorthands (e.g. english, en, eng, en-us, en-gb)
+language:
+  "nl":
+  "nld":
+  "nederlands":
+  "dutch":
+# links: newsletter signup
+newsletter:
+  "nieuwsbrief":
+  "abonneren":
+  "nieuws":
+# links: contact us, request help
+contact:
+  "contact":
+  "contacteer":
+  "bericht versturen":
+  "bericht":
+  "hulp":
+  "nodig":
+# form label: verification code (one you would receive via SMS or email)
+verification_code:
+  "verificatie code":
+  "bevestigingscode":
+  "activatie code":
+  "validatie code":
+  "registratiecode":
+# keyword in email subject for confirmation or verification email - all possible ways to say confirm/verify this email
+confirmation_email:
+  "verifiëren":
+  "verificatie":
+  "verifieer":
+  "bevestigen":
+  "bevestiging":
+  "bevestig":
+  "valideren":
+  "validering":
+  "valideer":
+  "geldigmaking":
+  "activeren":
+  "activering":
+  "activeer":
+  "compleet":
+  "registratie":
+  "rekening":
+  "inloggegevens":
+  "authenticeren":
+# links: confirm/verify/activate this account
+confirmation_link:
+  "verifiëren":
+  "verificatie":
+  "verifieer":
+  "bevestigen":
+  "bevestiging":
+  "bevestig":
+  "valideren":
+  "validering":
+  "valideer":
+  "geldigmaking":
+  "activeren":
+  "activering":
+  "activeer":
+  "compleet":
+  "registratie":
+  "rekening":
+  "inloggegevens":
+  "authenticeren":
+# links: unsubscribe from a newletter
+unsubscribe:
+  "uitschrijven":
+  "schrijf": 0.5
+  "verwijderen":
+  "afmelde":
+  "meld": 0.5
+# form label: captcha - the characters you are supposed to read from an image
+captcha_input:
+  "tekens invoeren":
+  "tekens":
+  "typ":
+  "karakters":
+  "uitdaging":
+  "antwoord":
+# form label: search box
+search_input:
+  "zoekopdracht":
+  "zoeken":
+  "vinden":
+  "zoek":
+  "vind":
+# form label: title (e.g. Mr. / Ms.)
+title_input:
+  "titel":
+# form input: organization/company name
+organization_input:
+  "bedrijf":
+  "organisatie":
+# form label: age
+age_input:
+  "leeftijd":
+  "oud":
+

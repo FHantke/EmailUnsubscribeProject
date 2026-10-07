@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<!-- saved from url=(0022)http://localhost:5000/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="baidu-site-verification" content="1eqDRU51Jw">
+    
+    <title>百度语音搜索</title>
+    <link href="{{ url_for('static', filename='index.cf120b13.css') }}" rel="stylesheet">
+    <meta name="keywords" content="百度语音搜索, 语音搜索, 语音播报, 语音交流, 手机百度">
+    <meta name="description" content="百度语音搜索，基于强大的语音识别能力，支持通过语音命令快速发起搜索，让搜索更快捷、更智能。对比手机端的文本键盘输入，百度语音搜索是更自然的，符合移动移动设备的交互方式。">
+    <link rel="shortcut icon" href="http://mms-static.cdn.bcebos.com/voiceweb/static/asset/home/pc/img/favicon.cae06cd4.ico" type="image/x-icon">
+    <link rel="icon" href="http://mms-static.cdn.bcebos.com/voiceweb/static/asset/home/pc/img/favicon.cae06cd4.ico" type="image/x-icon">
+    <link rel="bookmark" href="http://mms-static.cdn.bcebos.com/voiceweb/static/asset/home/pc/img/favicon.cae06cd4.ico" type="image/x-icon">
+    <script src="{{ url_for('static', filename='hm.js') }}"></script><script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?629b7bc2b7d1692f07c8b5a47202e6e2";
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+<script data-require-id="home/pc/index" src="{{ url_for('static', filename='index.js') }}" async=""></script></head>
+<body style="">
+
+<header>
+    <nav>
+        <a class="voice-nav">语音搜索</a>
+    </nav>
+</header>
+
+<main>
+    <section class="cover">
+        <div class="pic">
+            <div class="index-text">
+                <div class="text-wrap">
+                    <p class="index-title">百度语音搜索</p>
+                    <p class="second-line">听懂你的需要</p>
+                    <a href="http://localhost:5000/Page/pc_guide" class="fresh-guide">点击查看新手指引<i class="icon-guide"></i></a>
+                    <div class="app-download">
+                        <a href="http://localhost:5000/#" class="app-android"><span class="icon-wrap"><i class="icon-android"></i></span>手机百度 Android 版</a>
+                        <a href="http://localhost:5000/#" class="app-ios"><span class="icon-wrap"><i class="icon-ios"></i></span>手机百度 iOS 版</a>
+                    </div>
+                </div>
+            </div>
+            <div class="my-hand"></div>
+        </div>
+        <div class="page-nav">
+            <a class="circle-wrap" href="http://localhost:5000/#page-1">
+                <div class="circle circle-fast">
+                    <div class="icon icon-fast"></div>
+                </div>
+                <p class="circle-text">更快捷</p>
+            </a>
+            <a class="circle-wrap" href="http://localhost:5000/#page-2">
+                <div class="circle circle-understand">
+                    <div class="icon icon-understand"></div>
+                </div>
+                <p class="circle-text">更懂你</p>
+            </a>
+            <a class="circle-wrap" href="http://localhost:5000/#page-3">
+                <div class="circle circle-excellent">
+                    <div class="icon icon-excellent"></div>
+                </div>
+                <p class="circle-text">更优质</p>
+            </a>
+        </div>
+    </section>
+    <section class="page page-1" id="page-1">
+        <div class="content-wrap">
+            <div class="page-text">
+            <span class="page-title">更快捷</span>
+            <p class="">
+                说话总比打字快<br>
+                语音搜索 vs 键盘输入快十倍
+            </p>
+            </div>
+            <div class="page-pic"></div>
+        </div>
+    </section>
+    <section class="page page-2" id="page-2">
+        <div class="content-wrap">
+            <div class="page-pic"></div>
+            <div class="page-text">
+                <span class="page-title">更懂你</span>
+                <p class="">
+                    能听清，更能听懂你的需求</p>
+                <p class="second-p">
+                    语音播报，可以跟你“交流” 的<br>
+                    语音搜索
+                </p>
+            </div>
+        </div>
+    </section>
+    <section class="page page-3" id="page-3">
+        <div class="content-wrap">
+            <div class="page-text">
+                <span class="page-title">更优质</span>
+                <p class="">
+                    为了优化您的体验<br>
+                    我们一直在尝试做的更好
+                </p>
+                <a class="guide-start">看看我们可以实现的<i class="icon-go"></i></a>
+                <div class="guide-wrap">
+                    <a class="guide-box" data-id="1">语音播报</a>
+                    <a class="guide-box" data-id="2">声音博物馆</a>
+                    <a class="guide-box" data-id="3">多轮对话</a>
+                </div>
+            </div>
+            <div class="page-pic">
+
+                <div class="pic pic-3">
+                    <!--<a class="click-box"></a>-->
+                    <div class="shadow shadow-1"></div>
+                </div>
+                <div class="pic pic-2">
+                    <!--<a class="click-box"></a>-->
+                    <div class="shadow shadow-1"></div>
+                </div>
+                <div class="pic pic-1">
+                    <!--<a class="click-box"></a>-->
+                    <div class="shadow shadow-1"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+</main>
+
+<section class="modal-wrap" style="display: none;">
+    <div class="middle-wrap">
+    <div class="close-btn"></div>
+    <!-- 轮播插件 -->
+    <div class="slider ecl-ui-slider" data-interval="3000" id="slider">
+        <div class="ecl-ui-slider-index">
+            <i data-index="0" class="ecl-ui-slider-index-selected"></i>
+            <i data-index="1"></i>
+            <i data-index="2"></i>
+        </div>
+
+        <div class="ecl-ui-slider-stage" data-role="stage"><div class="item active ecl-ui-slider-item">
+                <div class="slider-bg">
+                    <div class="phone-middle-wrap">
+                        <div class="phone-box">
+                            <video class="video1" src="//mms-static.cdn.bcebos.com/voiceweb/static/asset/home/pc/mov/mov-1.mp4" controls=""></video>
+                        </div>
+                    </div>
+                </div>
+                <div class="slider-text"><span>语音播报 - </span>搜索关键词时，可直接听到百度播报出来的搜索结果</div>
+            </div><div class="item ecl-ui-slider-item">
+                <div class="slider-bg">
+                    <div class="phone-middle-wrap">
+                        <div class="phone-box">
+                            <video class="video2" src="//mms-static.cdn.bcebos.com/voiceweb/static/asset/home/pc/mov/mov-2.mp4" controls=""></video>
+                        </div>
+                    </div>
+                </div>
+                <div class="slider-text"><span>声音博物馆 - </span>在线聆听几十种常见动物的各类叫声</div>
+            </div><div class="item ecl-ui-slider-item">
+                <div class="slider-bg">
+                    <div class="phone-middle-wrap">
+                        <div class="phone-box">
+                            <video class="video3" src="//mms-static.cdn.bcebos.com/voiceweb/static/asset/home/pc/mov/mov-3.mp4" controls=""></video>
+                        </div>
+                    </div>
+                </div>
+                <div class="slider-text"><span>多轮对话</span> 用更自然的方式搜索，更聪明的搜索</div>
+            </div>
+        </div>
+
+        <a class="pre-btn ecl-ui-slider-prev" href="http://localhost:5000/#slider" data-slide="prev">
+        </a>
+        <a class="next-btn ecl-ui-slider-next" href="http://localhost:5000/#slider" data-slide="next">
+        </a>
+    </div>
+
+    </div>
+</section>
+
+<footer>
+    <nav class="footer-nav">
+        <a href="http://localhost:5000/Page/pc_faq" target="_blank">Q&amp;A</a>
+        <a href="http://weibo.com/u/5647663550" target="_blank">官方微博</a>
+        <a href="http://tieba.baidu.com/f?ie=utf-8&amp;kw=%E7%99%BE%E5%BA%A6%E8%AF%AD%E9%9F%B3%E5%9B%BE%E5%83%8F%E6%90%9C%E7%B4%A2&amp;fr=search" target="_blank">官方贴吧</a>
+        <a class="weixin">微信服务号</a>
+        <a href="http://localhost:5000/Page/pc_agreement" class="privacy-agreement" target="_blank">隐私协议</a>
+        <a href="mailto:mms-help@baidu.com" class="contact-us">联系我们</a>
+    </nav>
+</footer>
+
+
+<script src="{{ url_for('static', filename='esl.js') }}"></script>
+<script src="{{ url_for('static', filename='jquery-1.10.2_d88366fd.js') }}"></script>
+<script>
+
+    require.config({
+        'baseUrl': '//mms-static.cdn.bcebos.com/voiceweb/static/asset',
+        'paths': {},
+        'packages': [
+            {
+                'name': 'jquery',
+                'location': '../dep/jquery/1.11.1/asset',
+                'main': 'jquery'
+            },
+            {
+                'name': 'moye',
+                'location': '../dep/moye0.7.3/0.7.3/asset/ui',
+                'main': 'main'
+            }
+        ],
+        'urlArgs': 'v=20201125121413'
+    });
+
+</script>
+
+<script>
+    require(['home/pc/index'], function (app) {
+        app.init();
+    })
+</script>
+
+</body></html>
