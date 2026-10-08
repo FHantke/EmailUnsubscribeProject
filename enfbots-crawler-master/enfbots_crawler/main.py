@@ -753,7 +753,8 @@ def run_crawler() -> None:
                 # Check if we can cache
                 latest_crawl: Optional[DBWebsiteCrawl] = None
 
-                if not job.force_recrawl:
+                # A cached (validation) crawl only re-checks PP/TC links, so forms-only mode never uses it
+                if not job.force_recrawl and Config().COLLECT_LEGAL_TEXTS:
                     logger.info("Checking if previous crawl exists")
                     latest_crawl = get_latest_crawl(cast(DBWebsite, job.website))
 

@@ -192,8 +192,14 @@ class EnfbotsNavigator(Navigator):
         super(EnfbotsNavigator, self).__init__(str(website.base_url))
         # this is a reference to website's states
         self.states = website.states
+        self.website = website
 
     def is_navigation_completed(self) -> bool:
+        if not Config().COLLECT_LEGAL_TEXTS:
+            # Forms only: done once a newsletter form is seen, or no newsletter page is left to try
+            return self.website.newsletter_url is not None or self.is_type_overused(
+                PageType.NEWSLETTER
+            )
         return (
             (State.REGISTER_FORM_FOUND in self.states or self.is_type_overused(PageType.REGISTER))
             and (
@@ -217,6 +223,9 @@ class EnfbotsNavigator(Navigator):
         return self.visited_counts[page_type] > maxes[page_type]
 
     def is_type_needed(self, t: PageType) -> bool:
+        if not Config().COLLECT_LEGAL_TEXTS:
+            # Forms only: newsletter pages; account registration and login pages are not needed
+            return t == PageType.NEWSLETTER
         return (
             (
                 State.REGISTER_FORM_FOUND not in self.states
@@ -523,6 +532,10 @@ class WebSite(BaseWebsite):
                 self.states.add(State.REGISTER_FORM_NOT_FOUND)
                 self.process_newsletter_registration()
 
+            if not Config().COLLECT_LEGAL_TEXTS:
+                # Forms only: search and popular paths below only serve PP/TC discovery
+                return
+
             # Search if configured
             if Config().USE_SEARCH.lower() == "always" or (
                 not self.has_pp() and Config().USE_SEARCH.lower() == "missing"
@@ -592,6 +605,10 @@ class WebSite(BaseWebsite):
         """
         If no registration form was found, but a newsletter URL is known, try to register there.
         """
+        if not Config().COLLECT_LEGAL_TEXTS and not Config().CREATE_ACCOUNT:
+            # Forms only without submitting: reloading the page would only serve the submission
+            return
+
         if (
                 self.newsletter_url
                 and self.navigator.domain_legal(self.newsletter_url)
@@ -756,6 +773,11 @@ class WebSite(BaseWebsite):
 
         html_str = self.br.get_html()
         found_email_addresses = get_all_emails(html_str)
+
+        if not Config().COLLECT_LEGAL_TEXTS:
+            # Forms only: no text extraction, PDF download or PP/TC classification
+            self._finish_page(url, page_type, consideration_basis, found_email_addresses)
+            return
 
         # Indicates that the current page is a pdf
         is_pdf = False
@@ -1024,23 +1046,32 @@ class WebSite(BaseWebsite):
             self.crawl_stat_collector.error()
             page_type = PageType.OTHER
         finally:
-            logger.info(
-                "Finished processing page %s and classified as %s on basis %s",
-                url,
-                page_type.name,
-                consideration_basis,
+            self._finish_page(url, page_type, consideration_basis, found_email_addresses)
+
+    def _finish_page(
+        self,
+        url: URL,
+        page_type: PageType,
+        consideration_basis: ConsiderationBasis,
+        found_email_addresses: set[tuple[str, str]],
+    ) -> None:
+        logger.info(
+            "Finished processing page %s and classified as %s on basis %s",
+            url,
+            page_type.name,
+            consideration_basis,
+        )
+
+        # Now that we know the page_type
+        for address_local_part, domain in found_email_addresses:
+            self.emails.append((address_local_part, domain, page_type.name, str(url)))
+
+        try:
+            self._process_forms()
+        except WebDriverException:
+            logger.exception(
+                "Unknown Webdriver error occurred while processing forms on %s", url.to_text()
             )
-
-            # Now that we know the page_type
-            for address_local_part, domain in found_email_addresses:
-                self.emails.append((address_local_part, domain, page_type.name, str(url)))
-
-            try:
-                self._process_forms()
-            except WebDriverException:
-                logger.exception(
-                    "Unknown Webdriver error occurred while processing forms on %s", url.to_text()
-                )
 
     def store_pp(
         self,

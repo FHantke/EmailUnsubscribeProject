@@ -72,6 +72,51 @@ def test_load_duplicates(db_disk):
         assert 4 == len(jobs)
 
 
+def _load(*args: str) -> None:
+    raw_list_path = (Path(__file__).parent / "../data/load_database_list.txt").resolve()
+    testargs = ["not-important.py", "--raw", str(raw_list_path), "--ignore-crux", *args]
+    with patch.object(sys, "argv", testargs):
+        main()
+
+
+def _job_count_per_crawl() -> dict:
+    # pylint: disable=no-member
+    with SessionLocal.begin() as session:
+        jobs: List[DBJob] = session.scalars(select(DBJob)).all()
+        counts: dict = {}
+        for j in jobs:
+            counts[j.crawl_id] = counts.get(j.crawl_id, 0) + 1
+        return counts
+
+
+def test_load_same_list_twice_schedules_once(db_disk):
+    _load("--id", "crawl-a")
+    _load("--id", "crawl-a")
+
+    assert _job_count_per_crawl() == {"crawl-a": 2}
+
+
+def test_same_list_in_another_crawl_is_scheduled(db_disk):
+    _load("--id", "crawl-a")
+    _load("--id", "crawl-b")
+
+    assert _job_count_per_crawl() == {"crawl-a": 2, "crawl-b": 2}
+
+
+def test_same_list_twice_without_crawl_id_schedules_once(db_disk):
+    _load()
+    _load()
+
+    assert _job_count_per_crawl() == {None: 2}
+
+
+def test_allow_duplicates_still_schedules_twice(db_disk):
+    _load("--id", "crawl-a", "--allow-duplicates")
+    _load("--id", "crawl-a", "--allow-duplicates")
+
+    assert _job_count_per_crawl() == {"crawl-a": 4}
+
+
 def test_load_no_empty_lines(db_disk):
     raw_list_path = (Path(__file__).parent / "../data/load_database_empty_line.txt").resolve()
 

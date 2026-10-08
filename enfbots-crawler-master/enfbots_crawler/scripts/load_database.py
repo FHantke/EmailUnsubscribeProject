@@ -557,6 +557,40 @@ class MetadataProcessor:
         return pd.DataFrame(res)
 
 
+def drop_already_queued(jobs: Dict[str, DBJob], crawl_id: Optional[str]) -> Dict[str, DBJob]:
+    """
+    Removes jobs whose website already has a job with the same crawl_id, so loading a list
+    twice does not schedule a site twice.
+
+    Args:
+        jobs (Dict[str, DBJob]): Jobs about to be inserted, not yet in the database
+        crawl_id (Optional[str]): Crawl ID of these jobs; None matches jobs without one
+
+    Returns:
+        Dict[str, DBJob]: The jobs whose website is not yet queued for this crawl
+    """
+    query = select(DBWebsite.url).join(DBJob, DBJob.website_id == DBWebsite.id)
+    if crawl_id is None:
+        query = query.where(DBJob.crawl_id.is_(None))
+    else:
+        query = query.where(DBJob.crawl_id == crawl_id)
+
+    # pylint: disable=no-member
+    with SessionLocal.begin() as session:
+        queued = set(session.scalars(query).all())
+
+    kept = {key: job for key, job in jobs.items() if job.website.url not in queued}
+    skipped = len(jobs) - len(kept)
+    if skipped:
+        logger.warning(
+            "Skipping %d of %d sites that already have a job in crawl %s",
+            skipped,
+            len(jobs),
+            crawl_id,
+        )
+    return kept
+
+
 class DBImporter(ABC):
     """
     Assumes that SessionLocal was already configured. This inserts jobs into the
@@ -883,6 +917,10 @@ def main() -> None:
             job.from_dynamic = True
 
             jobs[entry["domain"]] = job
+
+    # Without a database (--dry) there is nothing to compare against
+    if not allow_duplicates and not dry:
+        jobs = drop_already_queued(jobs, crawl_id)
 
     importer = DefaultImporter(shuffle, dry or False, int(args.threads))
 

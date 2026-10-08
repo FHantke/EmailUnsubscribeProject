@@ -951,11 +951,15 @@ def create_views() -> None:
             session.execute(CREATE_OR_REPLACE_best_tc_urls_kw)
             session.execute(CREATE_OR_REPLACE_best_us_pn_urls_kw)
         else:
-            session.execute(text(str(CREATE_OR_REPLACE_best_pp_urls_kw).replace("OR REPLACE", "")))
-            session.execute(text(str(CREATE_OR_REPLACE_best_tc_urls_kw).replace("OR REPLACE", "")))
-            session.execute(
-                text(str(CREATE_OR_REPLACE_best_us_pn_urls_kw).replace("OR REPLACE", ""))
-            )
+            # SQLite has no CREATE OR REPLACE VIEW; IF NOT EXISTS keeps --create-database re-runnable
+            for view in (
+                CREATE_OR_REPLACE_best_pp_urls_kw,
+                CREATE_OR_REPLACE_best_tc_urls_kw,
+                CREATE_OR_REPLACE_best_us_pn_urls_kw,
+            ):
+                session.execute(
+                    text(str(view).replace("CREATE OR REPLACE VIEW", "CREATE VIEW IF NOT EXISTS"))
+                )
 
 
 CREATE_OR_REPLACE_best_pp_urls_kw = text(
@@ -1020,7 +1024,7 @@ CREATE OR REPLACE VIEW best_us_pn_urls_kw AS
 
 CREATE_JOBS_CREATED_AT_INDEX = text(
     """
-CREATE INDEX created_at_index
+CREATE INDEX IF NOT EXISTS created_at_index
 ON jobs USING btree
 (created_at ASC NULLS LAST)
 """
@@ -1028,7 +1032,7 @@ ON jobs USING btree
 
 CREATE_JOBS_STARTED_AT_INDEX = text(
     """
-CREATE INDEX started_at_index
+CREATE INDEX IF NOT EXISTS started_at_index
 ON jobs USING btree
 (started_at ASC NULLS LAST)
 """
@@ -1036,7 +1040,7 @@ ON jobs USING btree
 
 CREATE_EMAILS_WEBSITE_CRAWL_INDEX = text(
     """
-CREATE INDEX emails_website_crawl_id_index
+CREATE INDEX IF NOT EXISTS emails_website_crawl_id_index
 ON mails USING btree
 (website_crawl_id ASC NULLS LAST)
 """
@@ -1044,15 +1048,21 @@ ON mails USING btree
 
 CREATE_WEBSITES_URL_INDEX = text(
     """
-CREATE INDEX websites_url_index
+CREATE INDEX IF NOT EXISTS websites_url_index
 ON websites USING btree
 (url varchar_ops ASC NULLS LAST)
 """
 )
 
+# Postgres has no ADD CONSTRAINT IF NOT EXISTS; the check keeps --create-database re-runnable
 CREATE_WEBSITES_URL_UNIQUE_CONSTRAINT = text(
     """
-ALTER TABLE websites
-ADD CONSTRAINT websites_url_unique UNIQUE (url)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'websites_url_unique') THEN
+        ALTER TABLE websites ADD CONSTRAINT websites_url_unique UNIQUE (url);
+    END IF;
+END
+$$
 """
 )

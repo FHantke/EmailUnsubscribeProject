@@ -87,6 +87,10 @@ class Config(metaclass=Singleton):
         # First try to subscribe to a newsletter, before registering
         self.NEWSLETTER_FIRST = False
 
+        # Collect privacy policies, terms, US privacy notices and GDPR pages. If False the crawler
+        # only visits newsletter pages to find sign-up forms and skips all policy work.
+        self.COLLECT_LEGAL_TEXTS = True
+
         # This is used to classify pages (their markdown content) as beeing a PP/TC or not.
         self.USE_CLASSIFIER: bool = False
         self.CLASSIFY_SERVICE_ENDPOINT: str = ""

@@ -2,8 +2,6 @@ from typing import Optional
 import logging
 import requests
 
-import gcld3
-
 logger = logging.getLogger("lang_helper.py")
 
 
@@ -50,6 +48,13 @@ def detect_language(content: str) -> Optional[str]:
     :return: The language code of the most probable language or None
     """
     # If polyglot did not find a language, try gcld3
+    # Imported here so this module loads where gcld3 can't be built (e.g. on macOS, outside Docker)
+    try:
+        # pylint: disable=import-outside-toplevel
+        import gcld3
+    except ImportError:
+        logger.warning("gcld3 is not installed; cannot detect the language with it")
+        return None
 
     # pylint: disable=no-member
     detector = gcld3.NNetLanguageIdentifier(min_num_bytes=0, max_num_bytes=10_000)

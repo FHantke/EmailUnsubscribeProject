@@ -22,8 +22,10 @@ conf/ssh*
 .claude/
 /enfbots-crawler-master/static_resources/
 /enfbots-crawler-master/doc/
+/enfbots-crawler_orig_baseline
 # Raw (uncompressed) site lists stay local; study samples are tracked
 /enfbots-crawler-master/static_lists/*.csv
 !/enfbots-crawler-master/static_lists/study_*.csv
 /enfbots-crawler-master/usage_screenshots/
 /enfbots-crawler-master.zip
+/testrun/

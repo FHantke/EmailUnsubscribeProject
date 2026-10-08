@@ -141,6 +141,7 @@ services:
     environment:
       POSTGRES_USER: crawler
       POSTGRES_PASSWORD: database_stuff
+      POSTGRES_DB: pptc             # Must match CRAWLER_DB_NAME in .env; only applied when database_data/ is first initialized
       PGDATA: /var/lib/postgresql/data
     ports:
       - 5434:5432
