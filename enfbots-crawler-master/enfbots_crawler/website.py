@@ -22,6 +22,7 @@ from enfbots_crawler.exceptions import CrawlerException, WebsiteException
 
 from sortedcontainers import SortedSet
 from tldextract import tldextract
+from unidecode import unidecode
 from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_text as extract_text_from_pdf
 from urllib3.exceptions import HTTPError
@@ -57,9 +58,11 @@ from enfbots_crawler.modules.classifier import (
     ClassificationException,
 )
 from enfbots_crawler.languages import (
+    Keyword,
     KeywordType,
     get_supported_languages,
     Language,
+    MatchString,
 )
 from enfbots_crawler.text_helper import (
     extract_content_from_html,
@@ -95,6 +98,7 @@ from enfbots_crawler.database import (
     get_website,
     get_urlcontent,
 )
+from enfbots_crawler import capture
 from enfbots_crawler.form_bs import FormBS
 from enfbots_crawler.form_selenium import FormSelenium
 from enfbots_crawler.reg_processor import RegProcessor
@@ -116,6 +120,19 @@ _register_map = (
     State.REGISTER_FAILED,
     State.REGISTER_ERRORED,
 )
+
+
+def is_discovery_mode() -> bool:
+    """Email-capture crawl that records the captures it sees and never submits a form."""
+    return Config().EMAIL_CAPTURE_ONLY and not Config().CREATE_ACCOUNT
+
+
+def page_key(url: URL) -> URL:
+    """The URL without trailing slashes or fragment and with a lower-case host."""
+    path = list(url.path)
+    while path and path[-1] == "":
+        path.pop()
+    return url.replace(host=url.host.lower(), path=tuple(path), fragment="")
 
 
 class Navigator(ABC):
@@ -193,13 +210,45 @@ class EnfbotsNavigator(Navigator):
         # this is a reference to website's states
         self.states = website.states
         self.website = website
+        # Off-site links already logged as skipped or allowed (email-capture mode)
+        self.offsite_logged: set[URL] = set()
+        # Pages already queued, by page_key and type (email-capture mode)
+        self.page_keys: set[tuple[URL, PageType]] = set()
+
+    def is_capture_host(self, url: URL) -> bool:
+        """The site's own registered domain (subdomains included) or a hosted sign-up platform."""
+        if self.domain_matches(url):
+            return True
+        return tldextract.extract(str(url)).registered_domain in Config().CAPTURE_HOST_ALLOWLIST
+
+    def add(self, match: UrlMatch) -> None:
+        # Email captures only: never follow a newsletter link to an unrelated site (e.g. a "news"
+        # link to a press article), so captures found there are not attributed to this site
+        if Config().EMAIL_CAPTURE_ONLY and self.is_type_needed(match.type):
+            if not self.domain_matches(match.url):
+                allowed = self.is_capture_host(match.url)
+                if match.url not in self.offsite_logged:
+                    self.offsite_logged.add(match.url)
+                    verdict = "allowed (sign-up platform)" if allowed else "skipped"
+                    logger.info("Off-site newsletter link %s: %s", verdict, match.url)
+                if not allowed:
+                    return
+            # The same page linked with and without a trailing slash is visited only once
+            key = (page_key(match.url), match.type)
+            if key in self.page_keys:
+                return
+            self.page_keys.add(key)
+        super().add(match)
 
     def is_navigation_completed(self) -> bool:
-        if not Config().COLLECT_LEGAL_TEXTS:
-            # Forms only: done once a newsletter form is seen, or no newsletter page is left to try
-            return self.website.newsletter_url is not None or self.is_type_overused(
-                PageType.NEWSLETTER
-            )
+        if Config().EMAIL_CAPTURE_ONLY:
+            # Email captures only: done once a capture is found or no newsletter page is left.
+            # Discovery waits for an eligible capture, not just any newsletter-looking form.
+            if is_discovery_mode():
+                found = self.website.eligible_capture_found
+            else:
+                found = self.website.newsletter_url is not None
+            return found or self.is_type_overused(PageType.NEWSLETTER)
         return (
             (State.REGISTER_FORM_FOUND in self.states or self.is_type_overused(PageType.REGISTER))
             and (
@@ -223,8 +272,8 @@ class EnfbotsNavigator(Navigator):
         return self.visited_counts[page_type] > maxes[page_type]
 
     def is_type_needed(self, t: PageType) -> bool:
-        if not Config().COLLECT_LEGAL_TEXTS:
-            # Forms only: newsletter pages; account registration and login pages are not needed
+        if Config().EMAIL_CAPTURE_ONLY:
+            # Email captures only: newsletter pages, never registration or login pages
             return t == PageType.NEWSLETTER
         return (
             (
@@ -283,15 +332,25 @@ class BaseWebsite(ABC):
         self.output_log_filehandler.setFormatter(log_formatter)
         root_logger.addHandler(self.output_log_filehandler)
 
+    def close_log(self) -> None:
+        """
+        Detaches and closes this website's crawler.log; safe to call more than once.
+        Called by run_domain once the crawl is done: waiting for __del__ let later websites
+        write into this log whenever the object lived on (it sits in reference cycles).
+        """
+        # getattr: __init__ may have failed early, or been bypassed (tests)
+        handler = getattr(self, "output_log_filehandler", None)
+        if handler is None or getattr(self, "_log_closed", False):
+            return
+        logging.getLogger().removeHandler(handler)
+        handler.close()
+        self._log_closed = True
+
     def __del__(self) -> None:
         """
-        Always called when an object is destroyed.
+        Always called when an object is destroyed. Fallback in case close_log was not called.
         """
-        if self.log_to_output_path:
-            if self.output_log_filehandler in logging.getLogger().handlers:
-                logging.getLogger().removeHandler(self.output_log_filehandler)
-            else:
-                logging.getLogger().error("Missing output_log_filehandler in the handlers")
+        self.close_log()
 
 
 class WebSite(BaseWebsite):
@@ -363,6 +422,11 @@ class WebSite(BaseWebsite):
         # self.search_provider = "startpage.com"
 
         self.dump_id = 0
+
+        # Discovery: signatures of captures already stored, so a form shown on every page
+        # (e.g. in the footer) is recorded once per crawl
+        self._capture_signatures: set[str] = set()
+        self.eligible_capture_found = False
 
     def download_page(self, page_url: URL, output_file: Path) -> bool:
         """
@@ -532,8 +596,8 @@ class WebSite(BaseWebsite):
                 self.states.add(State.REGISTER_FORM_NOT_FOUND)
                 self.process_newsletter_registration()
 
-            if not Config().COLLECT_LEGAL_TEXTS:
-                # Forms only: search and popular paths below only serve PP/TC discovery
+            if Config().EMAIL_CAPTURE_ONLY:
+                # Email captures only: search and popular paths below only serve PP/TC discovery
                 return
 
             # Search if configured
@@ -605,8 +669,8 @@ class WebSite(BaseWebsite):
         """
         If no registration form was found, but a newsletter URL is known, try to register there.
         """
-        if not Config().COLLECT_LEGAL_TEXTS and not Config().CREATE_ACCOUNT:
-            # Forms only without submitting: reloading the page would only serve the submission
+        if Config().EMAIL_CAPTURE_ONLY and not Config().CREATE_ACCOUNT:
+            # Email captures only, no submitting: the reload would only serve the submission
             return
 
         if (
@@ -774,8 +838,8 @@ class WebSite(BaseWebsite):
         html_str = self.br.get_html()
         found_email_addresses = get_all_emails(html_str)
 
-        if not Config().COLLECT_LEGAL_TEXTS:
-            # Forms only: no text extraction, PDF download or PP/TC classification
+        if Config().EMAIL_CAPTURE_ONLY:
+            # Email captures only: no text extraction, PDF download or PP/TC classification
             self._finish_page(url, page_type, consideration_basis, found_email_addresses)
             return
 
@@ -1186,6 +1250,11 @@ class WebSite(BaseWebsite):
 
             links = list(filter(filter_func, links))
 
+        # Email captures only: newsletter keywords without the weak ones ("news", "sub", ...)
+        strong_newsletter_kws: Optional[list[Keyword]] = None
+        if Config().EMAIL_CAPTURE_ONLY:
+            strong_newsletter_kws = self._strong_newsletter_keywords()
+
         # Classify found links and also follow them
         for link in links:
             possible_types = keyword_classify(
@@ -1195,11 +1264,35 @@ class WebSite(BaseWebsite):
                 self.lang,
                 Config().MIN_KW_MATCH_LEN,
             )
+            if strong_newsletter_kws is not None:
+                possible_types = self._drop_weak_newsletter_match(
+                    link, possible_types, strong_newsletter_kws
+                )
             if len(possible_types) == 0:
                 possible_types = [(PageType.OTHER, 1)]
             for type, score in possible_types:
                 self.navigator.add(UrlMatch(link.url, type, score))
         logger.info("Finished processing and classifying links")
+
+    def _strong_newsletter_keywords(self) -> list[Keyword]:
+        weak = {unidecode(w).lower() for w in Config().WEAK_NEWSLETTER_KEYWORDS}
+        return [
+            kw
+            for kw in self.lang.get_keywords(KeywordType.NEWSLETTER)
+            if unidecode(kw.text).strip().lower() not in weak
+        ]
+
+    def _drop_weak_newsletter_match(
+        self, link: LinkTuple, possible_types: list[tuple[PageType, float]], strong: list[Keyword]
+    ) -> list[tuple[PageType, float]]:
+        """Removes the NEWSLETTER type from a link that only weak newsletter keywords match."""
+        if all(t != PageType.NEWSLETTER for t, _ in possible_types):
+            return possible_types
+        texts = [MatchString(t, self.lang) for t in link.texts if t]
+        if match_keywords(texts, strong, Config().MIN_KW_MATCH_LEN) > 0:
+            return possible_types
+        logger.debug("Ignoring link matched only by weak newsletter keywords: %s", link.url)
+        return [(t, s) for t, s in possible_types if t != PageType.NEWSLETTER]
 
     def _process_forms(self, try_newsletter: bool = False) -> None:
         """
@@ -1235,7 +1328,8 @@ class WebSite(BaseWebsite):
     def categorize_forms_on_current_page(self) -> defaultdict[FormType, list[FormBS]]:
         by_type: defaultdict[FormType, list[FormBS]] = defaultdict(list)
 
-        for f in cast(EnfbotsBrowser, self.br).find_forms(self.lang):
+        forms = cast(EnfbotsBrowser, self.br).find_forms(self.lang)
+        for f in forms:
             logger.debug("Found a form of type %s", f.type.name)
             by_type[f.type].append(f)
 
@@ -1245,7 +1339,42 @@ class WebSite(BaseWebsite):
                 "Detected newsletter form. Storing it for later usage. URL: %s", self.newsletter_url
             )
 
+        if is_discovery_mode():
+            self._record_captures(forms)
+
         return by_type
+
+    def _record_captures(self, forms: list[FormBS]) -> None:
+        """Stores each new email-capture form on the current page, eligible or not."""
+        url = str(self.br.current_url)
+        candidates = [f for f in forms if capture.is_capture_candidate(f)]
+        if not candidates:
+            return
+        # Page-level CAPTCHA scripts (e.g. reCAPTCHA v3) apply to forms without a widget
+        page_html = self.br.get_html()
+        new = []
+        for form in candidates:
+            sig = capture.signature(form)
+            if sig in self._capture_signatures:
+                continue
+            self._capture_signatures.add(sig)
+            row = capture.to_db(form, url, self.db_websitecrawl.id, page_html)
+            logger.info(
+                "Capture form on %s: kind=%s eligible=%s reason=%s vendor=%s captcha=%s",
+                url,
+                row.kind,
+                row.eligible,
+                row.reject_reason,
+                row.vendor_hint,
+                row.captcha_type,
+            )
+            self.eligible_capture_found = self.eligible_capture_found or row.eligible
+            new.append(row)
+
+        if new:
+            # pylint: disable=no-member
+            with SessionLocal.begin() as session:
+                session.add_all(new)
 
     def _process_form(self, best_form: FormBS) -> None:
         if best_form.type == FormType.NEWSLETTER:

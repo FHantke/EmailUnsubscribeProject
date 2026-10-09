@@ -324,6 +324,9 @@ def run_domain(
                 "Unknown error occurred during the crawl of website %s", http_target_url
             )
             raise CrawlerException(e) from e
+        finally:
+            # Stop writing into this website's crawler.log before the next website starts
+            site.close_log()
 
     return site
 
@@ -753,8 +756,8 @@ def run_crawler() -> None:
                 # Check if we can cache
                 latest_crawl: Optional[DBWebsiteCrawl] = None
 
-                # A cached (validation) crawl only re-checks PP/TC links, so forms-only mode never uses it
-                if not job.force_recrawl and Config().COLLECT_LEGAL_TEXTS:
+                # A cached (validation) crawl only re-checks PP/TC links; email-capture skips it
+                if not job.force_recrawl and not Config().EMAIL_CAPTURE_ONLY:
                     logger.info("Checking if previous crawl exists")
                     latest_crawl = get_latest_crawl(cast(DBWebsite, job.website))
 

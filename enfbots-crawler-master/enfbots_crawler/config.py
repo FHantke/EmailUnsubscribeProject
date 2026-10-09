@@ -87,9 +87,93 @@ class Config(metaclass=Singleton):
         # First try to subscribe to a newsletter, before registering
         self.NEWSLETTER_FIRST = False
 
-        # Collect privacy policies, terms, US privacy notices and GDPR pages. If False the crawler
-        # only visits newsletter pages to find sign-up forms and skips all policy work.
-        self.COLLECT_LEGAL_TEXTS = True
+        # Study mode: only visit newsletter pages to find email-capture forms (newsletters, offers)
+        # and skip all policy work (privacy policies, terms, GDPR and US privacy notices)
+        self.EMAIL_CAPTURE_ONLY = False
+
+        # Email-capture mode follows newsletter links only on the site's own registered domain and
+        # on these hosted sign-up platforms (registered domains); other off-site links are logged
+        self.CAPTURE_HOST_ALLOWLIST: list[str] = [
+            "substack.com",
+            "beehiiv.com",
+            "kit.com",
+            "ck.page",
+            "convertkit.com",
+            "mailchi.mp",
+            "eepurl.com",
+            "list-manage.com",
+            "kmail-lists.com",
+            "mailerlite.com",
+            "constantcontact.com",
+            "constantcontactpages.com",
+            "sibforms.com",
+            "createsend.com",
+            "hsforms.com",
+            "hs-sites.com",
+            "aweber.com",
+            "flodesk.com",
+            "ghost.io",
+            "buttondown.com",
+            "buttondown.email",
+        ]
+
+        # Newsletter keywords too weak to follow a link on in email-capture mode ("news" leads to
+        # news articles): English "news" and "sub" plus their translations in the language files.
+        # Compared with the keyword entries (case and accents ignored), not with page text.
+        self.WEAK_NEWSLETTER_KEYWORDS: list[str] = [
+            # English (added to every language)
+            "news",
+            "sub",
+            # "news"
+            "aktualności",
+            "albisteak",
+            "aħbarijiet",
+            "fréttir",
+            "haberler",
+            "hírek",
+            "lajme",
+            "nachrichten",
+            "neiegkeeten",
+            "newyddion",
+            "nieuws",
+            "noticias",
+            "notícias",
+            "notícies",
+            "nouvelles",
+            "novice",
+            "novinky",
+            "nyheder",
+            "nyheter",
+            "správy",
+            "uudised",
+            "uutiset",
+            "vesti",
+            "vijesti",
+            "zprávy",
+            "ziņas",
+            "žinios",
+            "știri",
+            "νέα",
+            "вести",
+            "новини",
+            "новости",
+            # "sub" (translated as "under")
+            "alam",
+            "alatti",
+            "alt",
+            "apakš",
+            "azpi",
+            "is",
+            "nën",
+            "pod",
+            "under",
+            "undir",
+            "unter",
+            "υπο",
+            "під",
+            "под",
+            "суб",
+        ]
 
         # This is used to classify pages (their markdown content) as beeing a PP/TC or not.
         self.USE_CLASSIFIER: bool = False

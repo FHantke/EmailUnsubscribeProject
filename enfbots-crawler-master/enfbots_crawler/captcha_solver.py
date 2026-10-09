@@ -50,6 +50,8 @@ def classify_captcha_url(url: URL) -> Optional[str]:
         "api.js" in url.path or "enterprise.js" in url.path
     ):
         return "recaptcha"
+    if url.host == "challenges.cloudflare.com" and "turnstile" in url.path:
+        return "turnstile"
     return None
 
 
@@ -740,6 +742,74 @@ class CaptchaSolverScanning:  # pragma: no cover
         return response_map
 
 
+# Live check for a displayed challenge (image grid etc.); the frames exist hidden beforehand
+_CHALLENGE_SHOWN_JS = """
+return [...document.querySelectorAll('iframe')].some(f => {
+    if (!/recaptcha\\/(api2|enterprise)\\/bframe|hcaptcha\\.com.*challenge|challenges\\.cloudflare\\.com/.test(f.src)) {
+        return false;
+    }
+    const r = f.getBoundingClientRect();
+    let e = f;
+    while (e) {
+        const s = getComputedStyle(e);
+        if (s.visibility === 'hidden' || s.display === 'none' || parseFloat(s.opacity) === 0) {
+            return false;
+        }
+        e = e.parentElement;
+    }
+    return r.width > 50 && r.height > 50;
+});
+"""
+
+
+class CaptchaRecorder:
+    """
+    Records CAPTCHAs instead of solving them (CAPTCHA_BACKEND="none"). Never calls a paid
+    service: invisible CAPTCHAs run in the real browser, and visible challenges are only noted.
+    """
+
+    def __init__(self, browser: EnfbotsBrowser) -> None:
+        self.browser = browser
+        self.captcha_type = CaptchaType.NONE
+        # Finer than CaptchaType, e.g. "turnstile" or "recaptcha_v2_invisible"
+        self.captcha_name: Optional[str] = None
+        self.captcha_visible: Optional[bool] = None
+
+    def detect(self) -> None:
+        # Imported here: capture imports this module (classify_captcha_url)
+        # pylint: disable=import-outside-toplevel
+        from enfbots_crawler import capture
+
+        info = capture.captcha_in(self.browser.get_soup()) or capture.page_captcha(
+            self.browser.get_html()
+        )
+        if info is None:
+            return
+        self.captcha_name, self.captcha_visible = info.type, info.visible
+        if info.type.startswith("recaptcha_v3"):
+            self.captcha_type = CaptchaType.ReCAPTCHAv3
+        elif info.type.startswith("recaptcha"):
+            self.captcha_type = CaptchaType.ReCAPTCHAv2
+        elif info.type.startswith("hcaptcha"):
+            self.captcha_type = CaptchaType.HCaptcha
+        logger.info("CAPTCHA detected (not solved): %s, visible=%s", info.type, info.visible)
+
+    def pre_submit_solve(self) -> None:
+        pass
+
+    def post_submit_solve(self) -> bool:
+        return True
+
+    def solve_image_captcha(self, img_base64: str) -> str:
+        self.captcha_type = CaptchaType.IMAGE
+        self.captcha_name, self.captcha_visible = "image", True
+        logger.warning("Image CAPTCHA left unsolved (CAPTCHA_BACKEND=none)")
+        return ""
+
+    def challenge_shown(self) -> bool:
+        return bool(self.browser.execute_script(_CHALLENGE_SHOWN_JS))
+
+
 def js_key_regex(name: str, string: str) -> Optional[str]:
     """Regex to find the value of a key from JS object source code"""
     matches = re.search(r"[\"|']?" + name + r"[\"|']?\s*:\s*([^,}\n]*)", string, re.IGNORECASE)
@@ -748,10 +818,12 @@ def js_key_regex(name: str, string: str) -> Optional[str]:
     return None
 
 
-CaptchaSolver = typing.Union[CaptchaSolverStub, CaptchaSolverScanning]
+CaptchaSolver = typing.Union[CaptchaSolverStub, CaptchaSolverScanning, CaptchaRecorder]
 
 
 def create_solver(*args: Any, **kwargs: Any) -> CaptchaSolver:
+    if Config().CAPTCHA_BACKEND == "none":
+        return CaptchaRecorder(*args, **kwargs)
     if Config().CAPTCHA_ALLOW_STUB:
         return CaptchaSolverStub(*args, **kwargs)
     else:

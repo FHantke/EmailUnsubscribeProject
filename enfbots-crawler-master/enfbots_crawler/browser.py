@@ -20,7 +20,8 @@ from types import TracebackType
 from typing import Optional, NamedTuple, Any, List, TypeVar, Callable, cast, Generator
 from urllib.parse import urldefrag
 
-from psutil import Process, TimeoutExpired
+import psutil
+from psutil import Process
 from bs4 import BeautifulSoup
 from hyperlink import URL, URLParseError
 from numpy import random
@@ -572,7 +573,8 @@ class Firefox(EnfbotsBrowser):
         captcha_type = classify_captcha_url(url)
         if captcha_type:
             self.captcha_apis.append(url)
-            if Config().CAPTCHA_ALLOW_STUB:
+            # The stub only imitates the reCAPTCHA/hCaptcha APIs, not Turnstile
+            if Config().CAPTCHA_ALLOW_STUB and captcha_type in ("recaptcha", "hcaptcha"):
                 enterprise = "true" if "enterprise.js" in url.path else "false"
                 stub = (Config().code_dir / "js/captcha_stub.js").read_text()
                 query_dict = dict(url.query)
@@ -696,6 +698,66 @@ def is_content_type_accepted(content_type: str) -> bool:
         or content_type.strip().startswith("application/pdf")
         or content_type.strip().startswith("application/xhtml+xml")
     )
+
+
+def _process_tree(pid: Optional[int]) -> list[Process]:
+    """The process and all its descendants; empty if it is already gone."""
+    if pid is None:
+        return []
+    try:
+        root = Process(pid)
+        return [root] + root.children(recursive=True)
+    except psutil.Error:
+        return []
+
+
+def _is_alive(p: Process) -> bool:
+    """
+    A zombie has exited and writes nothing, so it counts as gone. Reaps it when it is our
+    child: in Docker the crawler is often PID 1 and inherits Chrome's orphaned helpers.
+    """
+    try:
+        if p.status() != psutil.STATUS_ZOMBIE:
+            return True
+        p.wait(timeout=0)
+    except psutil.Error:
+        pass
+    return False
+
+
+def _alive_after(processes: list[Process], timeout: float) -> list[Process]:
+    deadline = time.monotonic() + timeout
+    alive = [p for p in processes if _is_alive(p)]
+    while alive and time.monotonic() < deadline:
+        time.sleep(0.1)
+        alive = [p for p in alive if _is_alive(p)]
+    return alive
+
+
+def _wait_for_exit(processes: list[Process], timeout: float = 10) -> None:
+    """Waits for the processes to exit; kills those still running after timeout seconds."""
+    alive = _alive_after(processes, timeout)
+    if not alive:
+        return
+    logger.info("Killing %s browser processes still running", len(alive))
+    for p in alive:
+        try:
+            p.kill()
+        except psutil.Error:
+            pass
+    _alive_after(alive, timeout)
+
+
+def _cleanup_temp_dir(temp_dir: tempfile.TemporaryDirectory[str], tries: int = 3) -> None:
+    """Removes the directory, retrying shortly if a file appeared while it was removed."""
+    for i in range(tries):
+        try:
+            temp_dir.cleanup()
+            return
+        except OSError:
+            if i == tries - 1:
+                raise
+            time.sleep(0.5)
 
 
 class Chrome(EnfbotsBrowser):
@@ -959,34 +1021,21 @@ class Chrome(EnfbotsBrowser):
             self._interceptor_process.terminate()
             self._interceptor_thread.join()
 
+        # Chrome's helper processes (network service, GPU, zygote, ...) can outlive the main
+        # browser process and keep writing into the profile; collect them before quitting
+        browser_processes = _process_tree(self.driver.browser_pid)
+
         super().__exit__(exc_type, exc_val, exc_tb)
 
-        pid = self.driver.browser_pid
         try:
             # Ensure chrome is no longer running before removing _temp_dir
             if self.display:
                 self.display.stop()
 
-            if pid is not None:
-                p = Process(pid)
-
-                i = 0
-                while p.is_running():
-                    logger.info("Browser still running")
-                    try:
-                        p.wait(timeout=10)
-                    except TimeoutExpired:
-                        pass
-
-                    if i > 5:
-                        logger.info("Sending kill/term")
-                        p.kill()
-                        p.wait()
-                        p.terminate()
-                    i+= 1
+            _wait_for_exit(browser_processes)
 
             if self.use_temp:
-                self._temp_dir.cleanup()
+                _cleanup_temp_dir(self._temp_dir)
             if self.temp_download_directory:
                 self.temp_download_directory.cleanup()
             print("Exited browser")

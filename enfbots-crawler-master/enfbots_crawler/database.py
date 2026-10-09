@@ -613,6 +613,10 @@ class DBWebsiteCrawl(Base):
         back_populates="website_crawl", uselist=False, lazy="select", cascade="all, delete"
     )
 
+    capture_forms: Mapped[List["DBCaptureForm"]] = relationship(
+        back_populates="website_crawl", uselist=True, lazy="select", cascade="all, delete"
+    )
+
     def __repr__(self) -> str:
         return f"[DBWebsiteCrawl id={self.id} website={self.website}, website_id={self.website_id}, job={self.job}]"
 
@@ -812,6 +816,61 @@ class DBViolations(Base):
     gdpr_nudging: Mapped[Optional[bool]]
 
     other = mapped_column(JSON)
+
+
+class DBCaptureForm(Base):
+    """
+    An email-capture form (newsletter, offer, waitlist, ...) seen during an email-capture crawl,
+    whether or not the study can sign up to it (see eligible / reject_reason).
+    """
+
+    __tablename__ = "capture_forms"
+
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True)
+
+    website_crawl_id: Mapped[int] = mapped_column(
+        ForeignKey("website_crawls.id", ondelete="CASCADE")
+    )
+    website_crawl: Mapped["DBWebsiteCrawl"] = relationship(
+        back_populates="capture_forms", uselist=False, lazy="select"
+    )
+
+    # Page the form was found on
+    url: Mapped[str]
+
+    # newsletter / other (more kinds follow with the offer keywords)
+    kind: Mapped[str]
+
+    eligible: Mapped[bool]
+    # First rule the form failed, e.g. "password" or "phone_required"; NULL if eligible
+    reject_reason: Mapped[Optional[str]]
+
+    # How the form became visible: "inline" (in the page as loaded)
+    trigger: Mapped[str] = mapped_column(default="inline")
+
+    # Email platform guessed from the form's HTML, e.g. "klaviyo" or "mailchimp"
+    vendor_hint: Mapped[Optional[str]]
+
+    # Path of iframes containing the form; NULL for the top document
+    frame_path: Mapped[Optional[str]]
+
+    # Visible inputs: estimated type, HTML type, name, required, visible, label
+    fields = mapped_column(JSON)
+
+    # Plain strings rather than the CaptchaType enum, so new types need no migration
+    captcha_type: Mapped[Optional[str]]
+    captcha_visible: Mapped[Optional[bool]]
+
+    # Identifies the same form across pages of one crawl (e.g. a footer newsletter form)
+    signature: Mapped[str] = mapped_column(String(40))
+
+    html: Mapped[Optional[str]]
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        # pylint: disable=not-callable
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
 
 
 def get_website(url: URL) -> DBWebsite:
