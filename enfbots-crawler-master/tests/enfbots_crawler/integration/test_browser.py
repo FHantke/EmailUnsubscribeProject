@@ -1,10 +1,11 @@
 from contextlib import closing
+import logging
 import socket
 from pathlib import Path
 
 from PIL import Image  # type: ignore
 from hyperlink import URL
-from enfbots_crawler import PageState
+from enfbots_crawler import Config, PageState
 from enfbots_crawler.browser import EnfbotsBrowser
 
 
@@ -70,3 +71,32 @@ def test_dump_html(browser, output_directory: Path, flask_app_function):
     assert len(files) == 1
     assert files[0].name == "register.html"
     assert "register_page_unique_body_id" in files[0].read_text()
+
+
+def test_popup_triggers_show_popups(flask_app_function, browser):
+    browser.load_page(flask_app_function.child("static", "popups.html"))
+    assert 'id="scroll-popup"' not in browser.get_html()
+
+    browser.scroll_through_page(pause=0.1)
+    assert 'id="scroll-popup"' in browser.get_html()
+    assert 'id="exit-popup"' not in browser.get_html()
+
+    browser.simulate_exit_intent()
+    assert 'id="exit-popup"' in browser.get_html()
+
+
+def test_unblock_capture_vendors_in_ublock(browser, caplog):
+    # Needs the baked Chrome profile, which contains uBlock Origin Lite
+    with caplog.at_level(logging.INFO, logger="enfbots_crawler"):
+        browser.unblock_capture_vendors()
+
+    unblocked = len(Config().CAPTURE_UNBLOCK_DOMAINS)
+    assert f"Unblocked {unblocked} sign-up vendor domains" in caplog.text
+
+
+def test_disable_ublock_filtering_in_ublock(browser, caplog):
+    # Needs the baked Chrome profile, which contains uBlock Origin Lite
+    with caplog.at_level(logging.INFO, logger="enfbots_crawler"):
+        browser.disable_ublock_filtering()
+
+    assert "uBlock Origin Lite filtering switched off" in caplog.text

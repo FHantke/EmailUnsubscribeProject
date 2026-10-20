@@ -259,6 +259,21 @@ def image_captcha_submit():
     return redirect(request.referrer)
 
 
+# Study sign-ups (subscribe.py): a newsletter form submitted with fetch(), like most pop-up vendors
+NEWSLETTER_SIGNUPS: list[dict[str, str]] = []
+
+
+@bp.route("/newsletter")
+def newsletter():
+    return render_template("newsletter.html")
+
+
+@bp.route("/newsletter/subscribe", methods=["POST"])
+def newsletter_subscribe():
+    NEWSLETTER_SIGNUPS.append(request.form.to_dict())
+    return {"ok": True}
+
+
 app.register_blueprint(bp, url_prefix="/website")
 
 

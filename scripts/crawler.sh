@@ -9,8 +9,12 @@ unset _crawler_src
 crawler() {
   local testrun="$CRAWLER_PROJECT_ROOT/testrun"
   # Each call starts a fresh run.log; tee -i keeps it alive on Ctrl+C so the last lines are saved
-  docker run --rm -it --platform linux/amd64 --shm-size=2g \
-    --env-file "$testrun/crawler.env" \
-    -v "$testrun:/data" --init \
-    enfbots-crawler:local "$@" 2>&1 | tee -i "$testrun/run.log"
+  {
+    echo "=== start $(date '+%F %T %Z'): crawler $*"
+    docker run --rm -it --platform linux/amd64 --shm-size=2g \
+      --env-file "$testrun/crawler.env" \
+      -v "$testrun:/data" --init \
+      enfbots-crawler:local "$@" 2>&1
+    echo "=== end   $(date '+%F %T %Z') (exit status $?)"
+  } | tee -i "$testrun/run.log"
 }

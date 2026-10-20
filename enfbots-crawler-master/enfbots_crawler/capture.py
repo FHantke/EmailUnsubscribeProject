@@ -172,6 +172,11 @@ def is_capture_candidate(form: FormBS) -> bool:
     return len(email_inputs(form)) > 0
 
 
+def is_visible(form: FormBS) -> bool:
+    """Whether an email field is shown; a pop-up's form can sit hidden in the page until then."""
+    return any(i.visible for i in email_inputs(form))
+
+
 def _is_card_field(inp: InputBS) -> bool:
     autocomplete = get_attr(inp.element, "autocomplete", "").lower()
     if autocomplete.startswith("cc-"):
@@ -308,7 +313,11 @@ def signature(form: FormBS) -> str:
 
 
 def to_db(
-    form: FormBS, url: str, website_crawl_id: int, page_html: Optional[str] = None
+    form: FormBS,
+    url: str,
+    website_crawl_id: int,
+    page_html: Optional[str] = None,
+    trigger: str = "inline",
 ) -> DBCaptureForm:
     captcha = captcha_info(form, page_html)
     result = eligibility(form, captcha)
@@ -318,7 +327,8 @@ def to_db(
         kind=capture_kind(form),
         eligible=result.eligible,
         reject_reason=result.reject_reason,
-        trigger="inline",
+        trigger=trigger,
+        visible=is_visible(form),
         vendor_hint=vendor_hint(form),
         fields=field_summary(form),
         captcha_type=captcha.type if captcha else None,

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Pop-up triggers</title>
+</head>
+<body style="min-height: 4000px">
+<h1>Shop</h1>
+<p>Sign-up pop-ups that appear only on scroll or on exit intent (tests for browser.py).</p>
+<script>
+    function showForm(id, text) {
+        if (document.getElementById(id)) return;
+        const form = document.createElement("form");
+        form.id = id;
+        form.style = "position: fixed; top: 30%; left: 30%; background: white; border: 1px solid";
+        form.innerHTML = `<p>${text}</p><input type="email" name="email">` +
+            `<button type="submit">Subscribe</button>`;
+        document.body.appendChild(form);
+    }
+
+    window.addEventListener("scroll", () => {
+        const bottom = window.scrollY + window.innerHeight;
+        if (bottom >= document.documentElement.scrollHeight * 0.75) {
+            showForm("scroll-popup", "Get 10% off your first order");
+        }
+    });
+
+    // Typical exit-intent check: the pointer left the page above the viewport
+    document.addEventListener("mouseout", (e) => {
+        if (!e.relatedTarget && e.clientY <= 0) {
+            showForm("exit-popup", "Before you go: 15% off");
+        }
+    });
+</script>
+</body>
+</html>

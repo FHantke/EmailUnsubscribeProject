@@ -89,6 +89,8 @@ from enfbots_crawler import (
 from enfbots_crawler.browser import EnfbotsBrowser, LinkTuple, Browser
 from enfbots_crawler.credentials import Credentials
 from enfbots_crawler.database import (
+    DBCaptureForm,
+    DBTestCase,
     DBWebsite,
     DBWebsiteCrawl,
     DBURL,
@@ -99,6 +101,7 @@ from enfbots_crawler.database import (
     get_urlcontent,
 )
 from enfbots_crawler import capture
+from enfbots_crawler import subscribe as signup
 from enfbots_crawler.form_bs import FormBS
 from enfbots_crawler.form_selenium import FormSelenium
 from enfbots_crawler.reg_processor import RegProcessor
@@ -423,10 +426,12 @@ class WebSite(BaseWebsite):
 
         self.dump_id = 0
 
-        # Discovery: signatures of captures already stored, so a form shown on every page
-        # (e.g. in the footer) is recorded once per crawl
-        self._capture_signatures: set[str] = set()
+        # Discovery: captures already stored, by signature, so a form shown on every page
+        # (e.g. in the footer) is recorded once per crawl; values are (row id, visible)
+        self._capture_rows: dict[str, tuple[int, bool]] = {}
         self.eligible_capture_found = False
+        # When the homepage finished loading; pop-up triggers measure their delay from it
+        self._index_loaded_at = time.monotonic()
 
     def download_page(self, page_url: URL, output_file: Path) -> bool:
         """
@@ -496,6 +501,7 @@ class WebSite(BaseWebsite):
             if not self.load_index_page():
                 logger.warning("Failed to load index page %s", self.base_url)
                 return
+            self._index_loaded_at = time.monotonic()
 
             if Config().ALLOW_SCREENSHOTS:
                 png_bytes = self.br.get_screenshot()
@@ -544,6 +550,9 @@ class WebSite(BaseWebsite):
 
             self._process_site(self.base_url, PageType.INDEX, 0.0)
             self.crawl_stat_collector.page_loaded()
+
+            if is_discovery_mode():
+                self._reveal_popups()
 
             # Print links in order of visit (see self.navigator.sorting_key)
             logger.info("Interesting links on this page:")
@@ -664,6 +673,54 @@ class WebSite(BaseWebsite):
         finally:
             self.crawl_stat_collector.stop()
             logger.info("Finished crawl of %s:%s", self.base_url, self.crawl_stat_collector)
+
+    def subscribe(self, test_case_id: int) -> None:
+        """
+        Study sign-up for one test case (subscribe job), see subscribe.py. A test case that was
+        already submitted is never submitted again, e.g. when its job is restarted.
+        """
+        self.crawl_stat_collector.start()
+        website = get_website(self.base_url)
+        self.db_websitecrawl.website_id = website.id
+        # pylint: disable=no-member
+        with SessionLocal.begin() as session:
+            session.add(self.db_websitecrawl)
+            case = session.get(DBTestCase, test_case_id)
+            if case is None:
+                logger.error("Test case %s does not exist", test_case_id)
+                return
+            if case.submitted_at is not None:
+                logger.warning(
+                    "Test case %s was already submitted (%s), not submitting again",
+                    test_case_id,
+                    case.submit_status,
+                )
+                return
+            form = case.capture_form
+            target = signup.SubscribeTarget(
+                case.alias, case.persona, form.url, form.signature, form.html
+            )
+        logger.info("Study sign-up: test case %s on %s", test_case_id, target.url)
+
+        error: Optional[Exception] = None
+        try:
+            result = signup.run(self, target)
+        except (WebDriverException, TimeoutError, InvalidSessionIdException, HTTPError) as e:
+            error = e
+            result = signup.SubscribeResult("error", {"error": str(e)[:500]}, None, None)
+        finally:
+            self.crawl_stat_collector.stop()
+
+        with SessionLocal.begin() as session:
+            case = session.get(DBTestCase, test_case_id)
+            case.submit_status = result.status
+            case.submit_detail = result.detail
+            case.submit_page_url = result.page_url
+            case.submitted_at = result.submitted_at
+        logger.info("Study sign-up result for test case %s: %s", test_case_id, result.status)
+        if error is not None:
+            # Like crawl(): the job keeps no ended_at and is retried later (never resubmitted)
+            raise WebsiteException(error)
 
     def process_newsletter_registration(self) -> None:
         """
@@ -1325,7 +1382,43 @@ class WebSite(BaseWebsite):
                 self._process_form(best_form)
         logger.info("Finished processing forms.")
 
-    def categorize_forms_on_current_page(self) -> defaultdict[FormType, list[FormBS]]:
+    def _reveal_popups(self) -> None:
+        """
+        Discovery on the homepage: pop-ups (newsletter, discount, ...) often appear only after
+        a delay, on scroll or on exit intent. Runs each POPUP_TRIGGERS step in turn and rescans
+        the page after it, so captures are recorded with the step that revealed them.
+        """
+        steps = {
+            "delay": self._wait_for_popup_delay,
+            "scroll": self.br.scroll_through_page,
+            "exit_intent": self.br.simulate_exit_intent,
+        }
+        for trigger in Config().POPUP_TRIGGERS:
+            if trigger not in steps:
+                logger.warning("Unknown pop-up trigger %s", trigger)
+                continue
+            logger.info("Pop-up trigger: %s", trigger)
+            try:
+                steps[trigger]()
+                if trigger != "delay":
+                    time.sleep(Config().POPUP_STEP_WAIT_SEC)
+                self.categorize_forms_on_current_page(trigger)
+            except WebDriverException as e:
+                logger.warning("Pop-up trigger %s failed: %s", trigger, e.msg)
+                continue
+            if Config().ALLOW_SCREENSHOTS:
+                did = self.dump_id
+                self.dump_id += 1
+                png_bytes = self.br.get_screenshot()
+                (self.output_path / f"{did}_popup_{trigger}.png").write_bytes(png_bytes)
+
+    def _wait_for_popup_delay(self) -> None:
+        elapsed = time.monotonic() - self._index_loaded_at
+        time.sleep(max(0.0, Config().POPUP_WAIT_SEC - elapsed))
+
+    def categorize_forms_on_current_page(
+        self, trigger: str = "inline"
+    ) -> defaultdict[FormType, list[FormBS]]:
         by_type: defaultdict[FormType, list[FormBS]] = defaultdict(list)
 
         forms = cast(EnfbotsBrowser, self.br).find_forms(self.lang)
@@ -1340,28 +1433,42 @@ class WebSite(BaseWebsite):
             )
 
         if is_discovery_mode():
-            self._record_captures(forms)
+            self._record_captures(forms, trigger)
 
         return by_type
 
-    def _record_captures(self, forms: list[FormBS]) -> None:
-        """Stores each new email-capture form on the current page, eligible or not."""
+    def _record_captures(self, forms: list[FormBS], trigger: str = "inline") -> None:
+        """
+        Stores each new email-capture form on the current page, eligible or not. A form seen
+        before only hidden (e.g. a pop-up waiting in the page) that is now visible gets this
+        trigger, as that is what revealed it.
+        """
         url = str(self.br.current_url)
         candidates = [f for f in forms if capture.is_capture_candidate(f)]
         if not candidates:
             return
         # Page-level CAPTCHA scripts (e.g. reCAPTCHA v3) apply to forms without a widget
         page_html = self.br.get_html()
-        new = []
+        new: dict[str, DBCaptureForm] = {}
+        revealed: dict[int, FormBS] = {}
         for form in candidates:
             sig = capture.signature(form)
-            if sig in self._capture_signatures:
+            if sig in new:
                 continue
-            self._capture_signatures.add(sig)
-            row = capture.to_db(form, url, self.db_websitecrawl.id, page_html)
+            if sig in self._capture_rows:
+                row_id, was_visible = self._capture_rows[sig]
+                if not was_visible and capture.is_visible(form):
+                    revealed[row_id] = form
+                    self._capture_rows[sig] = (row_id, True)
+                    logger.info("Capture form on %s revealed by %s", url, trigger)
+                continue
+            row = capture.to_db(form, url, self.db_websitecrawl.id, page_html, trigger)
             logger.info(
-                "Capture form on %s: kind=%s eligible=%s reason=%s vendor=%s captcha=%s",
+                "Capture form on %s: trigger=%s visible=%s kind=%s eligible=%s reason=%s "
+                "vendor=%s captcha=%s",
                 url,
+                trigger,
+                row.visible,
                 row.kind,
                 row.eligible,
                 row.reject_reason,
@@ -1369,12 +1476,22 @@ class WebSite(BaseWebsite):
                 row.captcha_type,
             )
             self.eligible_capture_found = self.eligible_capture_found or row.eligible
-            new.append(row)
+            new[sig] = row
 
-        if new:
-            # pylint: disable=no-member
-            with SessionLocal.begin() as session:
-                session.add_all(new)
+        if not new and not revealed:
+            return
+        # pylint: disable=no-member
+        with SessionLocal.begin() as session:
+            session.add_all(new.values())
+            session.flush()
+            for sig, row in new.items():
+                self._capture_rows[sig] = (row.id, bool(row.visible))
+            for row_id, form in revealed.items():
+                stored = session.get(DBCaptureForm, row_id)
+                if stored is not None:
+                    stored.trigger = trigger
+                    stored.visible = True
+                    stored.fields = capture.field_summary(form)
 
     def _process_form(self, best_form: FormBS) -> None:
         if best_form.type == FormType.NEWSLETTER:

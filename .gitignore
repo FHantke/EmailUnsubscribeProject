@@ -15,7 +15,8 @@ stalwart-etc
 test-backups
 emails/
 conf/ssh*
-
+project_report*
+crawl_archive/
 
 # Other
 .DS_Store
@@ -29,3 +30,4 @@ conf/ssh*
 /enfbots-crawler-master/usage_screenshots/
 /enfbots-crawler-master.zip
 /testrun/
+/reports/

@@ -67,7 +67,12 @@ class Credentials:
 
     @staticmethod
     def get() -> Credentials:
-        file = Config().credentials_dir / f"{Config().CREDENTIALS.lower()}.json"
+        return Credentials.load(Config().CREDENTIALS)
+
+    @staticmethod
+    def load(name: str) -> Credentials:
+        """The persona in credentials/<name>.json (study sign-ups name theirs per test case)."""
+        file = Config().credentials_dir / f"{name.lower()}.json"
         if file.exists():
             with file.open() as f:
                 json_creds = json.load(f)
@@ -76,7 +81,7 @@ class Credentials:
             )
             return Credentials(**json_creds)
         else:
-            raise FileNotFoundError(f"Cannot find credentials matching name '{Config().CREDENTIALS}'")
+            raise FileNotFoundError(f"Cannot find credentials matching name '{name}'")
 
 
 def get_rnd_str(length: int) -> str:

@@ -374,6 +374,10 @@ class DBJob(Base):
         back_populates="job", uselist=True, lazy="select"
     )
 
+    # Study sign-up this job performs (subscribe job); NULL for crawl jobs
+    test_case_id: Mapped[Optional[int]] = mapped_column(ForeignKey("test_cases.id"), default=None)
+    test_case: Mapped[Optional["DBTestCase"]] = relationship(uselist=False, lazy="select")
+
     # These indices are based on the job because the websites
     # index may change over time
     tranco_index: Mapped[Optional[int]]
@@ -845,8 +849,12 @@ class DBCaptureForm(Base):
     # First rule the form failed, e.g. "password" or "phone_required"; NULL if eligible
     reject_reason: Mapped[Optional[str]]
 
-    # How the form became visible: "inline" (in the page as loaded)
+    # Step after which the form was first visible: "inline" (in the page as loaded), "delay",
+    # "scroll" or "exit_intent" (pop-up triggers); for a form never seen visible, the step
+    # it was first found at
     trigger: Mapped[str] = mapped_column(default="inline")
+    # Whether its email field was visible after that step; False: only ever hidden in the page
+    visible: Mapped[Optional[bool]]
 
     # Email platform guessed from the form's HTML, e.g. "klaviyo" or "mailchimp"
     vendor_hint: Mapped[Optional[str]]
@@ -865,6 +873,51 @@ class DBCaptureForm(Base):
     signature: Mapped[str] = mapped_column(String(40))
 
     html: Mapped[Optional[str]]
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        # pylint: disable=not-callable
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+
+class DBTestCase(Base):
+    """
+    One sign-up of the RFC 8058 study: an alias subscribed to a capture form. Each site gets a
+    control and a treatment case; only the treatment alias is unsubscribed later.
+    """
+
+    __tablename__ = "test_cases"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+
+    website_id: Mapped[int] = mapped_column(ForeignKey("websites.id"))
+    capture_form_id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), ForeignKey("capture_forms.id")
+    )
+    capture_form: Mapped["DBCaptureForm"] = relationship(uselist=False, lazy="select")
+
+    # crawl_id of the subscribe jobs, e.g. "subscribe-pilot"
+    study_id: Mapped[str]
+    # "control" or "treatment"
+    arm: Mapped[str]
+    alias: Mapped[str] = mapped_column(unique=True)
+    # credentials/<persona>.json used for required fields
+    persona: Mapped[str]
+    # Why this capture was chosen for the site, e.g. "visible newsletter"
+    selection_reason: Mapped[Optional[str]]
+
+    # pending, dry_run, success_text, form_gone, redirect, captcha_blocked, failed, unknown,
+    # skipped_<reason> (e.g. skipped_form_not_found) or error
+    submit_status: Mapped[str] = mapped_column(default="pending")
+    # Signals behind submit_status: fields filled, keywords seen, URLs, ...
+    submit_detail = mapped_column(JSON)
+    submit_page_url: Mapped[Optional[str]]
+    submitted_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(timezone=True))
+
+    # Set by the later double opt-in confirmation step
+    confirm_status: Mapped[Optional[str]]
+    confirmed_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(timezone=True))
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         # pylint: disable=not-callable

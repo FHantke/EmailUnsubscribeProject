@@ -35,6 +35,7 @@ from selenium.common.exceptions import (
     UnexpectedAlertPresentException,
 )
 from selenium.webdriver import ActionChains
+from selenium.webdriver.common.actions.action_builder import ActionBuilder
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -74,6 +75,59 @@ FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 
 CHROME_WIDTH=1920
 CHROME_HEIGHT=1080
+
+# The pointer leaving the viewport at the top: mouseout/mouseleave with no related target
+_EXIT_INTENT_JS = """
+const options = {bubbles: true, cancelable: true, view: window, clientX: 200, clientY: -5,
+                 relatedTarget: null};
+for (const target of [document, document.documentElement, document.body]) {
+    if (!target) continue;
+    target.dispatchEvent(new MouseEvent("mouseout", options));
+    target.dispatchEvent(new MouseEvent("mouseleave", {...options, bubbles: false}));
+}
+window.dispatchEvent(new MouseEvent("mouseout", options));
+"""
+
+# Allows the sign-up vendors' domains for the browser session, outranking uBlock's filter
+# lists (a higher priority wins within one extension); runs on one of uBlock's own pages
+_UNBLOCK_RULE_ID = 7_000_001
+_UNBLOCK_JS = """
+const [domains, ruleId, done] = arguments;
+if (!(window.chrome && chrome.declarativeNetRequest)) {
+    done("declarativeNetRequest is not available on this page");
+    return;
+}
+const resourceTypes = ["main_frame", "sub_frame", "stylesheet", "script", "image", "font",
+                       "xmlhttprequest", "ping", "media", "websocket", "other"];
+chrome.declarativeNetRequest.updateSessionRules({
+    removeRuleIds: [ruleId],
+    addRules: [{id: ruleId, priority: 1000000, action: {type: "allow"},
+                condition: {requestDomains: domains, resourceTypes: resourceTypes}}],
+}).then(() => chrome.declarativeNetRequest.getSessionRules())
+  .then((rules) => {
+      const rule = rules.find((r) => r.id === ruleId);
+      done(rule ? rule.condition.requestDomains.length : "the rule is missing after adding it");
+  })
+  .catch((e) => done(String(e)));
+"""
+
+# Switches uBlock Origin Lite to "No filtering" for all sites with the message its dashboard
+# sends (uBOL 2024.2.26, js/settings.js). uBOL then adds an allowAllRequests rule and removes
+# its cosmetic filters; the rule is read back to confirm
+_NO_FILTERING_JS = """
+const done = arguments[arguments.length - 1];
+if (!(window.chrome && chrome.runtime && chrome.declarativeNetRequest)) {
+    done("the extension APIs are not available on this page");
+    return;
+}
+chrome.runtime.sendMessage({what: "setDefaultFilteringMode", level: 0})
+  .then((level) => chrome.declarativeNetRequest.getDynamicRules().then((rules) => {
+      const allowAll = rules.some((r) => r.action.type === "allowAllRequests"
+                                         && !r.condition.requestDomains);
+      done({level: level, allowAll: allowAll});
+  }))
+  .catch((e) => done(String(e)));
+"""
 
 # Find all href tags
 # JavaScript efficient implementation
@@ -236,12 +290,14 @@ class Browser(ABC):
         else:
             logger.info("NO load status found for %s", str_url)
 
-        try:
-            logger.info("Pressing escape")
-            self._press_key(Keys.ESCAPE)
-        except (UnexpectedAlertPresentException, WebDriverException, TimeoutException) as e:
-            logger.exception(e)
-            # Also continue
+        # Escape closes modals; email-capture mode is looking for exactly those (pop-up sign-ups)
+        if not Config().EMAIL_CAPTURE_ONLY:
+            try:
+                logger.info("Pressing escape")
+                self._press_key(Keys.ESCAPE)
+            except (UnexpectedAlertPresentException, WebDriverException, TimeoutException) as e:
+                logger.exception(e)
+                # Also continue
 
         if str(url) in self._load_status:
             tries = 3
@@ -412,6 +468,28 @@ class Browser(ABC):
         actions = ActionChains(self.driver)
         actions.send_keys(key)
         actions.perform()
+
+    def scroll_through_page(self, steps: int = 8, pause: float = 0.4) -> None:
+        """Scrolls to the bottom in steps, firing scroll events like a reader would, then back."""
+        for i in range(1, steps + 1):
+            self.driver.execute_script(
+                "window.scrollTo(0, document.documentElement.scrollHeight * arguments[0]);",
+                i / steps,
+            )
+            time.sleep(pause)
+        self.driver.execute_script("window.scrollTo(0, 0);")
+
+    def simulate_exit_intent(self) -> None:
+        """
+        Moves the mouse up to the top edge, then fires the events exit-intent scripts listen
+        for when the pointer leaves the window towards the tabs or address bar. The events are
+        synthetic (isTrusted is false), so scripts that check for real input won't react.
+        """
+        actions = ActionBuilder(self.driver)
+        actions.pointer_action.move_to_location(200, 300)
+        actions.pointer_action.move_to_location(200, 5)
+        actions.perform()
+        self.driver.execute_script(_EXIT_INTENT_JS)
 
     @post_load_routine
     def input_value(self, tag: WebElement, value: str) -> None:
@@ -917,7 +995,58 @@ class Chrome(EnfbotsBrowser):
 
         self.driver.add_cdp_listener("Network.responseReceived", self._handle_cdp_response_received)
 
+        if Config().EMAIL_CAPTURE_ONLY:
+            self.configure_ublock()
+
         return self
+
+    def configure_ublock(self) -> None:
+        """Applies CAPTURE_UBLOCK_MODE to uBlock Origin Lite (email-capture mode)."""
+        mode = Config().CAPTURE_UBLOCK_MODE
+        if mode == "none":
+            self.disable_ublock_filtering()
+        elif mode == "allowlist":
+            self.unblock_capture_vendors()
+        elif mode != "default":
+            logger.warning("Unknown CAPTURE_UBLOCK_MODE %s; uBlock left unchanged", mode)
+
+    def _run_on_ublock_page(self, script: str, *args: Any) -> Any:
+        # uBlock's extension APIs are only reachable from its own pages, e.g. its dashboard
+        self.driver.get(f"chrome-extension://{Config().UBLOCK_EXTENSION_ID}/dashboard.html")
+        return self.driver.execute_async_script(script, *args)
+
+    def disable_ublock_filtering(self) -> None:
+        """
+        Switches uBlock Origin Lite to "No filtering": it stays installed and running, as for
+        a user who turned it off, but blocks and hides nothing, so every pop-up vendor loads.
+        """
+        try:
+            result = self._run_on_ublock_page(_NO_FILTERING_JS)
+        except WebDriverException as e:
+            logger.warning("Could not switch off uBlock Origin Lite filtering: %s", e.msg)
+            return
+        if isinstance(result, dict) and result.get("level") == 0 and result.get("allowAll"):
+            logger.info("uBlock Origin Lite filtering switched off (No filtering mode)")
+        else:
+            logger.warning("Could not switch off uBlock Origin Lite filtering: %s", result)
+
+    def unblock_capture_vendors(self) -> None:
+        """
+        Lifts uBlock Origin Lite's blocking for CAPTURE_UNBLOCK_DOMAINS only, so pop-up and
+        sign-up vendors load while its other filtering stays on.
+        """
+        domains = Config().CAPTURE_UNBLOCK_DOMAINS
+        if not domains:
+            return
+        try:
+            result = self._run_on_ublock_page(_UNBLOCK_JS, domains, _UNBLOCK_RULE_ID)
+        except WebDriverException as e:
+            logger.warning("Could not unblock sign-up vendors in uBlock Origin Lite: %s", e.msg)
+            return
+        if isinstance(result, int):
+            logger.info("Unblocked %d sign-up vendor domains in uBlock Origin Lite", result)
+        else:
+            logger.warning("Could not unblock sign-up vendors in uBlock Origin Lite: %s", result)
 
     def _handle_cdp_response_received(self, data: Any) -> None:
         """

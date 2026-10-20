@@ -117,6 +117,103 @@ class Config(metaclass=Singleton):
             "buttondown.email",
         ]
 
+        # Study sign-ups (subscribe jobs, email-capture mode). Aliases are ALIAS_PREFIX followed
+        # by ALIAS_DIGITS random digits @ STUDY_MAIL_DOMAIN and must match the mail server's
+        # mailbox pattern (news[0-9]+ in conf/provision.sh)
+        self.STUDY_MAIL_DOMAIN = ""
+        self.ALIAS_PREFIX = "news"
+        self.ALIAS_DIGITS = 10
+        # Fictional persona (credentials/<name>.json) for fields a sign-up form requires
+        self.STUDY_PERSONA = "us_jordan"
+        # Fill sign-up forms and take screenshots, but never submit
+        self.SUBSCRIBE_DRY_RUN = False
+        # Seconds to wait after submitting before judging the outcome
+        self.SUBSCRIBE_WAIT_SEC = 5.0
+        # Page text (lower case) that newly appears after a successful / failed sign-up
+        self.SUBSCRIBE_SUCCESS_KEYWORDS: list[str] = [
+            "thank you",
+            "thanks for",
+            "you're subscribed",
+            "you are subscribed",
+            "you're on the list",
+            "you're in",
+            "successfully subscribed",
+            "subscription confirmed",
+            "check your inbox",
+            "check your email",
+            "confirm your email",
+            "confirm your subscription",
+            "confirmation email",
+            "almost done",
+            "almost there",
+            "welcome to the",
+            "your discount code",
+            "use code",
+        ]
+        self.SUBSCRIBE_FAILURE_KEYWORDS: list[str] = [
+            "already subscribed",
+            "already registered",
+            "invalid email",
+            "valid email",
+            "please enter",
+            "is required",
+            "something went wrong",
+            "try again",
+        ]
+
+        # Email-capture discovery: steps run on the homepage to reveal pop-ups, each followed by
+        # a rescan for forms (any of "delay", "scroll", "exit_intent"; empty disables them)
+        self.POPUP_TRIGGERS: list[str] = ["delay", "scroll", "exit_intent"]
+        # "delay" waits until this many seconds after the homepage loaded
+        self.POPUP_WAIT_SEC = 12.0
+        # Wait after scrolling / exit intent before rescanning
+        self.POPUP_STEP_WAIT_SEC = 2.0
+
+        # uBlock Origin Lite in the Chrome profile blocks the scripts of many sign-up, pop-up and
+        # personalisation vendors. In email-capture mode it stays installed (sites can still
+        # see it) and this sets what it blocks:
+        #   "none": nothing, its "No filtering" mode (as a user can switch in its dashboard)
+        #   "allowlist": filtering on, except for CAPTURE_UNBLOCK_DOMAINS
+        #   "default": the profile's filtering, unchanged
+        self.CAPTURE_UBLOCK_MODE = "none"
+        self.UBLOCK_EXTENSION_ID = "ddkjiahejlhfcafbddmgiahcphecmpfh"
+        # Allowed in "allowlist" mode, subdomains included. Incomplete: personalisation
+        # platforms (Bloomreach/Exponea, Insider, Bluecore, ...) are blocked too and not listed
+        self.CAPTURE_UNBLOCK_DOMAINS: list[str] = [
+            # blocked by the profile's lists (checked 2026-10-09)
+            "attn.tv",  # Attentive
+            "attentivemobile.com",
+            "privy.com",
+            "justuno.com",
+            "omappapi.com",  # OptinMonster
+            "optinmonster.com",
+            "optmnstr.com",
+            "sumo.com",
+            "bounceexchange.com",  # Wunderkind
+            "bouncex.net",
+            "wknd.ai",
+            "listrak.com",
+            "listrakbi.com",
+            "popt.in",  # Poptin
+            "poptin.com",
+            # tracking endpoints blocked; their forms load
+            "klaviyo.com",
+            "list-manage.com",  # Mailchimp
+            "chimpstatic.com",
+            "hsforms.com",  # HubSpot
+            "hsforms.net",
+            "convertkit.com",
+            # not blocked today; listed in case the lists change
+            "wisepops.com",
+            "sleeknote.com",
+            "getsitecontrol.com",
+            "omnisend.com",
+            "omnisrc.com",
+            "hellobar.com",
+            "mailerlite.com",
+            "sibforms.com",  # Brevo
+        ]
+
         # Newsletter keywords too weak to follow a link on in email-capture mode ("news" leads to
         # news articles): English "news" and "sub" plus their translations in the language files.
         # Compared with the keyword entries (case and accents ignored), not with page text.

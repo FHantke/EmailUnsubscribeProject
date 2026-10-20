@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Newsletter</title>
+</head>
+<body>
+<h1>Shop</h1>
+<p>A newsletter sign-up like the ones the study signs up to (tests for subscribe.py).</p>
+
+<form id="signup" action="/website/newsletter/subscribe" method="post">
+    <p>Join our newsletter and get 10% off your first order</p>
+    <label for="email">Email</label>
+    <input type="email" name="email" id="email" required>
+    <label for="first_name">First name *</label>
+    <input type="text" name="first_name" id="first_name">
+    <label for="last_name">Last name</label>
+    <input type="text" name="last_name" id="last_name">
+    <label for="phone">Phone (optional)</label>
+    <input type="tel" name="phone" id="phone">
+    <input type="checkbox" name="privacy" id="privacy" value="yes" required>
+    <label for="privacy">I agree to the privacy policy</label>
+    <input type="checkbox" name="sms" id="sms" value="yes" checked>
+    <label for="sms">Also send me SMS text messages</label>
+    <!-- Honeypot: hidden from people, filled by bots -->
+    <textarea name="comment" id="comment" style="display: none"></textarea>
+    <button type="button" id="dismiss">No thanks</button>
+    <button id="join">Join the list</button>
+</form>
+<p id="done" style="display: none">Thanks for subscribing! Check your inbox to confirm.</p>
+
+<script>
+    document.getElementById("dismiss").addEventListener("click", () => {
+        document.getElementById("signup").style.display = "none";
+    });
+    document.getElementById("signup").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await fetch(e.target.action, {method: "POST", body: new FormData(e.target)});
+        e.target.style.display = "none";
+        document.getElementById("done").style.display = "block";
+    });
+</script>
+</body>
+</html>

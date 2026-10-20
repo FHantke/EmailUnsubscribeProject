@@ -133,7 +133,8 @@ def run_domain(
 
     is_cached = cached_website_crawl is not None
 
-    if not is_cached:
+    # Email-capture sign-ups use the study's own mail server, not Sybilmail
+    if not is_cached and not Config().EMAIL_CAPTURE_ONLY:
         if str(Config().SYBIL_URL).strip() == "" and Config().CREATE_ACCOUNT:
             raise CrawlerException(
                 "You are missing the SYBIL_URL setting "
@@ -195,7 +196,8 @@ def run_domain(
     with create_browser(
         languages=languages,
         seconds_before_processing_page=seconds_before_processing_page,
-        intercept_network=Config().CREATE_ACCOUNT,
+        # The interceptor swaps in the CAPTCHA stub for paid solving, which the study never uses
+        intercept_network=Config().CREATE_ACCOUNT and not Config().EMAIL_CAPTURE_ONLY,
         headless=headless,
     ) as browser:
         end = time.time()
@@ -235,6 +237,10 @@ def run_domain(
                             prev_lang_code=cached_website_crawl.lang,
                         )
                         stat_collector.validated_website()
+            elif job is not None and job.test_case_id is not None:
+                # Subscribe job (create_test_cases.py): one study sign-up, no crawling
+                site.subscribe(job.test_case_id)
+                stat_collector.visited_website()
             else:
                 logger.info("Doing a normal crawl")
                 site.crawl()

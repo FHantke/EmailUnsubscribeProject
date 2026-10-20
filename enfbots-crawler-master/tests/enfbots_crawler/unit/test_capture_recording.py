@@ -28,8 +28,8 @@ REGISTRATION = """<form action="/signup"><input type="email" name="email">
   <input type="password" name="password"><button type="submit">Create account</button></form>"""
 
 
-def _form(html: str) -> FormBS:
-    return FormBS(bs4.BeautifulSoup(html, "html.parser").form, EN)
+def _form(html: str, input_info: dict[str, bool] | None = None) -> FormBS:
+    return FormBS(bs4.BeautifulSoup(html, "html.parser").form, EN, input_info)
 
 
 @pytest.fixture
@@ -39,7 +39,9 @@ def db(tmp_path, monkeypatch):
     monkeypatch.setenv("CRAWLER_DB_PATH", str(db_path))
     monkeypatch.setattr(Config(), "DB_TYPE", "sqlite")
     monkeypatch.setattr(Config(), "DB_PATH", str(db_path))
-    initialize_base_db(db_url=f"sqlite:///{db_path}", alembic_root_dir=Config().code_dir, create=True)
+    initialize_base_db(
+        db_url=f"sqlite:///{db_path}", alembic_root_dir=Config().code_dir, create=True
+    )
 
 
 @pytest.fixture
@@ -55,7 +57,7 @@ def _site() -> WebSite:
     site.br.get_html.return_value = "<html><body></body></html>"
     site.lang = EN
     site.newsletter_url = None
-    site._capture_signatures = set()
+    site._capture_rows = {}
     site.eligible_capture_found = False
     site.db_websitecrawl = store(DBWebsiteCrawl(website_id=get_website(BASE).id))
     return site
@@ -94,6 +96,42 @@ def test_only_ineligible_capture_keeps_searching(db, discovery):
 
     assert len(_stored()) == 1
     assert not site.eligible_capture_found
+
+
+# A discount pop-up; its email input carries the id browser.load_form_info gives it
+POPUP = """<form id="popup"><p>Get 15% off your first order</p>
+  <input type="email" name="email" data-enfbots-uuid="popup-email">
+  <button type="submit">Unlock offer</button></form>"""
+
+
+def _scan(site: WebSite, trigger: str, *forms: FormBS) -> None:
+    site.br.current_url = BASE
+    site.br.find_forms.return_value = list(forms)
+    site.categorize_forms_on_current_page(trigger)
+
+
+def test_popup_is_recorded_with_the_trigger_that_showed_it(db, discovery):
+    site = _site()
+    _scan(site, "inline", _form(FOOTER_NEWSLETTER.format(n="a")))
+    _scan(site, "delay", _form(FOOTER_NEWSLETTER.format(n="b")), _form(POPUP))
+
+    rows = _stored()
+    assert [(r.trigger, r.visible) for r in rows] == [("inline", True), ("delay", True)]
+
+
+def test_hidden_popup_form_gets_the_trigger_that_reveals_it(db, discovery):
+    site = _site()
+    # The pop-up's form is in the page from the start, but hidden
+    _scan(site, "inline", _form(POPUP, {"popup-email": False}))
+    assert [(r.trigger, r.visible) for r in _stored()] == [("inline", False)]
+
+    _scan(site, "delay", _form(POPUP, {"popup-email": False}))
+    _scan(site, "scroll", _form(POPUP, {"popup-email": True}))
+    _scan(site, "exit_intent", _form(POPUP, {"popup-email": True}))
+
+    rows = _stored()
+    assert [(r.trigger, r.visible) for r in rows] == [("scroll", True)]
+    assert rows[0].fields[0]["visible"] is True
 
 
 def test_nothing_recorded_outside_discovery(db, monkeypatch):
