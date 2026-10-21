@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DETECT_JS Flow</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6b66;
+    --line: #c9c9c2; --accent: #2f6fdb; --accent-soft: #e6eefc;
+    --td: #2e8b57; --td-soft: #e5f4ec; --bu: #b7612a; --bu-soft: #fbeee4;
+    --skip: #8a8a84; --skip-soft: #efefec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161615; --card: #20201e; --ink: #ecece8; --muted: #a3a39c;
+      --line: #42423e; --accent: #7aa7f5; --accent-soft: #1f2a3d;
+      --td: #6cc391; --td-soft: #1b2e23; --bu: #e39a68; --bu-soft: #35261b;
+      --skip: #8f8f88; --skip-soft: #2a2a27;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161615; --card: #20201e; --ink: #ecece8; --muted: #a3a39c;
+    --line: #42423e; --accent: #7aa7f5; --accent-soft: #1f2a3d;
+    --td: #6cc391; --td-soft: #1b2e23; --bu: #e39a68; --bu-soft: #35261b;
+    --skip: #8f8f88; --skip-soft: #2a2a27;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a { color: var(--accent); }
+
+  .flow { display: flex; flex-direction: column; align-items: stretch; }
+  .arrow { align-self: center; width: 2px; height: 26px; background: var(--line); position: relative; }
+  .arrow::after {
+    content: ""; position: absolute; left: -5px; bottom: -2px;
+    border: 6px solid transparent; border-top-color: var(--line); border-bottom: 0;
+  }
+  .edge { align-self: center; color: var(--muted); font-size: 0.85rem; padding: 2px 10px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card h2 { font-size: 1rem; margin: 0 0 6px; display: flex; gap: 8px; align-items: baseline; }
+  .num {
+    flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px;
+    border-radius: 50%; background: var(--accent-soft); color: var(--accent);
+    font-size: 0.8rem; font-weight: 700;
+  }
+  .card p { margin: 0; color: var(--muted); }
+  .io { text-align: center; border-style: dashed; }
+  .io p { color: var(--ink); }
+
+  .phase { border-width: 2px; }
+  .phase.td { border-color: var(--td); }
+  .phase.bu { border-color: var(--bu); }
+  .phase.td .num { background: var(--td-soft); color: var(--td); }
+  .phase.bu .num { background: var(--bu-soft); color: var(--bu); }
+  .loop-label { font-size: 0.85rem; color: var(--muted); margin: 0 0 10px; }
+
+  .step { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin: 8px 0; }
+  .q {
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px;
+    background: var(--bg);
+  }
+  .q::before { content: "?"; font-weight: 700; color: var(--accent); margin-right: 8px; }
+  .skip {
+    font-size: 0.82rem; color: var(--skip); background: var(--skip-soft);
+    border-radius: 999px; padding: 3px 10px; white-space: nowrap;
+  }
+  .yes { font-size: 0.82rem; color: var(--muted); margin: 2px 0 2px 14px; }
+  .result {
+    border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-weight: 600;
+  }
+  .td .result { background: var(--td-soft); color: var(--td); }
+  .bu .result { background: var(--bu-soft); color: var(--bu); }
+  .result span { display: block; font-weight: 400; color: var(--muted); font-size: 0.88rem; }
+
+  .climb {
+    border-left: 3px dashed var(--bu); padding: 4px 0 4px 14px; margin: 8px 0 8px 4px;
+  }
+  .climb-tag { font-size: 0.82rem; color: var(--bu); font-weight: 600; margin-bottom: 2px; }
+
+  ol.rank { margin: 6px 0 0; padding-left: 20px; }
+  ol.rank li { margin: 2px 0; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tags span {
+    font-size: 0.82rem; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px;
+  }
+  .budget {
+    align-self: center; font-size: 0.82rem; color: var(--muted);
+    border: 1px dashed var(--line); border-radius: 999px; padding: 3px 12px; margin: 10px 0 0;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 24px; font-size: 0.85rem; color: var(--muted); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+  @media (max-width: 520px) {
+    .step { grid-template-columns: 1fr; }
+    .skip { justify-self: start; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>How <code>DETECT_JS</code> finds signup forms</h1>
+  <p class="sub">Runs inside the page, once per frame after every phase. Step numbers
+    match <a href="crawl-flow.md">crawl-flow.md</a>, section 5; step 2, the email-input
+    test, is the "email input?" check inside both loops.</p>
+
+  <div class="legend">
+    <span><i style="background:var(--td)"></i>top-down</span>
+    <span><i style="background:var(--bu)"></i>bottom-up</span>
+    <span><i style="background:var(--skip-soft);border:1px solid var(--skip)"></i>skipped</span>
+  </div>
+
+  <div class="flow">
+    <div class="card io"><p><code>scan_page()</code> calls <code>DETECT_JS</code> in one frame</p></div>
+    <div class="arrow"></div>
+
+    <div class="card">
+      <h2>Start the time budget</h2>
+      <p>4 s (<code>DETECT_BUDGET_MS</code>). Both loops below stop early once it is used up.</p>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="card">
+      <h2><span class="num">1</span>Collect roots</h2>
+      <p>The main document plus every open shadow root, checking at most 15,000
+        elements (<code>MAX_SHADOW_SCAN</code>). All later searches cover this whole list.</p>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="card phase td">
+      <h2><span class="num">3</span>Top-down: start from the form</h2>
+      <p class="loop-label">For each <code>&lt;form&gt;</code> in every root:</p>
+      <div class="step">
+        <div class="q">Does it contain a visible email input?</div>
+        <div class="skip">no → skip form</div>
+      </div>
+      <div class="yes">yes ↓</div>
+      <div class="result">Candidate = the &lt;form&gt;
+        <span><code>detection_method = top-down</code>. Its email inputs are marked
+          <b>claimed</b>.</span></div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="card phase bu">
+      <h2><span class="num">4</span>Bottom-up: start from the email box</h2>
+      <p class="loop-label">For each <code>&lt;input&gt;</code> in every root:</p>
+      <div class="step">
+        <div class="q">Claimed, not an email input, or invisible?</div>
+        <div class="skip">yes → skip input</div>
+      </div>
+      <div class="yes">no ↓ &nbsp; set <code>c</code> = parent of the input</div>
+
+      <div class="climb">
+        <div class="climb-tag">↺ climb loop</div>
+        <div class="step">
+          <div class="q"><code>c</code> is <code>&lt;body&gt;</code>, or already 15 levels up?</div>
+          <div class="skip">yes → skip input</div>
+        </div>
+        <div class="step">
+          <div class="q">Does <code>c</code> contain a visible submit-like control?</div>
+          <div class="skip" style="color:var(--bu);background:var(--bu-soft)">no → <code>c</code> = parent of <code>c</code>, repeat</div>
+        </div>
+      </div>
+
+      <div class="yes">yes ↓</div>
+      <div class="result">Candidate = <code>c</code>
+        <span><code>detection_method = bottom-up</code>. Every input inside
+          <code>c</code> is marked <b>claimed</b>.</span></div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="card">
+      <h2>Score every candidate</h2>
+      <p>Field count, effective z-index, modal/dialog hint, login-like
+        (password field or "log in" text).</p>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="card">
+      <h2><span class="num">5</span>Rank (the paper's rules, in order)</h2>
+      <ol class="rank">
+        <li>Higher z-index first, so popups beat inline forms. Ties: modal hint first.</li>
+        <li>Login-like forms last.</li>
+        <li>More fields first.</li>
+      </ol>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="card">
+      <h2><span class="num">6</span>Tag and measure each candidate</h2>
+      <p>Sets <code>data-ux-form-id</code> so Python can find the element, then reads:</p>
+      <div class="tags">
+        <span>placement_guess</span><span>field types, names &amp; counts</span>
+        <span>pre-checked boxes</span><span>missing labels</span>
+        <span>email field attributes</span><span>submit text</span>
+        <span>other clickable text</span><span>heading</span>
+        <span>consent wording</span>
+        <span>size &amp; viewport coverage</span>
+      </div>
+    </div>
+    <div class="arrow"></div>
+
+    <div class="card io"><p>Ranked list returned to Python</p></div>
+    <div class="arrow"></div>
+
+    <div class="card">
+      <h2>Back in <code>scan_page()</code></h2>
+      <div class="step">
+        <div class="q"><code>form_signature()</code> already seen on this site?</div>
+        <div class="skip">yes → skip</div>
+      </div>
+      <div class="yes">no ↓</div>
+      <p><code>capture()</code> saves the HTML and both screenshots, then the row is
+        written to <code>forms.csv</code> and <code>forms.jsonl</code>.</p>
+    </div>
+  </div>
+</main>
+</body>
+</html>

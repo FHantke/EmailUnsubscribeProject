@@ -1,0 +1,6 @@
+selenium
+
+# Needed only to re-render the documentation, not by the crawler:
+#   docs/find-forms-method.pdf and docs/detect-js-flow.png
+# are produced with headless Chromium through Playwright.
+# playwright

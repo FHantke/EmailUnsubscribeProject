@@ -1,0 +1,514 @@
+<!doctype html>
+<!-- Source of docs/find-forms-method.pdf, and of the online copy at
+     https://claude.ai/artifact/4Hg8pz9vWyEtBRdu6zbXJK
+     Regenerate the PDF from the repo root after editing this file:
+       venv/bin/python -c "from playwright.sync_api import sync_playwright; import pathlib; p = sync_playwright().start(); b = p.chromium.launch(); pg = b.new_page(viewport={'width':1100,'height':1400}, color_scheme='light'); pg.goto(pathlib.Path('docs/find-forms-method.html').resolve().as_uri(), wait_until='networkidle'); pg.wait_for_timeout(1200); pg.emulate_media(media='print', color_scheme='light'); pg.pdf(path='docs/find-forms-method.pdf', format='A4', print_background=True, prefer_css_page_size=True, margin={'top':'17mm','bottom':'15mm','left':'15mm','right':'15mm'}); b.close(); p.stop()"
+     The <style> block near the end of this file holds the print-only rules. -->
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><title>Find Forms Method Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+<style>
+  /* Layout: a single reading column (~68ch) for a methods report; wide tables and
+     figures scroll inside their own boxes. Postal-blue accent on cool neutrals. */
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --fg: #1a2130;
+    --muted: #586274;
+    --line: #dce1e9;
+    --accent: #2c54a0;
+    --accent-soft: #e7edf8;
+    --keep: #24704a;
+    --keep-soft: #e3f2ea;
+    --drop: #8a4a14;
+    --drop-soft: #f8ece0;
+    --phase-1: #2c54a0;
+    --phase-2: #5878b8;
+    --phase-3: #8aa2d0;
+    --phase-4: #b9c8e6;
+    --font-body: "Newsreader", "Iowan Old Style", Georgia, serif;
+    --font-ui: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --step--1: 0.86rem;
+    --step-0: 1.06rem;
+    --step-1: 1.25rem;
+    --step-2: 1.6rem;
+    --step-3: 2.2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161d; --surface: #1a2029; --fg: #e5e8ee; --muted: #9ba4b3; --line: #2d3542;
+      --accent: #8eaef0; --accent-soft: #1d2a42; --keep: #7fd0a4; --keep-soft: #183326;
+      --drop: #e8a76d; --drop-soft: #3a2817;
+      --phase-1: #8eaef0; --phase-2: #6f8fd0; --phase-3: #5571a8; --phase-4: #3f5480;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161d; --surface: #1a2029; --fg: #e5e8ee; --muted: #9ba4b3; --line: #2d3542;
+    --accent: #8eaef0; --accent-soft: #1d2a42; --keep: #7fd0a4; --keep-soft: #183326;
+    --drop: #e8a76d; --drop-soft: #3a2817;
+    --phase-1: #8eaef0; --phase-2: #6f8fd0; --phase-3: #5571a8; --phase-4: #3f5480;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font-body); font-size: var(--step-0); line-height: 1.6;
+    padding-inline: 16px; padding-block: 40px 72px;
+  }
+  .doc { max-width: 46rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.6rem; }
+  section { display: flex; flex-direction: column; gap: 1rem; }
+  h1, h2, h3 { font-family: var(--font-ui); text-wrap: balance; line-height: 1.25; margin: 0; }
+  h1 { font-size: var(--step-3); font-weight: 600; letter-spacing: -0.01em; }
+  h2 { font-size: var(--step-2); font-weight: 600; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+  h3 { font-size: var(--step-1); font-weight: 600; margin-top: 0.4rem; }
+  p, ul, ol { margin: 0; }
+  ul, ol { padding-left: 1.3rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  a { color: var(--accent); }
+  strong { font-weight: 600; }
+  code {
+    font-family: var(--font-mono); font-size: 0.86em; background: var(--accent-soft);
+    padding: 0.05em 0.35em; border-radius: 3px; overflow-wrap: anywhere;
+  }
+  .eyebrow {
+    font-family: var(--font-ui); font-size: var(--step--1); font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+  }
+  .lede { font-size: var(--step-1); color: var(--fg); }
+  .meta { font-family: var(--font-ui); font-size: var(--step--1); color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; }
+  .muted { color: var(--muted); }
+  .small { font-size: var(--step--1); }
+
+  .toc {
+    font-family: var(--font-ui); font-size: var(--step--1);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 1rem 1.2rem; display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .toc ol { gap: 0.2rem; }
+  .toc a { text-decoration: none; }
+  .toc a:hover, .toc a:focus-visible { text-decoration: underline; }
+
+  .callout {
+    background: var(--accent-soft); border-radius: 6px; padding: 1rem 1.2rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .callout .eyebrow { color: var(--accent); }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-family: var(--font-ui); font-size: var(--step--1); line-height: 1.45; }
+  th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font-weight: 600; color: var(--muted); background: var(--bg); white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  caption { caption-side: bottom; text-align: left; padding: 0.6rem 0.8rem; color: var(--muted); font-size: var(--step--1); }
+  .tag {
+    display: inline-block; font-family: var(--font-ui); font-size: 0.78rem; font-weight: 500;
+    border-radius: 999px; padding: 0.05rem 0.55rem; white-space: nowrap;
+  }
+  .tag.keep { background: var(--keep-soft); color: var(--keep); }
+  .tag.drop { background: var(--drop-soft); color: var(--drop); }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+  figcaption { font-family: var(--font-ui); font-size: var(--step--1); color: var(--muted); }
+
+  /* Phase timeline, drawn to scale: seconds -> width */
+  .timeline { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1rem; overflow-x: auto; }
+  .bar { display: flex; min-width: 34rem; height: 2.6rem; border-radius: 4px; overflow: hidden; font-family: var(--font-ui); font-size: 0.78rem; }
+  .seg { display: flex; align-items: center; padding-inline: 0.5rem; color: #fff; white-space: nowrap; }
+  .seg.load { background: var(--phase-1); }
+  .seg.wait { background: var(--phase-2); }
+  .seg.scroll { background: var(--phase-3); color: var(--fg); }
+  .seg.exit { background: var(--phase-4); color: var(--fg); }
+  .marks { display: flex; min-width: 34rem; font-family: var(--font-ui); font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem; }
+  .marks span { flex: none; }
+  .checks { display: flex; min-width: 34rem; margin-top: 0.15rem; font-family: var(--font-ui); font-size: 0.72rem; color: var(--accent); }
+
+  /* Detection figure */
+  .flow { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-family: var(--font-ui); font-size: var(--step--1); line-height: 1.45; }
+  .flow > * { min-width: 0; }
+  .step {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 0.8rem 0.9rem; display: flex; flex-direction: column; gap: 0.35rem;
+  }
+  .step.wide { grid-column: 1 / -1; }
+  .step b { font-weight: 600; }
+  .step .k { font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); font-weight: 500; }
+  .down { grid-column: 1 / -1; text-align: center; color: var(--muted); line-height: 1; }
+
+  .record { font-family: var(--font-mono); font-size: 0.8rem; }
+  .record td:first-child { color: var(--muted); white-space: nowrap; }
+
+  ol.refs { padding-left: 1.3rem; }
+  footer { font-family: var(--font-ui); font-size: var(--step--1); color: var(--muted); border-top: 1px solid var(--line); padding-top: 1rem; }
+
+  @media (max-width: 560px) {
+    .flow { grid-template-columns: 1fr; }
+    h1 { font-size: 1.85rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<main class="doc">
+
+  <header style="display:flex;flex-direction:column;gap:0.8rem">
+    <span class="eyebrow">ISEC Lab · Methods report</span>
+    <h1>Find Forms: how the crawler works and how its keywords were chosen</h1>
+    <p class="lede">A Selenium crawler that visits websites like a first-time visitor, finds their email newsletter signup forms, and records each one with screenshots and design measurements for manual coding.</p>
+    <div class="meta">
+      <span>Hrishikesh Jadhav</span>
+      <span>Northeastern University</span>
+      <span>Method as of 21 October 2026</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Contents">
+    <span class="eyebrow">Contents</span>
+    <ol>
+      <li><a href="#overview">What the crawler does</a></li>
+      <li><a href="#site">How one site is crawled</a></li>
+      <li><a href="#page">How one page is scanned</a></li>
+      <li><a href="#detect">How a form is recognised</a></li>
+      <li><a href="#record">What is recorded</a></li>
+      <li><a href="#keywords">How the keywords were collected</a></li>
+      <li><a href="#paper">Differences from the original method</a></li>
+      <li><a href="#limits">Limitations</a></li>
+      <li><a href="#planned">Planned work: submitting the forms</a></li>
+    </ol>
+  </nav>
+
+  <section id="overview">
+    <h2>1. What the crawler does</h2>
+    <p>The study looks at how websites design their email subscription forms: footer signups, popups, slide-ins and sticky bars. For each site in a list, the crawler opens the site in a real Chromium browser, driven by Selenium, waits, scrolls and moves the mouse the way a visitor would, detects every signup form that appears, and saves what it found.</p>
+    <p>The detection logic is adapted from Englehardt, Han and Narayanan (2018), who built a crawler to sign up for newsletters at scale [1]. Our goal is different: we catalogue the forms instead of submitting them, so several parts of their method were changed (section 7).</p>
+    <div class="callout">
+      <span class="eyebrow">Safeguards</span>
+      <ul>
+        <li><strong>Detection only.</strong> The crawler never types into, fills, submits or clicks anything. It moves between pages by opening link addresses directly.</li>
+        <li><strong>Polite pacing.</strong> One browser visits one site at a time, with a 3-second pause plus 0–1 s of random jitter between page loads, and at most 3 pages per site by default.</li>
+        <li><strong>Real browser only.</strong> Every request comes from ordinary Chromium page loads; nothing is fetched outside the browser.</li>
+        <li><strong>robots.txt is not consulted.</strong> This was a deliberate project decision (8 Oct 2026) and should be stated in the methods section.</li>
+      </ul>
+    </div>
+    <p>Larger lists can be split across up to 8 browsers running in separate processes (<code>--jobs</code>); their results are merged afterwards. A run can be stopped and resumed at any time: finished sites are logged and skipped on the next run.</p>
+  </section>
+
+  <section id="site">
+    <h2>2. How one site is crawled</h2>
+    <ol>
+      <li><strong>Fresh browser profile.</strong> Each site gets its own browser: a 1440 × 900 desktop window, US-English locale, no cookies or storage left over from earlier sites. Video and audio are not downloaded; images, fonts and third-party scripts load normally, because many signup forms are embedded from other services.</li>
+      <li><strong>Landing page.</strong> The homepage is scanned for forms (section 3).</li>
+      <li><strong>Follow links if needed.</strong> If the homepage has no signup form, the crawler ranks the visible links on the page by how likely they are to lead to one and visits the best ones in order, stopping as soon as a page yields a form, or after 3 pages in total.</li>
+      <li><strong>Time limit.</strong> If one site is still running after 6 minutes (2 minutes per allowed page), its browser is stopped, the site is logged as timed out, and the crawl moves on with a fresh browser. This guards against pages whose scripts never let the browser respond; in the pilot, two such sites had each held a browser for 30 minutes and almost 5 hours.</li>
+    </ol>
+
+    <h3>Link ranking</h3>
+    <p>A link is checked against five groups in order and gets the first group it matches. Lower groups are visited first; links matching none are not visited. Links whose text mentions <em>unsubscribe</em>, <em>mobile</em> or <em>phone</em>, links whose address contains <em>unsubscribe</em>, and file downloads are always skipped.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Group</th><th>Checks the link's</th><th>Matches if it contains</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>text</td><td>newsletter, weekly ad, subscri…, inbox, email, sale alert</td><td>paper, “subscribe” shortened</td></tr>
+          <tr><td class="num">2</td><td>text</td><td>signup, sign up, sign me up, register, create, join, suscr…, inscr…, count me in, send me</td><td>paper + keyword study</td></tr>
+          <tr><td class="num">3</td><td>address</td><td>newsletter, subscri…, signup, sign-up, mailing-list</td><td>keyword study</td></tr>
+          <tr><td class="num">4</td><td>address</td><td>/article, news/, a year such as /2024/</td><td>paper</td></tr>
+          <tr><td class="num">5</td><td>address</td><td>/us/, =us&amp;, en-us</td><td>paper</td></tr>
+        </tbody>
+        <caption>Matching ignores capitalisation and counts a keyword anywhere in the text or address. “…” marks a word stem: <em>subscri</em> matches subscribe, subscriber and subscription.</caption>
+      </table>
+    </div>
+  </section>
+
+  <section id="page">
+    <h2>3. How one page is scanned</h2>
+    <p>Many signup forms are not on the page when it first loads: they open after a delay, after the visitor scrolls, or when the mouse moves toward the top of the window as if to leave (<em>exit intent</em>). The crawler therefore checks the page four times, once after each of these triggers, and records the first moment each form appeared.</p>
+
+    <figure>
+      <div class="timeline" role="img" aria-label="Timeline of one page scan: about 4 seconds to load, 8 seconds of waiting, up to 6 seconds of scrolling, about 2.5 seconds of exit intent; forms are detected after each step.">
+        <div class="bar">
+          <div class="seg load" style="width:19.5%">Load ≈ 4 s</div>
+          <div class="seg wait" style="width:39%">Wait 8 s</div>
+          <div class="seg scroll" style="width:29.3%">Scroll ≤ 6 s</div>
+          <div class="seg exit" style="width:12.2%">Exit 2.5 s</div>
+        </div>
+        <div class="checks">
+          <span style="width:19.5%">▲ check 1: on_load</span>
+          <span style="width:39%">▲ check 2: after_delay</span>
+          <span style="width:29.3%">▲ check 3: after_scroll</span>
+          <span style="width:12.2%">▲ check 4</span>
+        </div>
+        <div class="marks">
+          <span style="width:19.5%">0 s</span>
+          <span style="width:39%">4 s</span>
+          <span style="width:29.3%">12 s</span>
+          <span style="width:12.2%">18 s → ≈ 20 s</span>
+        </div>
+      </div>
+      <figcaption>One page scan, drawn to scale. Forms are detected after each step; each form is recorded once, under the first check that saw it.</figcaption>
+    </figure>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Check</th><th>What happens first</th><th>Catches</th><th class="num">Pilot forms</th></tr></thead>
+        <tbody>
+          <tr><td><code>on_load</code></td><td>page load, then 1 s for instant popups</td><td>inline, footer and header forms; instant popups</td><td class="num">64</td></tr>
+          <tr><td><code>after_delay</code></td><td>8 s wait</td><td>timed popups</td><td class="num">10</td></tr>
+          <tr><td><code>after_scroll</code></td><td>scroll down in steps to the bottom, then back up</td><td>scroll-triggered popups, bottom sticky bars</td><td class="num">5</td></tr>
+          <tr><td><code>after_exit_intent</code></td><td>mouse moved to the top edge; “pointer left the window” events</td><td>exit-intent popups</td><td class="num">1</td></tr>
+        </tbody>
+        <caption>Pilot: 200 sites crawled on 11 October 2026, 80 forms recorded. One form in five (16 of 80) appeared only after a trigger.</caption>
+      </table>
+    </div>
+    <p>Each check runs in every frame of the page, so forms inside embedded iframes are found as well.</p>
+  </section>
+
+  <section id="detect">
+    <h2>4. How a form is recognised</h2>
+    <p>Detection runs as a script inside the page. It uses two complementary approaches from the original paper: <em>top-down</em>, which starts from <code>&lt;form&gt;</code> elements, and <em>bottom-up</em>, which starts from an email box and looks for its button. The second catches the many modern forms built without a <code>&lt;form&gt;</code> tag.</p>
+
+    <figure>
+      <div class="flow">
+        <div class="step wide">
+          <span class="k">Step 1 · where to look</span>
+          <span>The page plus every open <b>shadow DOM</b> (sealed-off widget areas that a normal page search does not enter), up to 15,000 elements.</span>
+        </div>
+        <div class="down" aria-hidden="true">↓</div>
+        <div class="step wide">
+          <span class="k">Step 2 · is this an email box?</span>
+          <span>A visible <code>type="email"</code> input, or a text input whose name, placeholder or label mentions <em>email</em> or <em>newsletter</em> and not <em>search</em>, <em>password</em>, <em>phone</em>, <em>coupon</em> or similar.</span>
+        </div>
+        <div class="down" aria-hidden="true">↓</div>
+        <div class="step">
+          <span class="k">Step 3 · top-down</span>
+          <span>Every <code>&lt;form&gt;</code> that contains a visible email box is a candidate.</span>
+        </div>
+        <div class="step">
+          <span class="k">Step 4 · bottom-up</span>
+          <span>For an email box outside any <code>&lt;form&gt;</code>: climb up the page structure, at most 15 levels, to the first element that also contains a visible <b>submit-like control</b>. That element is the candidate.</span>
+        </div>
+        <div class="down" aria-hidden="true">↓</div>
+        <div class="step wide">
+          <span class="k">Step 5 · rank</span>
+          <span>(1) furthest in front first (highest z-index), so popups come before inline forms; ties go to popup-looking forms; (2) login-like forms last; (3) forms with more fields first.</span>
+        </div>
+        <div class="down" aria-hidden="true">↓</div>
+        <div class="step wide">
+          <span class="k">Step 6 · measure</span>
+          <span>Position, fields, labels, button and surrounding text, size; then an element screenshot, a full-window screenshot and the form's HTML are saved.</span>
+        </div>
+      </div>
+      <figcaption>Detection in one frame. Every candidate is recorded, not only the best one.</figcaption>
+    </figure>
+
+    <h3>Submit-like controls</h3>
+    <p>Any <code>&lt;button&gt;</code> (except reset) and any submit or image input counts. A short clickable <code>&lt;div&gt;</code>, <code>&lt;span&gt;</code> or link counts only if its text, at most 40 characters, contains a submit word: <em>subscribe</em>, <em>sign up</em>, <em>sign me up</em>, <em>join</em>, <em>submit</em>, <em>send</em>, <em>notify</em>, <em>register</em>, <em>get</em>, <em>continue</em>, <em>next</em>, <em>save</em>, <em>count me in</em>, <em>yes</em>, <em>go</em>, <em>ok</em>, or the Spanish and Portuguese/French stems <em>suscr…</em> and <em>inscr…</em>.</p>
+
+    <h3>Login-like forms</h3>
+    <p>Login forms that ask for an email address look like signups, so they are flagged rather than dropped. A form is marked <code>login_like</code> if any of these hold:</p>
+    <ul>
+      <li>it contains a password box;</li>
+      <li>its HTML contains <em>log in</em>, <em>login</em>, <em>sign in</em> or <em>signin</em> as a word;</li>
+      <li>the plain text around it, not counting links and buttons, contains those words (for example “Log in to Hulu with your MyDisney account” above an email box);</li>
+      <li>the page address looks like a login or account page (<code>auth.</code>, <code>/login</code>, <code>/signin</code>, <code>/account</code>). Two-step logins show only an email box and “Continue”; the password box would appear on the next screen, which the crawler never opens.</li>
+    </ul>
+    <p class="small muted">The word-boundary rule was added after a pilot check showed that the original text match fired inside other words: 3 of the 5 forms flagged in an 18-form pilot were newsletter forms caught by “By signing up, I agree…”.</p>
+  </section>
+
+  <section id="record">
+    <h2>5. What is recorded</h2>
+    <p>Each unique form on a site becomes one row (37 columns) in <code>forms.csv</code>, with a matching JSON line, an element screenshot, a screenshot of the whole window, and the form's HTML. Every page visit is logged in <code>pages.csv</code>, and every run in a timestamped <code>run.log</code> that ends with the total run time.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Group</th><th>Columns</th></tr></thead>
+        <tbody>
+          <tr><td>Where and when</td><td>site, page and frame address, first check that saw it, detection method, rank on the page</td></tr>
+          <tr><td>Position</td><td><code>placement_guess</code> (fullscreen takeover, sticky bar top/bottom, modal popup, slide-in, footer, header, sidebar, in article, inline, near page bottom), z-index, popup hint, in iframe, in shadow DOM, width, height, share of the window covered</td></tr>
+          <tr><td>Fields</td><td>number and types of fields, field names, checkboxes and how many are pre-checked, fields with no label</td></tr>
+          <tr><td>Email box</td><td>input type, whether it has a label, placeholder, autocomplete, required</td></tr>
+          <tr><td>Words</td><td>submit text, other clickable text near the form (e.g. “No thanks”), heading, consent wording, form text</td></tr>
+          <tr><td>Files</td><td>element screenshot, window screenshot, saved HTML</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <figure>
+      <div class="table-wrap">
+        <table class="record">
+          <tbody>
+            <tr><td>site</td><td>https://arlingtonpower.com</td></tr>
+            <tr><td>first_seen_phase</td><td>after_delay</td></tr>
+            <tr><td>detection_method</td><td>top-down</td></tr>
+            <tr><td>placement_guess</td><td>modal_popup</td></tr>
+            <tr><td>field_types</td><td>email | checkbox | checkbox</td></tr>
+            <tr><td>n_checkboxes_prechecked</td><td>0</td></tr>
+            <tr><td>email_placeholder</td><td>Email</td></tr>
+            <tr><td>submit_text</td><td>Submit</td></tr>
+            <tr><td>other_clickable_text</td><td>Close dialog</td></tr>
+            <tr><td>viewport_coverage</td><td>0.325</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption>Part of one real row from the pilot: a popup that opened during the 8-second wait and covered about a third of the window.</figcaption>
+    </figure>
+    <p>Columns such as <code>placement_guess</code>, <code>login_like</code>, <code>modal_hint</code>, <code>consent_text_hint</code> and <code>heading</code> are heuristics. They are starting points for manual coding and are checked against the screenshots.</p>
+  </section>
+
+  <section id="keywords">
+    <h2>6. How the keywords were collected</h2>
+    <p>The paper's keyword lists decide two things: which links the crawler follows when the homepage has no form (section 2), and which custom buttons count as submit buttons (section 4). On 11 October 2026 we tested and extended these lists against real signup pages.</p>
+
+    <h3>6.1 Data</h3>
+    <p>We assembled a list of <strong>146 URLs</strong>, from 144 sites, of pages known to contain an email subscription form (news sites, shops, Substack newsletters, company blogs and others). A separate helper script loaded each page in 5 parallel browsers, found the form with the crawler's own detection code, and recorded the page title, main heading, address path, and the form's heading, button text, email placeholder and surrounding text. As in the crawler, nothing was clicked or typed.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Result</th><th class="num">Pages</th></tr></thead>
+        <tbody>
+          <tr><td>form found</td><td class="num">118</td></tr>
+          <tr><td>page loaded, no form detected</td><td class="num">22</td></tr>
+          <tr><td>failed to load</td><td class="num">3</td></tr>
+          <tr><td>HTTP error</td><td class="num">3</td></tr>
+          <tr><td><strong>total</strong></td><td class="num"><strong>146</strong></td></tr>
+        </tbody>
+        <caption>159 forms were found on the 118 pages.</caption>
+      </table>
+    </div>
+
+    <h3>6.2 Analysis</h3>
+    <p><strong>Button text.</strong> The 115 pages with button text held 127 buttons. After ignoring capitalisation, spacing and symbols (“SIGN UP”, “Sign Up &gt;”), they reduce to 30 distinct wordings.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th class="num">Buttons</th><th>Wording</th><th>Already matched?</th></tr></thead>
+        <tbody>
+          <tr><td class="num">62</td><td>subscribe</td><td>yes, group 1</td></tr>
+          <tr><td class="num">19</td><td>submit</td><td>no</td></tr>
+          <tr><td class="num">17</td><td>sign up</td><td>yes, group 2</td></tr>
+          <tr><td class="num">2</td><td>suscribirse (Spanish)</td><td>no</td></tr>
+          <tr><td class="num">2</td><td>next</td><td>no</td></tr>
+          <tr><td class="num">1 each</td><td>send me the next briefing, count me in, inscreva-se (Portuguese), update my subscriptions, save newsletter options, …</td><td>mostly no</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>Form text.</strong> The text of the 108 forms was split into single words and two-word phrases and counted once per form: 3,091 terms, 363 of them used by 3 or more forms. Most frequent were field labels (<em>first name</em>, <em>address</em>) and legal text (<em>privacy policy</em>, <em>terms</em>). Terms describing the newsletter itself included <em>news</em> (25 forms), <em>updates</em> (15), <em>weekly</em> (14), <em>latest</em> (14), <em>daily</em> (12), and <em>delivered</em>, <em>free</em>, <em>offers</em>, <em>events</em> and <em>stay</em> (10 each).</p>
+    <p><strong>Page addresses.</strong> 113 of the 146 URLs had a path (the rest were homepages). The most common path words were <em>newsletter</em> (40 pages), <em>signup</em> (27), <em>subscribe</em> (24), <em>newsletters</em> (20) and <em>sign-up</em> (8). The paper looks for signup words only in a link's text, never its address, so a link reading “Stay informed” that points to <code>/newsletter</code> was never followed.</p>
+
+    <h3>6.3 What was added</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>List</th><th>Change</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td>Link group 1</td><td><span class="tag keep">changed</span> “subscribe” → stem “subscri”</td><td>“update my subscriptions” went unmatched: <em>subscribe</em> is not contained in <em>subscription</em></td></tr>
+          <tr><td>Link group 2</td><td><span class="tag keep">added</span> suscr, inscr, count me in, send me</td><td>signup buttons in Spanish (2 forms), Portuguese (1), and signup phrasing (1 each). <em>suscr</em> rather than <em>suscri</em>, so the accented <em>suscríbete</em> also matches</td></tr>
+          <tr><td>Link group 3</td><td><span class="tag keep">new</span> address contains newsletter, subscri, signup, sign-up, mailing-list</td><td>catches 101 of the 113 signup URLs with a path; links to <em>/unsubscribe</em> are explicitly excluded</td></tr>
+          <tr><td>Submit words</td><td><span class="tag keep">added</span> suscr…, inscr…, next, save</td><td>button wordings the detector did not yet recognise</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Button words went into group 2 rather than group 1: a link reading “Sign up” or “Count me in” often leads to a signup page, but also to account registration, so it is a weaker signal than <em>newsletter</em> or <em>subscribe</em>.</p>
+
+    <h3>6.4 What was considered and not added</h3>
+    <p>Because a link keyword matches anywhere in a link's text, each candidate was judged by what <em>other</em> links it would also match, not only by how often it appears on signup forms.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Candidate</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag drop">rejected</span> news, free, offers, events</td><td>match ordinary menu links (News, Free trial, Offers, Events), which would then be visited before the signup page</td></tr>
+          <tr><td><span class="tag drop">rejected</span> daily, latest</td><td>match common news-site links such as “Daily crossword” and “Latest stories”</td></tr>
+          <tr><td><span class="tag drop">rejected</span> submit, next, save, send, get</td><td>as link keywords they match “Next page”, “Submit a tip”, “Save 20%”; kept as submit words only</td></tr>
+          <tr><td><span class="tag drop">rejected</span> email, in addresses</td><td>appears in contact pages (<em>/email-us</em>) and in tracking codes on ordinary links (<em>?utm_medium=email</em>)</td></tr>
+          <tr><td><span class="tag drop">deferred</span> updates, weekly, stay in the loop</td><td>low risk, but not adopted in this round; the first candidates for a follow-up test</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>6.5 Limits of the keyword study</h3>
+    <ul>
+      <li>The words come from the signup <em>pages</em>, while the link keywords are matched against the <em>links</em> pointing to them. The two usually share words, but not always.</li>
+      <li>The sample is 146 URLs and mostly English; the non-English additions rest on one or two forms each.</li>
+      <li>The effect on a crawl has not yet been measured. The planned test is to crawl a set of sites not in the 146 once with the old lists and once with the new ones, and compare how often a form is found and on which page.</li>
+    </ul>
+  </section>
+
+  <section id="paper">
+    <h2>7. Differences from the original method</h2>
+    <p>Englehardt et al. [1] needed one form per site to submit; we need a complete catalogue of the forms a visitor sees. The main differences:</p>
+    <ul>
+      <li>Every candidate form is recorded, not only the top-ranked one.</li>
+      <li>Bottom-up detection runs on every page, not only when top-down finds nothing.</li>
+      <li>Detection runs four times per page (load, delay, scroll, exit intent) so the trigger of each form is known.</li>
+      <li>Open shadow DOM is searched.</li>
+      <li>Links are opened by navigating to their address, not by clicking, and nothing is ever submitted.</li>
+      <li>The paper's “/2017” URL keyword is generalised to any year; the keyword lists were extended as described in section 6, including a new group that matches signup words in link addresses.</li>
+      <li>Login detection uses word boundaries, the text around the form, and the page address (section 4).</li>
+      <li>robots.txt is not consulted.</li>
+      <li>The crawler was moved from Playwright to Selenium on 21 October 2026. The measurement regime is unchanged: on the test fixture both produce identical rows for every form — placement, ranking, field types, text, widths and viewport coverage — provided the viewport is set exactly and scrollbars hidden. Two mechanics differ: the HTTP status is now read inside the page from <code>PerformanceNavigationTiming</code>, and audio and video are blocked by address rather than by resource type, so media served from an address with no file extension is now downloaded.</li>
+    </ul>
+  </section>
+
+  <section id="limits">
+    <h2>8. Limitations</h2>
+    <ul>
+      <li><strong>Cookie banners</strong> can suppress or delay popups, especially on EU sites. Dismissing them would require clicking, which the method rules out.</li>
+      <li><strong>Bot detection.</strong> Some sites serve different content to automated browsers. The browser window is visible by default for this reason.</li>
+      <li><strong>Not detected:</strong> closed shadow DOM, forms drawn on a canvas, and forms behind CAPTCHAs.</li>
+      <li><strong>Heuristic columns</strong> (placement, popup hint, login-like, consent wording, heading) need checking against the screenshots.</li>
+      <li><strong>Time-outs.</strong> A site stopped by the 6-minute limit keeps the forms found on its earlier pages, but none from the page it was stuck on.</li>
+      <li><strong>Out of scope for the crawler:</strong> what happens after signing up (confirmation emails, double opt-in). Submitting forms is planned as separate work; see section 9.</li>
+    </ul>
+  </section>
+
+  <section id="planned">
+    <h2>9. Planned work: submitting the forms</h2>
+    <p>The crawler described above never submits anything, and that will not change. Submission is planned as a <strong>separate tool</strong>, run deliberately on a chosen subsample, so that an ordinary crawl can never sign up for anything by accident.</p>
+    <p>Submitting would extend the study past the design of a form to what the form actually does: the confirmation flow, whether the site uses double opt-in, what the welcome email contains, and where the address ends up afterwards. Section 8 lists this as out of scope for the crawler; a dedicated tool is how it comes into scope.</p>
+    <p>Four questions need answers before any of it is written:</p>
+    <ul>
+      <li><strong>Ethics approval.</strong> Submitting creates real subscriptions, and on some sites real accounts, which detection-only crawling does not. Whether this needs IRB sign-off has to be settled first.</li>
+      <li><strong>Address identity.</strong> One research address, or a per-site alias. An alias per site is what would make it possible to tell later which site sold or leaked an address, which is much of the reason to submit at all.</li>
+      <li><strong>Pacing and scope.</strong> A submission is a write rather than a read: at most one per site, on a small subsample rather than the full list.</li>
+      <li><strong>Records.</strong> What each attempt stores (fields filled, the response, the confirmation page) and whether it joins <code>forms.csv</code> or gets a file of its own.</li>
+    </ul>
+    <p class="small muted">The decisions above are recorded alongside the code so they are settled before implementation rather than during it.</p>
+  </section>
+
+  <section id="references">
+    <h2>References</h2>
+    <ol class="refs">
+      <li>Englehardt, S., Han, J., &amp; Narayanan, A. (2018). I never signed up for this! Privacy implications of email tracking. <em>Proceedings on Privacy Enhancing Technologies</em>, 2018(1), 109–126. Section 3 and Appendix 10.1.</li>
+    </ol>
+  </section>
+
+  <footer>Find Forms crawler · ISEC Lab, Northeastern University · Method as of 21 October 2026</footer>
+</main>
+
+<style>
+  /* Print-only: pagination and paper-friendly surfaces. Screen styles above are unchanged. */
+  @page { size: A4; margin: 17mm 15mm 15mm; }
+  @media print {
+    :root { --bg: #ffffff; --surface: #ffffff; }
+    body { padding-block: 0; padding-inline: 0; font-size: 10.5pt; }
+    .doc { max-width: none; gap: 1.5rem; }
+    /* Keep blocks whole across page breaks */
+    .table-wrap, table, figure, .callout, .timeline, .toc, .step, .record { break-inside: avoid; }
+    /* The 6-step detection diagram is taller than a page; let it split, keep each step whole. */
+    figure:has(.flow) { break-inside: auto; }
+    .flow { break-inside: auto; }
+    tr, li, p { break-inside: avoid; }
+    h1, h2, h3 { break-after: avoid; }
+    section { break-inside: auto; }
+    /* Section rules read as hairlines on paper */
+    h2 { padding-top: 0.4rem; }
+    /* The TOC is navigation; on paper it is a contents page */
+    .toc { background: #fff; }
+    a { text-decoration: none; }
+    /* Tables: keep the header with the body when a table does split */
+    thead { display: table-header-group; }
+    /* Short identifiers in a first column should not break mid-word (after_dela/y) */
+    table td:first-child code { white-space: nowrap; }
+    th { background: #f2f4f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .tag, .seg, .step .k, .eyebrow { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    footer { break-before: avoid; }
+  }
+</style>
+</body></html>
