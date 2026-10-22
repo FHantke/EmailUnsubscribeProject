@@ -1,0 +1,22 @@
+services:
+  crawler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: find-forms:latest
+    # Chromium crashes tabs on the default 64 MB /dev/shm. Raise it rather than
+    # relying on --disable-dev-shm-usage alone.
+    shm_size: 2gb
+    ports:
+      # Bound to localhost: the VNC screen has no password by default, so do not
+      # publish these on a shared machine without setting VNC_PASSWORD below.
+      - "127.0.0.1:5900:5900"   # VNC client (Remmina, TigerVNC, Screen Sharing)
+      - "127.0.0.1:6080:6080"   # noVNC in a browser, no client to install
+    volumes:
+      - ./inputs:/app/inputs:ro
+      - ./outputs:/app/outputs
+    environment:
+      # - VNC_PASSWORD=choose-one
+      - SCREEN=1600x1000x24
+    # --jobs 8 is ~8 browsers; give the container room for them.
+    mem_limit: 8g

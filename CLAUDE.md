@@ -20,6 +20,7 @@ Form-detection logic is adapted from Englehardt, Han & Narayanan (2018), "I neve
 ```bash
 pip install -r requirements.txt
 # Chrome and a matching chromedriver must be on PATH (Selenium Manager fetches one if not).
+# Or run it containerised, with a virtual screen to watch over VNC: see docker/README.md.
 
 python src/find_forms.py inputs/sites.txt --out outputs/results                   # default: desktop only, up to 3 pages/site
 python src/find_forms.py inputs/sites.txt --limit 20                       # quick pilot
@@ -130,7 +131,8 @@ After a test run, confirm in the server log that no POST or form-action requests
 - A browsered page takes roughly 15–20 seconds; the deliberate waits (`--popup-wait`, exit intent) dominate.
 - Closed shadow roots, canvas-rendered UIs, and forms behind CAPTCHAs are not detected.
 - A page whose JavaScript never lets go is bounded in two places since the Selenium switch: `SCRIPT_TIMEOUT_S` caps every `execute_script`, which Playwright could not do, and `SiteWatchdog` still backs it up for a page that wedges during load, where no script call is in flight. The watchdog kills Chrome and chromedriver found through `/proc`, so it works on **Linux only**; elsewhere it logs a warning and the site can still hang. A timed-out site gets no form rows for the page it was stuck on.
-- `--jobs` is capped at 8 by RAM, not CPU: roughly 500 MB per shard, spiking to ~800 MB on iframe-heavy pages.
+- `--jobs` is capped at 8 by RAM, not CPU: roughly 500 MB per shard, spiking to ~800 MB on iframe-heavy pages. In Docker, `shm_size` must be raised from the default 64 MB or Chromium crashes tabs; `docker-compose.yml` sets 2 GB.
+- `make_driver()` reads `FIND_FORMS_CHROME_BINARY`, `FIND_FORMS_CHROMEDRIVER` and `FIND_FORMS_CHROME_FLAGS` from the environment. They exist for the Docker image, which ships its own Chromium and needs `--no-sandbox`; all three are unset on a normal machine.
 - The post-submit experience (confirmation flow, double opt-in, welcome email) is out of scope for the crawler and is studied manually on a small subsample using a dedicated research email address.
 
 ## Planned: form submission (not built; raised 2026-10-14)

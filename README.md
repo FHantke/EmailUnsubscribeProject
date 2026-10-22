@@ -33,6 +33,15 @@ pip install -r requirements.txt
 Chrome and a matching chromedriver need to be on your PATH; Selenium Manager
 downloads a driver automatically if there isn't one.
 
+Or run it in Docker, which brings its own Chromium and a virtual screen you can
+watch over VNC while it crawls — see [docker/README.md](docker/README.md):
+
+```bash
+docker compose up -d --build
+# then open http://localhost:6080/ and
+docker compose exec crawler python3 src/find_forms.py inputs/sites.txt --out outputs/run1
+```
+
 ## Running
 
 Run from the repository root. Put site lists in `inputs/`: one domain or URL per
@@ -89,6 +98,7 @@ src/crawler/
   output.py            CSV/JSONL writing, resuming, merging parallel runs
   jobs.py              --jobs process supervisor, Ctrl-C handling
   util.py              small shared helpers
+docker/                Dockerfile, entrypoint and notes for the containerised run
 inputs/                site lists
 scripts/               misc helper scripts (cleanup, analysis, conversions)
 outputs/               one directory per run (not committed)

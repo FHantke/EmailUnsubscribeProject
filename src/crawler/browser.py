@@ -6,12 +6,14 @@ around every browser call: one failing page or frame must never stop a crawl.
 """
 
 import logging
+import os
 import time
 from urllib.parse import urldefrag, urlparse
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException as SeErr
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 
@@ -69,7 +71,15 @@ def make_driver(args):
     o.set_capability("acceptInsecureCerts", True)   # == Playwright ignore_https_errors
     o.page_load_strategy = "eager"                  # == wait_until="domcontentloaded"
 
-    driver = webdriver.Chrome(options=o)
+    # Set by the Docker image (docker/), which ships its own Chromium and needs
+    # --no-sandbox. Unset on a normal machine, where Selenium finds Chrome itself.
+    if os.environ.get("FIND_FORMS_CHROME_BINARY"):
+        o.binary_location = os.environ["FIND_FORMS_CHROME_BINARY"]
+    for flag in os.environ.get("FIND_FORMS_CHROME_FLAGS", "").split():
+        o.add_argument(flag)
+    driver_path = os.environ.get("FIND_FORMS_CHROMEDRIVER")
+
+    driver = webdriver.Chrome(options=o, service=Service(driver_path) if driver_path else None)
     driver.set_page_load_timeout(args.timeout)
     # Bounds every execute_script. Playwright has no equivalent, which is why a
     # page with a wedged main thread used to hang a whole shard indefinitely.
