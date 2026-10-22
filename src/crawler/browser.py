@@ -7,6 +7,8 @@ around every browser call: one failing page or frame must never stop a crawl.
 
 import logging
 import os
+import re
+import subprocess
 import time
 from urllib.parse import urldefrag, urlparse
 
@@ -52,6 +54,40 @@ def detect_options(prefix="ux"):
             "formTypes": [dict(rules, name=name) for name, rules in FORM_TYPES]}
 
 
+def _chrome_major(binary):
+    """Major version of the browser that will be launched, or None if unreadable.
+
+    undetected_chromedriver fetches its own driver and defaults to the newest
+    one, which drifts ahead of an installed browser and then refuses to start
+    ("only supports Chrome version N"). Pinning it to this stops that.
+    """
+    try:
+        out = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=15).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    m = re.search(r"(\d+)\.", out)
+    return int(m.group(1)) if m else None
+
+
+def _stealth_driver(options):
+    """Chrome through undetected_chromedriver, which hides the automation
+    fingerprints a plain Selenium session leaves (navigator.webdriver and
+    friends). `options` is passed through intact: dropping it would quietly
+    change the measurement regime, since --hide-scrollbars alone moves every
+    recorded width by 15px.
+    """
+    try:
+        import undetected_chromedriver as uc
+    except ImportError:
+        raise SystemExit("--stealth needs undetected_chromedriver: pip install undetected-chromedriver")
+    binary = options.binary_location or uc.find_chrome_executable()
+    major = _chrome_major(binary)
+    if major is None:
+        log.warning("  could not read the browser version; undetected_chromedriver will guess its driver")
+    return uc.Chrome(options=options, version_main=major,
+                     browser_executable_path=binary or None)
+
+
 def make_driver(args):
     """A fresh Chrome for one site, set up to match the measurement regime.
 
@@ -79,7 +115,10 @@ def make_driver(args):
         o.add_argument(flag)
     driver_path = os.environ.get("FIND_FORMS_CHROMEDRIVER")
 
-    driver = webdriver.Chrome(options=o, service=Service(driver_path) if driver_path else None)
+    if args.stealth:
+        driver = _stealth_driver(o)
+    else:
+        driver = webdriver.Chrome(options=o, service=Service(driver_path) if driver_path else None)
     driver.set_page_load_timeout(args.timeout)
     # Bounds every execute_script. Playwright has no equivalent, which is why a
     # page with a wedged main thread used to hang a whole shard indefinitely.

@@ -13,7 +13,7 @@ Form-detection logic is adapted from Englehardt, Han & Narayanan (2018), "I neve
 - **Browser only.** Every request comes from Chromium page loads; there are no requests outside the browser. Do not reintroduce plain-HTTP pre-screening or recording forms from served markup (removed 2026-10-08).
 - **Selenium**, since 2026-10-21 (was Playwright). Chrome is driven through chromedriver, one driver per site. The exact viewport is set with a CDP `Emulation.setDeviceMetricsOverride` and `--hide-scrollbars`; both are required for recorded `width` and `viewport_coverage` to mean the same thing as in earlier runs, so do not drop them for `--window-size`.
 - Keep polite delays between page loads (`--page-delay` plus random jitter). Do not add parallelism within a single process; scale across separate processes with `--shard`, or `--jobs N`, which spawns those shards for you and merges their output. The `--jobs` parent never crawls.
-- Do not add dependencies beyond `selenium` and the Python standard library without asking. (Playwright is no longer used by the crawler; `docs/` rendering still uses it, which is why `requirements.txt` mentions it in a comment.)
+- Do not add dependencies beyond `selenium`, `undetected-chromedriver` and the Python standard library without asking. `undetected-chromedriver` is used only by `--stealth` and imported inside `_stealth_driver()`, so the crawler runs without it installed. (Playwright is no longer used by the crawler; `docs/` rendering still uses it, which is why `requirements.txt` mentions it in a comment.)
 
 ## Setup and commands
 
@@ -29,6 +29,7 @@ python src/find_forms.py inputs/sites.txt --jobs 4                          # 4 
 python src/find_forms.py inputs/sites.txt --shard 0/4                      # or drive the shards yourself
 python src/find_forms.py --merge --out outputs/results                     # fold orphaned *.part* files in
 python src/find_forms.py inputs/sites.txt --headless                      # hide the browser (default: visible window)
+python src/find_forms.py inputs/sites.txt --stealth                       # undetected_chromedriver, for sites that block crawlers
 ```
 
 Rerunning the same command resumes; sites listed in `outputs/results/sites_done.txt` are skipped.
@@ -42,7 +43,7 @@ Selenium 4 (Chrome via chromedriver), Python 3.8+. Run from the repo root. `src/
 | `config.py` | timing budgets, `DETECT_PATTERNS` (form-detection keywords), `FORM_TYPES` (form classification), `LINK_TIERS`, `STOP`, `FORM_FIELDS`/`PAGE_FIELDS` |
 | `js.py` | `DETECT_JS`, `LINKS_JS`, `SCROLL_JS`, `EXIT_INTENT_JS` |
 | `util.py` | `now`, `slug`, `same_site`, `load_sites`, `form_signature`, `link_tier`, ... |
-| `browser.py` | `make_driver()`, `detect_options()`, `rank_links()`, `capture()`, `scan_page()`, `detect_in_all_frames()` |
+| `browser.py` | `make_driver()` (`_stealth_driver()` for `--stealth`), `detect_options()`, `rank_links()`, `capture()`, `scan_page()`, `detect_in_all_frames()` |
 | `crawl.py` | `crawl_site()` |
 | `output.py` | `Output`, `read_done()`, `merge_parts()` |
 | `jobs.py` | `run_jobs()` (relaunches `sys.argv[0]` per shard), `install_stop_handler()` |
@@ -127,6 +128,7 @@ After a test run, confirm in the server log that no POST or form-action requests
 ## Known limitations / backlog
 
 - Cookie consent banners can suppress or delay newsletter popups, especially on EU sites. Handling them would require clicking, which is currently out of scope.
+- `--stealth` drives Chrome through `undetected_chromedriver`, which hides `navigator.webdriver` and related fingerprints. It is off by default: the library is unmaintained (3.5.5, 2023), it fetches its own chromedriver and defaults to the newest one, so `_chrome_major()` pins it to the installed browser or it fails with "only supports Chrome version N". Options are passed through intact — dropping them silently changes the measurement regime, since `--hide-scrollbars` alone moves every recorded width by 15px. Verified: standard and `--stealth` return identical measurements on the fixture.
 - Headless Chromium can be detected and served different content, so the browser is visible by default (since 2026-10-11; one window per shard under `--jobs`). `--headless` hides it, e.g. on a machine without a display; compare a few sites both ways before a large headless run.
 - A browsered page takes roughly 15–20 seconds; the deliberate waits (`--popup-wait`, exit intent) dominate.
 - Closed shadow roots, canvas-rendered UIs, and forms behind CAPTCHAs are not detected.

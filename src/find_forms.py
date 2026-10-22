@@ -94,6 +94,9 @@ def parse_args():
     ap.add_argument("--limit", type=int, help="Only process the first N sites")
     ap.add_argument("--headless", action="store_true",
                     help="Hide the browser window (default: visible; with --jobs N, one window per shard)")
+    ap.add_argument("--stealth", action="store_true",
+                    help="Drive Chrome through undetected_chromedriver, which hides the automation "
+                         "fingerprints sites use to spot a crawler (needs: pip install undetected-chromedriver)")
     ap.add_argument("--site-time-limit", type=float,
                     help=f"Seconds one site may take before its browser is killed and it is logged as "
                          f"site_timeout (default: {SITE_TIME_LIMIT_PER_PAGE_S} x --max-pages)")

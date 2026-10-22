@@ -67,6 +67,7 @@ option. The ones you are most likely to change:
 | `--page-delay S` | 3 | Seconds between page loads on a site, plus jitter. |
 | `--jobs N` | 1 | Run N processes (max 8, ~500 MB RAM each) and merge their output. |
 | `--site-time-limit S` | 120 × `--max-pages` | Stop a site that runs longer than this (its browser is restarted) and log it as `site_timeout`. |
+| `--stealth` | off | Drive Chrome through `undetected_chromedriver`, hiding the fingerprints sites use to spot a crawler. |
 
 ## Output
 
