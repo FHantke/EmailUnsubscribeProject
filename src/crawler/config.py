@@ -28,37 +28,61 @@ BLOCKED_URL_PATTERNS = [
     "*.mp3*", "*.m4a*", "*.ogg*", "*.oga*", "*.wav*", "*.flac*", "*.aac*",
 ]
 
-# Words the form detector (DETECT_JS in js.py) looks for. They are sent into the
-# page each time it runs and used there as JavaScript regular expressions, always
-# case-insensitive. Keep to syntax that means the same in Python and JavaScript:
-# | for "or", ? for "optional", \b for a word edge, \w for a letter or digit,
-# .{0,20} for "up to 20 characters". The words also match inside longer words
-# unless you put \b around them (e.g. "log ?in" also matches "blog in").
+# ---------------------------------------------------------------------------
+# Form-detection words
+# ---------------------------------------------------------------------------
+# The words DETECT_JS (js.py) looks for. detect_options() in browser.py sends
+# them into the page on every detection run, where each becomes a
+# case-insensitive JavaScript regex.
+#
+# Write only syntax that means the same in Python and JavaScript:
+#     |  or            ?  the thing before it is optional
+#     \b word edge     \w a letter or digit      (?!x) not followed by x
+# A pattern matches anywhere in the text, including inside a longer word, unless
+# a \b pins it: without its \b, "log ?in" would also match "blog in".
+#
+# The four groups below are in the order detection uses them; the same steps are
+# described in docs/crawl-flow.md, section 5.
 DETECT_PATTERNS = {
-    # An input counts as an email box when its name, placeholder or label
-    # matches "email" ...
+
+    # --- 1. Is this input an email box? ------------------------------------
+    # Its name, placeholder or label has to match "email" ...
     "email": r"e-?mail|newsletter",
-    # ... and does not match one of these.
+    # ... and must not match any of these, which rule the input out.
     "not_email": r"search|query|password|phone|zip|postal|coupon|promo",
-    # A form is marked login_like (and ranked lower) when these words are in its
-    # HTML, or in the plain text around it (not counting links and buttons).
-    # \b and (?!g) since 2026-10-11, so "blog in", "dialog in", "design in" and
-    # "signing up" no longer count; "login-box", "loginForm", "signin" still do.
+
+    # --- 2. Is this element a submit button? -------------------------------
+    # Only consulted for a short <div>, <span> or link; a real <button> counts
+    # whatever its text says. The stems and "next"/"save" were added 2026-10-11
+    # from the button texts of known signup pages (see docs/link-keywords.md).
+    "submit": (
+        r"\b("
+        r"subscri\w*|suscr\w*|inscr\w*|"            # subscribe, suscribirse, inscreva-se
+        r"sign ?(me )?up|join|submit|send|"
+        r"notify|register|get|continue|next|save|"
+        r"count me in|yes|go|ok"
+        r")\b"
+    ),
+
+    # --- 3. Ranking signals: which form comes first ------------------------
+    # login_like (ranked last), from these words in the form's HTML or in the
+    # plain text around it, links and buttons excluded. The \b and (?!g) date
+    # from 2026-10-11: without them "blog in", "dialog in", "design in" and
+    # "signing up" all counted. "login-box", "loginForm" and "signin" still do.
     "login": r"\b(log ?in|sign ?in)(?!g)",
-    # ... or when the page's address (host + path) looks like a login or account
-    # page. Added 2026-10-11 for two-step logins, which ask for the email first and
-    # show the password box only on the next screen (auth.hulu.com/.../enter-email).
+    # login_like as well, when the page's own address looks like a login or
+    # account page. Added 2026-10-11 for two-step logins, which ask for the
+    # email first and show the password box only on the next screen, so there is
+    # nothing else to go on (auth.hulu.com/web/create-account/enter-email).
     "login_url": r"\b(auth|login|log-in|signin|sign-in|accounts?|myaccount)\b",
-    # A form inside an element whose class or id has one of these is marked modal_hint (a popup).
+    # modal_hint (ranked first among forms equally far in front), from the class
+    # or id of the form or one of its 10 nearest ancestors.
     "modal": r"modal|dialog|popup|pop-up|lightbox|overlay|flyout|slide-?in",
-    # Last-resort popup check: these words anywhere in the form's own HTML.
+    # modal_hint as a last resort: these two words anywhere in the form's HTML.
     "modal_html": r"modal|dialog",
-    # The text on a short <div>/<span>/link must match this for it to count as a
-    # submit button (real <button>s count whatever their text says).
-    # suscr/inscr/next/save added 2026-10-11 from button texts on known signup
-    # pages; see docs/link-keywords.md
-    "submit": r"\b(subscri\w*|suscr\w*|inscr\w*|sign ?(me )?up|join|submit|send|notify|register|get|continue|next|save|count me in|yes|go|ok)\b",
-    # Text near the form matching this sets consent_text_hint.
+
+    # --- 4. Recorded about the form ----------------------------------------
+    # Sets consent_text_hint when the text around the form matches.
     "consent": r"consent|i agree|unsubscribe|privacy|opt.?out|terms",
 }
 
