@@ -1,19 +1,29 @@
-"""Settings you can tune: time limits, form-detection words, link-choosing rules, and the output columns."""
+"""Everything you can tune, in one place.
+
+    1. Browser            the window, and what it is told not to download
+    2. Limits             how long each step may take, and how much it may scan
+    3. Detection words    what counts as an email box, a submit button, a popup
+    4. Link choosing      which links the crawler follows when a page has no form
+    5. Parallel runs      --jobs
+    6. Output columns     the CSV schemas (append-only; see CLAUDE.md)
+    7. Run state          not a setting
+
+Changing a value here changes the recorded data, so note anything that affects
+the measurements in CLAUDE.md, where the method is written down.
+"""
 
 import re
 
 
-# Size of the browser window, in pixels. Every page is seen as a desktop visitor would see it.
-DESKTOP_VIEWPORT = {"width": 1440, "height": 900}
+# ---------------------------------------------------------------------------
+# 1. Browser
+# ---------------------------------------------------------------------------
 
-# Time limits for each page, in milliseconds (1000 = 1 second).
-# If a spot-check shows forms being missed, or showing up in a later phase
-# than they should, make these bigger.
-LOAD_SETTLE_MS = 3000    # after the page's HTML arrives, wait at most this long for the rest (images, scripts) to finish loading
-PAINT_SETTLE_MS = 1000   # then wait this long before the first check, so popups that open right away have time to appear
-SCROLL_BUDGET_MS = 5000  # the most time spent scrolling down the page in the after_scroll phase
-DETECT_BUDGET_MS = 4000  # the most time one search for forms may take inside one frame
-MAX_SHADOW_SCAN = 15000  # the most elements checked when looking for hidden shadow-DOM boxes (see docs/crawl-flow.md)
+# The window every page is seen in, in pixels: a desktop visitor's view.
+# browser.py applies this through CDP rather than --window-size, which would
+# size the whole window and leave a smaller viewport; the recorded `width` and
+# `viewport_coverage` are measured against exactly these numbers.
+DESKTOP_VIEWPORT = {"width": 1440, "height": 900}
 
 # Downloads the browser is told to skip, as URL patterns for CDP
 # Network.setBlockedURLs (a trailing * so a query string still matches).
@@ -28,8 +38,33 @@ BLOCKED_URL_PATTERNS = [
     "*.mp3*", "*.m4a*", "*.ogg*", "*.oga*", "*.wav*", "*.flac*", "*.aac*",
 ]
 
+
 # ---------------------------------------------------------------------------
-# Form-detection words
+# 2. Limits
+# ---------------------------------------------------------------------------
+
+# Waits while scanning one page, in milliseconds (1000 = 1 second). Raise these
+# if a spot-check shows forms being missed, or showing up in a later phase than
+# they should. Lowering PAINT_SETTLE_MS shifts which phase a form is credited to.
+LOAD_SETTLE_MS = 3000    # after the page's HTML arrives, wait at most this long for the rest (images, scripts) to load
+PAINT_SETTLE_MS = 1000   # then wait this long before the first check, so popups that open right away have time to appear
+SCROLL_BUDGET_MS = 5000  # the most time spent scrolling down the page in the after_scroll phase
+
+# Caps on one detection run inside one frame.
+DETECT_BUDGET_MS = 4000  # the most time the search for forms may take
+MAX_SHADOW_SCAN = 15000  # the most elements checked when looking for shadow-DOM boxes (see docs/crawl-flow.md)
+
+# Backstops against a page that never finishes, in seconds. The first is
+# enforced by Selenium itself; the second by SiteWatchdog in jobs.py, which
+# covers a page that wedges while loading, when no script call is in flight.
+SCRIPT_TIMEOUT_S = 30           # the most time any one piece of JavaScript may run in the page
+SITE_TIME_LIMIT_PER_PAGE_S = 120  # per page allowed by --max-pages, so 6 minutes at the default of 3;
+                                  # a normal page needs ~70s. Then the browser is killed and the site
+                                  # is logged as site_timeout. --site-time-limit overrides it.
+
+
+# ---------------------------------------------------------------------------
+# 3. Detection words
 # ---------------------------------------------------------------------------
 # The words DETECT_JS (js.py) looks for. detect_options() in browser.py sends
 # them into the page on every detection run, where each becomes a
@@ -86,25 +121,15 @@ DETECT_PATTERNS = {
     "consent": r"consent|i agree|unsubscribe|privacy|opt.?out|terms",
 }
 
-# Becomes True when you press Ctrl-C. The crawler checks it between pages and
-# stops cleanly instead of in the middle of a page.
-STOP = {"now": False}
 
-MAX_JOBS = 8          # most parallel crawlers allowed with --jobs; each one is a browser using ~500-800 MB of memory
-SHUTDOWN_GRACE = 90   # after Ctrl-C, seconds each parallel crawler gets to finish its page and save before being killed
-# The most time one site may take, per page allowed by --max-pages (so 6 minutes
-# at the default of 3 pages); a normal page needs at most ~70s. After that the
-# browser is killed and the site logged as site_timeout. --site-time-limit overrides it.
-SITE_TIME_LIMIT_PER_PAGE_S = 120
-# The most time any one piece of JavaScript may run in the page before Selenium
-# gives up on it. Selenium enforces this; Playwright had no equivalent, which is
-# why a page with a wedged main thread used to hang a whole shard indefinitely.
-SCRIPT_TIMEOUT_S = 30
+# ---------------------------------------------------------------------------
+# 4. Link choosing
+# ---------------------------------------------------------------------------
 
-# Rules for choosing which links to follow, from Table 1 of the paper.
-# A link is checked against each group in order and gets the number of the
-# first group it matches (0 to 4). Lower numbers are visited first.
-# "text" groups look at the words of the link; "url" groups look at the address.
+# Which links to follow when a page has no form, from Table 1 of the paper.
+# A link is checked against each group in order and takes the first group it
+# matches; lower groups are visited first, and a link matching none is dropped.
+# "text" groups look at the words of the link; "url" groups at the address.
 LINK_TIERS = [
     # "subscri" (the paper: "subscribe") also matches subscription, subscriptions, subscriber; changed 2026-10-11
     ("text", ["newsletter", "weekly ad", "subscri", "inbox", "email", "sale alert"]),
@@ -121,15 +146,30 @@ LINK_TIERS = [
     ("url", ["/article", "news/", re.compile(r"/20\d\d/")]),  # /20\d\d/ = a year like /2024/; the paper used "/2017"
     ("url", ["/us/", "=us&", "en-us"]),
 ]
-# Never follow a link whose words contain one of these (so an "unsubscribe" link is never visited).
+
+# Links never followed, whatever tier they would otherwise match.
+# Never by their words (so an "unsubscribe" link is never visited):
 LINK_BLACKLIST = ["unsubscribe", "mobile", "phone"]
-# Never follow a link whose address contains one of these, whatever its words say.
-# Needed since the signup-address group above also matches "/unsubscribe".
+# Never by their address, needed since the signup-address group above also
+# matches "/unsubscribe":
 URL_BLACKLIST = ["unsubscribe"]
-# Never follow a link to a file download (PDFs, images, videos, Office files, ...).
+# Never a file download (PDFs, images, videos, Office files, ...):
 SKIP_EXTENSIONS = re.compile(
     r"\.(pdf|jpe?g|png|gif|svg|webp|zip|mp4|mp3|docx?|xlsx?|pptx?)$", re.I
 )
+
+
+# ---------------------------------------------------------------------------
+# 5. Parallel runs
+# ---------------------------------------------------------------------------
+
+MAX_JOBS = 8          # most parallel crawlers allowed with --jobs; each is a browser using ~500-800 MB of memory
+SHUTDOWN_GRACE = 90   # after Ctrl-C, seconds each parallel crawler gets to finish its page and save before being killed
+
+
+# ---------------------------------------------------------------------------
+# 6. Output columns
+# ---------------------------------------------------------------------------
 
 # The columns of forms.csv, in order. Analysis scripts depend on this order:
 # only ever add new columns at the END, and never rename or reorder these.
@@ -146,8 +186,18 @@ FORM_FIELDS = [
     "source",  # added 2026-10-07; always "browser" since 2026-10-08 (older runs may also have "http")
     "field_names",  # added 2026-10-10; each field's name (or id), in the same order as field_types
 ]
+
 # The columns of pages.csv: one row for every page visited.
 PAGE_FIELDS = [
     "timestamp", "site", "page_url", "final_url",
     "http_status", "status", "n_new_forms", "error",
 ]
+
+
+# ---------------------------------------------------------------------------
+# 7. Run state
+# ---------------------------------------------------------------------------
+
+# Not a setting: becomes True when you press Ctrl-C. The crawler checks it
+# between pages and stops cleanly instead of in the middle of one.
+STOP = {"now": False}
