@@ -38,7 +38,7 @@ Selenium 4 (Chrome via chromedriver), Python 3.8+. Run from the repo root. `src/
 
 | Module | Contents |
 |---|---|
-| `config.py` | timing budgets, `DETECT_PATTERNS` (form-detection keywords), `LINK_TIERS`, `STOP`, `FORM_FIELDS`/`PAGE_FIELDS` |
+| `config.py` | timing budgets, `DETECT_PATTERNS` (form-detection keywords), `FORM_TYPES` (form classification), `LINK_TIERS`, `STOP`, `FORM_FIELDS`/`PAGE_FIELDS` |
 | `js.py` | `DETECT_JS`, `LINKS_JS`, `SCROLL_JS`, `EXIT_INTENT_JS` |
 | `util.py` | `now`, `slug`, `same_site`, `load_sites`, `form_signature`, `link_tier`, ... |
 | `browser.py` | `make_driver()`, `detect_options()`, `rank_links()`, `capture()`, `scan_page()`, `detect_in_all_frames()` |
@@ -62,7 +62,7 @@ Selenium 4 (Chrome via chromedriver), Python 3.8+. Run from the repo root. `src/
 ### Ranking rules (from the paper, in priority order)
 
 1. Highest effective z-index first (walk ancestors until a non-`auto` value). Ties broken by modal/dialog hints.
-2. Login-like forms rank lower: a password field, "log in"/"sign in" as a word in the form's HTML or in the plain text around it, or a login/account page address (see `DETECT_PATTERNS["login"]` and `["login_url"]`).
+2. Forms whose `form_type` is not `signup` rank lower. `FORM_TYPES` in `config.py` classifies each form (`login`, `checkout`, `comment`, `contact`, `search`, else `signup`); first rule that matches wins, and each rule may carry an `unless` blacklist that cancels a match.
 3. Forms with more fields rank higher.
 
 ### Intentional differences from the paper
@@ -76,6 +76,8 @@ Also 2026-10-08: robots.txt is no longer fetched or honoured; earlier runs skipp
 Also 2026-10-11: `login_like` was tightened and widened. The paper's "log in"/"sign in" text check matched inside other words, notably "By signing up", so newsletter forms were marked login-like (3 of the 5 `login_like` rows in the `isec_lab_sample` pilot). It now needs a word start and no following "g". Two signals were added for two-step logins such as `auth.hulu.com/web/create-account/enter-email`, which show only an email box and "Continue" because the password box is on the next screen: the login words in the plain text around the form (links and buttons excluded), and a login/account page address. `login_like` values are therefore not comparable with runs before this date.
 
 Also 2026-10-21: the crawler was moved from Playwright to Selenium at the project lead's request. The measurement regime is unchanged and was verified: on the local fixture both drivers return byte-identical rows for all 7 forms (placement, ranking, field types, text, widths, coverage), once the viewport is forced through CDP and scrollbars are hidden. Two mechanics differ. `http_status` now comes from `PerformanceNavigationTiming.responseStatus` in the page rather than the response object. Media is blocked by URL pattern (`BLOCKED_URL_PATTERNS`) instead of by resource type, so audio or video served from an address without a file extension now loads where it used to be dropped; this costs bandwidth, not data.
+
+Also 2026-10-22: the boolean `login_like` became a six-way `form_type`, because the crawler records every form with an email box and a good number of those are not signups. A scan of the 116 forms collected so far found roughly 26 login/account, 8 checkout and 10 contact forms among them, which is what the type list is drawn from. Rules are data, in `FORM_TYPES`, each with detect patterns and an optional `unless` blacklist. The `login` rules are unchanged from `login_like`, so that classification is comparable across the change; the other five types are new and have no equivalent in earlier runs.
 
 Keep this list current if the method changes, since it belongs in the methods section.
 
@@ -92,6 +94,7 @@ Schema stability matters because downstream analysis depends on it. Add new colu
 
 Schema changes so far:
 
+- 2026-10-22: `login_like` was **replaced in place** by `form_type`, a fourth deliberate exception to the append-only rule. Same position and same column count, so only the name and the values change: the boolean becomes one of `signup`, `login`, `checkout`, `comment`, `contact`, `search`. `login` keeps the three signals `login_like` used, so forms that were `login_like=True` are typed `login`; everything that was `False` is now typed, most of it `signup`. Classification lives in `FORM_TYPES` in `config.py`. `Output` refuses to append to a `forms.csv` with the old header, so use a fresh `--out` directory.
 - 2026-10-13: `has_privacy_link` was **removed** from `FORM_FIELDS` at the project lead's request, a third deliberate exception to the append-only rule, together with its `privacy` pattern in `DETECT_PATTERNS`. The 10 columns after it (`consent_text_hint` through `field_names`) each moved one position left. `forms.csv` files written before this date are not column-compatible; `Output` refuses to append to them, so use a fresh `--out` directory.
 - 2026-10-10: `field_names` was **appended to the end** of `FORM_FIELDS`: one entry per field, in the same order as `field_types`, holding the field's `name` attribute, else its `id`, else empty (a radio group gets the group's name). Example: `field_types` = `email | text | checkbox`, `field_names` = `EMAIL | FNAME | gdpr_consent`.
 - 2026-10-10: `axe_violations` was **removed** from `FORM_FIELDS` at the project lead's request, a second deliberate exception to the append-only rule. `screenshot`, `context_screenshot`, `html_file`, `form_text` and `source` each moved one position left. `forms.csv` files written before this date are not column-compatible: use a fresh `--out` directory. `Output` now refuses to append to a CSV whose header differs from the current schema, so mixing versions fails loudly instead of misaligning columns.
@@ -101,12 +104,12 @@ Schema changes so far:
 
 `source` is always `browser` in current output. In runs from 2026-10-07 it can be `http`, meaning the row was read from served markup and has no screenshot or rendered-layout columns; filter on `source = 'browser'` for those runs.
 
-Several columns are heuristics, not ground truth: `placement_guess`, `modal_hint`, `login_like`, `consent_text_hint`, `heading`, `other_clickable_text`. They are starting points for manual coding and must be spot-checked against screenshots.
+Several columns are heuristics, not ground truth: `placement_guess`, `modal_hint`, `form_type`, `consent_text_hint`, `heading`, `other_clickable_text`. They are starting points for manual coding and must be spot-checked against screenshots.
 
 ## Conventions
 
 - Keep the JavaScript in raw strings (`r"""..."""`) so regex backslashes survive. The page scripts are arrow functions; Selenium's `execute_script` runs statements, so `browser.py` wraps them with `_call()` / `_call_async()` (the async one is for `SCROLL_JS`, via `execute_async_script`). Keep them as arrow functions so both wrappers keep working.
-- Detection keyword patterns live in `DETECT_PATTERNS` in `crawler/config.py` (moved there from the top of `DETECT_JS` on 2026-10-11, unchanged). They are passed into the page through `detect_options()` in `browser.py` and compiled there as case-insensitive JavaScript regexes, so write them in syntax that means the same in Python and JavaScript. Thresholds (sizes, depths, counts) stay in `DETECT_JS`. Change patterns in `config.py`, not inline, and record the change here.
+- Detection keyword patterns live in `DETECT_PATTERNS` in `crawler/config.py` (moved there from the top of `DETECT_JS` on 2026-10-11, unchanged). They are passed into the page through `detect_options()` in `browser.py` and compiled there as case-insensitive JavaScript regexes, so write them in syntax that means the same in Python and JavaScript. The form-type rules live beside them in `FORM_TYPES` and travel the same way. Thresholds (sizes, depths, counts) stay in `DETECT_JS`. Change patterns in `config.py`, not inline, and record the change here.
 - Timing budgets are constants in `crawler/config.py`: `LOAD_SETTLE_MS` (3000, replaces a 10s `networkidle` wait), `PAINT_SETTLE_MS` (1000, the settle before `on_load` detection — lowering it shifts `first_seen_phase`), `SCROLL_BUDGET_MS` (5000), `DETECT_BUDGET_MS` (4000), `MAX_SHADOW_SCAN` (15000), plus `BLOCKED_URL_PATTERNS` (audio/video addresses only — never block images, which are the deliverable, fonts, which change layout metrics, or third-party scripts, which host many signup embeds), `MAX_JOBS` (8), `SHUTDOWN_GRACE` (90), `SITE_TIME_LIMIT_PER_PAGE_S` (120) and `SCRIPT_TIMEOUT_S` (30).
 - Catch `SeErr` (Selenium's `WebDriverException`, the base class for every driver error including timeouts) around browser operations; one failing page or frame must never stop a crawl.
 - Keep the module docstring's usage and output sections in sync with the code.
@@ -114,7 +117,7 @@ Several columns are heuristics, not ground truth: `placement_guess`, `modal_hint
 
 ## Testing
 
-Test changes against a local fixture site served with `python -m http.server`, never against real sites first. The fixture should include at least: a footer `<form>` with a labeled email input, a delayed `position: fixed` modal with a placeholder-only email field, a prechecked consent checkbox, and confirmshaming dismiss text; an exit-intent sticky bar; a `<div>`-based form with no `<form>` tag; a shadow DOM widget; a signup form inside an iframe; a header login form (should rank last and be `login_like`); a search input mentioning "email" (should not be detected); and an "unsubscribe" link (should not be followed).
+Test changes against a local fixture site served with `python -m http.server`, never against real sites first. The fixture should include at least: a footer `<form>` with a labeled email input, a delayed `position: fixed` modal with a placeholder-only email field, a prechecked consent checkbox, and confirmshaming dismiss text; an exit-intent sticky bar; a `<div>`-based form with no `<form>` tag; a shadow DOM widget; a signup form inside an iframe; a header login form (should rank last, `form_type = login`); a search input mentioning "email" (should not be detected); and an "unsubscribe" link (should not be followed). For `FORM_TYPES`, also cover one form per type with an email box in it, plus the two blacklist cases: a newsletter box saying "Already subscribed? Sign in" and a footer offering both a newsletter and a way to get in touch, both of which must stay `signup`.
 
 After a test run, confirm in the server log that no POST or form-action requests were made, and spot-check screenshots in `outputs/<run>/screens/`.
 

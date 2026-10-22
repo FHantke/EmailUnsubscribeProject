@@ -30,8 +30,15 @@ DETECT_JS = r"""
   const P = opts.patterns, re = src => new RegExp(src, 'i');
   const EMAIL_HINT = re(P.email);        // an input described like this is an email box ...
   const NOT_EMAIL = re(P.not_email);     // ... unless it is also described like this
-  const LOGIN_HINT = re(P.login);        // login-like forms rank last
-  const LOGIN_URL = re(P.login_url);     // ... as do forms on login/account pages
+  // Form-type rules from config.py FORM_TYPES, in priority order: the first
+  // whose detect keys hit, and whose `unless` does not, names the form.
+  const TYPES = (opts.formTypes || []).map(t => ({
+    name: t.name,
+    fields: t.fields || [],
+    text: t.text ? re(t.text) : null,
+    url: t.url ? re(t.url) : null,
+    unless: t.unless ? re(t.unless) : null,
+  }));
   const MODAL_HINT = re(P.modal);        // popup-like class/id: ranks first
   const MODAL_HTML = re(P.modal_html);   // last-resort popup check on the form's HTML
   const SUBMIT_HINT = re(P.submit);      // text that makes a short clickable element a submit button
@@ -195,17 +202,22 @@ DETECT_JS = r"""
     return clean(out.join(' ')).slice(0, 20000);
   };
 
-  // Looks like a login form, from any one of:
-  //   - a password box in the form
-  //   - login words in the form's HTML (attributes count, e.g. class="login-box")
-  //   - login words in the plain text around the form (its scope, see scopeFor)
-  //   - a login/account page address; two-step logins ask for the email first and
-  //     show the password box only on the next screen, which is never reached
-  const isLogin = (el, scope) =>
-    !!el.querySelector('input[type=password]') ||
-    LOGIN_HINT.test(el.outerHTML.slice(0, 20000)) ||
-    LOGIN_HINT.test(plainText(scope)) ||
-    LOGIN_URL.test(location.hostname + location.pathname);
+  // What kind of form this is. Every form with an email box is recorded, but
+  // many are not signups; this labels them so analysis can filter. Each type is
+  // tried in turn against the form's own HTML (attributes included, so
+  // class="login-box" counts), the plain text around it, and the page address.
+  const formType = (el, scope) => {
+    const html = el.outerHTML.slice(0, 20000);
+    const near = plainText(scope);
+    const addr = location.hostname + location.pathname;
+    for (const t of TYPES) {
+      const hit = t.fields.some(f => el.querySelector('input[type=' + f + ']'))
+        || (t.text && (t.text.test(html) || t.text.test(near)))
+        || (t.url && t.url.test(addr));
+      if (hit && !(t.unless && (t.unless.test(html) || t.unless.test(near)))) return t.name;
+    }
+    return opts.defaultFormType;
+  };
 
 
   // ---- Helpers: where the form is (used in step 6) ---------------------------
@@ -340,10 +352,11 @@ DETECT_JS = r"""
     r.fi = fieldInfo(r.el);
     r.z = effectiveZ(r.el);
     r.modal = modalHint(r.el);
-    r.login = isLogin(r.el, scopeFor(r.el, fixedAncestor(r.el)));
+    r.type = formType(r.el, scopeFor(r.el, fixedAncestor(r.el)));
+    r.offTarget = r.type === opts.defaultFormType ? 0 : 1;   // anything but a signup ranks lower
   });
   cands.sort((a, b) =>
-    (b.z - a.z) || (b.modal - a.modal) || (a.login - b.login) || (b.fi.n - a.fi.n));
+    (b.z - a.z) || (b.modal - a.modal) || (a.offTarget - b.offTarget) || (b.fi.n - a.fi.n));
 
 
   // ---- 6. Tag and measure ----------------------------------------------------
@@ -380,7 +393,7 @@ DETECT_JS = r"""
       placement_guess: placement(rect, fx, landmark(el)),
       z_index: r.z,
       modal_hint: r.modal,
-      login_like: r.login,
+      form_type: r.type,
       in_shadow_dom: el.getRootNode() !== document,
 
       // its fields

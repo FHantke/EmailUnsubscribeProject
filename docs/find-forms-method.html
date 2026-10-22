@@ -160,7 +160,7 @@
     <div class="meta">
       <span>Hrishikesh Jadhav</span>
       <span>Northeastern University</span>
-      <span>Method as of 21 October 2026</span>
+      <span>Method as of 22 October 2026</span>
     </div>
   </header>
 
@@ -291,7 +291,7 @@
         <div class="down" aria-hidden="true">↓</div>
         <div class="step wide">
           <span class="k">Step 5 · rank</span>
-          <span>(1) furthest in front first (highest z-index), so popups come before inline forms; ties go to popup-looking forms; (2) login-like forms last; (3) forms with more fields first.</span>
+          <span>(1) furthest in front first (highest z-index), so popups come before inline forms; ties go to popup-looking forms; (2) forms that are not signups last; (3) forms with more fields first.</span>
         </div>
         <div class="down" aria-hidden="true">↓</div>
         <div class="step wide">
@@ -305,15 +305,24 @@
     <h3>Submit-like controls</h3>
     <p>Any <code>&lt;button&gt;</code> (except reset) and any submit or image input counts. A short clickable <code>&lt;div&gt;</code>, <code>&lt;span&gt;</code> or link counts only if its text, at most 40 characters, contains a submit word: <em>subscribe</em>, <em>sign up</em>, <em>sign me up</em>, <em>join</em>, <em>submit</em>, <em>send</em>, <em>notify</em>, <em>register</em>, <em>get</em>, <em>continue</em>, <em>next</em>, <em>save</em>, <em>count me in</em>, <em>yes</em>, <em>go</em>, <em>ok</em>, or the Spanish and Portuguese/French stems <em>suscr…</em> and <em>inscr…</em>.</p>
 
-    <h3>Login-like forms</h3>
-    <p>Login forms that ask for an email address look like signups, so they are flagged rather than dropped. A form is marked <code>login_like</code> if any of these hold:</p>
-    <ul>
-      <li>it contains a password box;</li>
-      <li>its HTML contains <em>log in</em>, <em>login</em>, <em>sign in</em> or <em>signin</em> as a word;</li>
-      <li>the plain text around it, not counting links and buttons, contains those words (for example “Log in to Hulu with your MyDisney account” above an email box);</li>
-      <li>the page address looks like a login or account page (<code>auth.</code>, <code>/login</code>, <code>/signin</code>, <code>/account</code>). Two-step logins show only an email box and “Continue”; the password box would appear on the next screen, which the crawler never opens.</li>
-    </ul>
-    <p class="small muted">The word-boundary rule was added after a pilot check showed that the original text match fired inside other words: 3 of the 5 forms flagged in an 18-form pilot were newsletter forms caught by “By signing up, I agree…”.</p>
+    <h3>What kind of form is it?</h3>
+    <p>Any form with an email box is recorded, but a good number are not newsletter signups: a scan of the first 116 collected forms found roughly 26 login or account forms, 8 checkouts and 10 contact forms among them. Each form is therefore classified into a <code>form_type</code>, so those can be filtered out of analysis rather than quietly skewing it. The types are tried in order and the first match wins:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Type</th><th>Recognised by</th></tr></thead>
+        <tbody>
+          <tr><td><code>login</code></td><td>a password box; <em>log in</em>, <em>login</em>, <em>sign in</em> or <em>signin</em> as a word in the form or the text around it; or a login/account page address</td></tr>
+          <tr><td><code>checkout</code></td><td><em>checkout</em>, <em>card number</em>, <em>cvv</em>, <em>billing address</em>, <em>place your order</em></td></tr>
+          <tr><td><code>comment</code></td><td><em>leave a reply</em>, <em>post a comment</em>, <em>your comment</em></td></tr>
+          <tr><td><code>contact</code></td><td><em>contact us</em>, <em>get in touch</em>, <em>send us a message</em>, <em>enquiry</em></td></tr>
+          <tr><td><code>search</code></td><td>a search box, or the word <em>search</em></td></tr>
+          <tr><td><code>signup</code></td><td>the fallback, when nothing above matches</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>A rule may also carry a blacklist that cancels a match, which is how a newsletter box reading &ldquo;Already subscribed? Sign in&rdquo; stays a signup, and how a footer offering both a newsletter and a way to get in touch is not read as a contact form.</p>
+    <p>Two details of the <code>login</code> rules are worth recording. The page address counts because two-step logins show only an email box and &ldquo;Continue&rdquo;, with the password box on a screen the crawler never opens. And the text match requires a whole word, added after a pilot showed the looser version firing inside other words: 3 of the 5 forms it flagged in an 18-form pilot were newsletter forms caught by &ldquo;By signing up, I agree&hellip;&rdquo;.</p>
+    <p class="small muted">Before 22 October 2026 this was a single yes/no column, <code>login_like</code>. The <code>login</code> rules are unchanged from it, so that category is comparable across the change; the other five types are new.</p>
   </section>
 
   <section id="record">
@@ -352,7 +361,7 @@
       </div>
       <figcaption>Part of one real row from the pilot: a popup that opened during the 8-second wait and covered about a third of the window.</figcaption>
     </figure>
-    <p>Columns such as <code>placement_guess</code>, <code>login_like</code>, <code>modal_hint</code>, <code>consent_text_hint</code> and <code>heading</code> are heuristics. They are starting points for manual coding and are checked against the screenshots.</p>
+    <p>Columns such as <code>placement_guess</code>, <code>form_type</code>, <code>modal_hint</code>, <code>consent_text_hint</code> and <code>heading</code> are heuristics. They are starting points for manual coding and are checked against the screenshots.</p>
   </section>
 
   <section id="keywords">
@@ -452,7 +461,7 @@
       <li><strong>Cookie banners</strong> can suppress or delay popups, especially on EU sites. Dismissing them would require clicking, which the method rules out.</li>
       <li><strong>Bot detection.</strong> Some sites serve different content to automated browsers. The browser window is visible by default for this reason.</li>
       <li><strong>Not detected:</strong> closed shadow DOM, forms drawn on a canvas, and forms behind CAPTCHAs.</li>
-      <li><strong>Heuristic columns</strong> (placement, popup hint, login-like, consent wording, heading) need checking against the screenshots.</li>
+      <li><strong>Heuristic columns</strong> (placement, popup hint, form type, consent wording, heading) need checking against the screenshots.</li>
       <li><strong>Time-outs.</strong> A site stopped by the 6-minute limit keeps the forms found on its earlier pages, but none from the page it was stuck on.</li>
       <li><strong>Out of scope for the crawler:</strong> what happens after signing up (confirmation emails, double opt-in). Submitting forms is planned as separate work; see section 9.</li>
     </ul>
@@ -479,7 +488,7 @@
     </ol>
   </section>
 
-  <footer>Find Forms crawler · ISEC Lab, Northeastern University · Method as of 21 October 2026</footer>
+  <footer>Find Forms crawler · ISEC Lab, Northeastern University · Method as of 22 October 2026</footer>
 </main>
 
 <style>

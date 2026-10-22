@@ -299,39 +299,50 @@ venv/bin/python -c "from playwright.sync_api import sync_playwright; import path
         containing *modal*, *dialog*, *popup*, *lightbox*, *overlay*,
         *flyout* or *slide-in*. As a last resort, the words *modal* or
         *dialog* anywhere in the form's HTML also count. Saved as `modal_hint`.
-     3. **Login forms last.** A form is probably a login form rather than a
-        signup, and goes after the others, when any one of these is true
-        (saved as `login_like`):
-        - it has a password box;
-        - its HTML contains *log in*, *login*, *sign in* or *signin* as a word
-          (so *blog in*, *dialog in*, *design in* and *signing up* do not count);
-        - the plain text around it, not counting links and buttons, contains
-          those words, e.g. "Log in to Hulu with your account" above the form;
-        - the page address looks like a login or account page (`auth.`,
-          `/login`, `/signin`, `/account`, …). Two-step logins ask for the email
-          first and show the password box only on the next screen, which the
-          crawler never reaches, so the address is often the only clue.
+     3. **Non-signup forms last.** Every form with an email box is recorded,
+        but many are not signups. `FORM_TYPES` in `config.py` classifies each
+        one into `form_type`, and anything that is not a `signup` goes after
+        the signups. The types are tried in this order, first match wins:
 
-        The last three rules date from 2026-10-11 (see `CLAUDE.md`).
+        | Type | Matches on |
+        |---|---|
+        | `login` | a password box; *log in* / *login* / *sign in* / *signin* as a word in the form's HTML or the text around it; or a login/account page address (`auth.`, `/login`, `/account`, …) |
+        | `checkout` | *checkout*, *card number*, *cvv*, *billing address*, *place your order*, … |
+        | `comment` | *leave a reply*, *post a comment*, *your comment* |
+        | `contact` | *contact us*, *get in touch*, *send us a message*, *enquiry*, … |
+        | `search` | a search box, or the word *search* |
+        | `signup` | **the fallback**: matched none of the above |
+
+        A rule can also carry an `unless` blacklist that cancels a match.
+        `login` uses one so a newsletter box reading "Already subscribed? Sign
+        in" stays a signup; `contact` and `search` use one so a footer that
+        mentions both a newsletter and getting in touch stays a signup.
+
+        `form_type` replaced the boolean `login_like` on 2026-10-22; the
+        `login` rules are the same three signals that column used, so login
+        classification did not shift. The address rule dates from 2026-10-11:
+        two-step logins ask for the email first and show the password box only
+        on the next screen, which the crawler never reaches, so the address is
+        often the only clue.
      4. **Bigger forms first.** If still tied, the form with more fields comes
         first. Text boxes and checkboxes count one each; a group of radio
         buttons counts as one. Saved as `n_fields`.
    - *Example:* a page has a newsletter popup (z-index 9999), a footer signup
      (no z-index) and a header login (no z-index). Rule 1 puts the popup first.
      The footer form and the login form are tied at 0 and neither looks like a
-     popup, so rule 3 puts the login form last. Result: popup = 1, footer = 2,
-     login = 3.
+     popup, so rule 3 puts the login form last, because its `form_type` is not
+     `signup`. Result: popup = 1, footer = 2, login = 3.
    - *Things to know when using `rank_on_page`:*
      - Ranking happens **per frame, per phase**. A form inside an iframe is
        ranked only against the other forms in that iframe, and a popup that
        appears in a later phase is ranked only against what the detector sees
        at that moment. So `rank_on_page = 1` means "first in that frame at that
        moment", not "the main form of the page".
-     - The checks are simple word matches, so they can be wrong. A newsletter
-       box whose own text says "Already subscribed? *Sign in*" is still marked
-       `login_like` and ranked low, and so is any form on an account page, e.g.
-       a newsletter footer on `/login`. Like the other heuristic columns, check
-       `modal_hint` and `login_like` against the screenshots.
+     - The checks are simple word matches, so they can be wrong. The `unless`
+       blacklists cover the confusions seen so far, but a newsletter footer on
+       an account page is still typed `login`, because the address rule fires
+       whatever the form itself says. Like the other heuristic columns, check
+       `modal_hint` and `form_type` against the screenshots.
 6. **Tag and measure:** each candidate gets a `data-ux-form-id` attribute so
    Python can find it for screenshots, and returns:
    - **position:** `placement_guess` (fullscreen takeover, sticky bar top or

@@ -102,13 +102,6 @@ DETECT_PATTERNS = {
         r")\b"
     ),
 
-    # -> login_like, which ranks a form last. Matched against the form's HTML
-    # and the text around it; (?!g) keeps "signing up" from counting. login_url
-    # matches the page address instead, for two-step logins that ask for the
-    # email first and show no password box.
-    "login": r"\b(log ?in|sign ?in)(?!g)",
-    "login_url": r"\b(auth|login|log-in|signin|sign-in|accounts?|myaccount)\b",
-
     # -> modal_hint, which ranks a form first among equals. From a class or id
     # on the form or its 10 nearest ancestors; modal_html is a last resort over
     # the form's own HTML.
@@ -118,6 +111,51 @@ DETECT_PATTERNS = {
     # -> consent_text_hint, from the text around the form.
     "consent": r"consent|i agree|unsubscribe|privacy|opt.?out|terms",
 }
+
+# -> form_type. The crawler records every form with an email box, but plenty of
+# those are not signups; this says which kind each one is, so analysis can
+# filter. Checked in order, first match wins, and a form matching nothing is
+# DEFAULT_FORM_TYPE. Ordered most reliable rule first: a password box is near
+# proof of a login, "get in touch" is only a hint.
+#
+# A type matches when ANY of its detect keys hits and `unless` does not:
+#     fields  input types present in the form, e.g. password
+#     text    the form's own HTML, or the plain text around it
+#     url     the page address (host + path)
+#     unless  blacklist; cancels a match from any of the above
+# Regexes go into the page as JavaScript, same syntax rule as DETECT_PATTERNS.
+DEFAULT_FORM_TYPE = "signup"
+FORM_TYPES = [
+    # Same three signals the old login_like column used, so classification of
+    # login forms did not shift when form_type replaced it on 2026-10-22. `url`
+    # is here for two-step logins, which ask for the email and show the password
+    # box only on the next screen; `unless` spares a newsletter box whose own
+    # text offers a sign-in to people already subscribed.
+    ("login", {
+        "fields": ["password"],
+        "text": r"\b(log ?in|sign ?in)(?!g)",
+        "url": r"\b(auth|login|log-in|signin|sign-in|accounts?|myaccount)\b",
+        "unless": r"\balready\b.{0,24}\b(subscrib|registered|member|account)",
+    }),
+    ("checkout", {
+        "text": r"\b(checkout|card number|cvv|billing address|expiry date|place (your )?order|payment method)\b",
+    }),
+    ("comment", {
+        "text": r"\b(leave a (repl|comment)|post (a )?comment|your comment)\w*\b",
+    }),
+    # Deliberately no `url` key: a newsletter popup on /contact is still a
+    # newsletter popup. `unless` spares footers that invite contact and a signup
+    # in the same block.
+    ("contact", {
+        "text": r"\b(contact us|get in touch|send (us )?a message|how can we help|enquir|inquir)\w*\b",
+        "unless": r"\b(newsletter|subscri)\w*",
+    }),
+    ("search", {
+        "fields": ["search"],
+        "text": r"\bsearch\b",
+        "unless": r"\b(newsletter|subscri)\w*",
+    }),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +175,7 @@ SHUTDOWN_GRACE = 90   # seconds a shard gets after Ctrl-C to finish its page and
 FORM_FIELDS = [
     "timestamp", "site", "page_url", "frame_url", "form_sig",
     "first_seen_phase", "detection_method", "rank_on_page", "placement_guess",
-    "z_index", "modal_hint", "login_like", "in_iframe", "in_shadow_dom",
+    "z_index", "modal_hint", "form_type", "in_iframe", "in_shadow_dom",   # form_type replaced login_like 2026-10-22
     "n_fields", "field_types", "n_checkboxes", "n_checkboxes_prechecked",
     "fields_missing_label", "email_input_type", "email_has_label",
     "email_placeholder", "email_autocomplete", "email_required",
