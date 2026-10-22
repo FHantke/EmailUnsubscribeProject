@@ -67,6 +67,7 @@ import time
 from pathlib import Path
 
 from crawler.config import MAX_JOBS, SITE_TIME_LIMIT_PER_PAGE_S, STOP
+from crawler.browser import prepare_stealth_driver
 from crawler.crawl import crawl_site
 from crawler.jobs import SiteWatchdog, install_stop_handler, run_jobs
 from crawler.output import Output, merge_parts
@@ -94,9 +95,9 @@ def parse_args():
     ap.add_argument("--limit", type=int, help="Only process the first N sites")
     ap.add_argument("--headless", action="store_true",
                     help="Hide the browser window (default: visible; with --jobs N, one window per shard)")
-    ap.add_argument("--stealth", action="store_true",
-                    help="Drive Chrome through undetected_chromedriver, which hides the automation "
-                         "fingerprints sites use to spot a crawler (needs: pip install undetected-chromedriver)")
+    ap.add_argument("--no-stealth", action="store_true",
+                    help="Drive Chrome with plain Selenium. The default is undetected_chromedriver, "
+                         "which hides the automation fingerprints sites use to spot a crawler.")
     ap.add_argument("--site-time-limit", type=float,
                     help=f"Seconds one site may take before its browser is killed and it is logged as "
                          f"site_timeout (default: {SITE_TIME_LIMIT_PER_PAGE_S} x --max-pages)")
@@ -108,6 +109,7 @@ def parse_args():
     ap.add_argument("--clean-parts", action="store_true",
                     help="Delete part files after a successful merge (default: keep them)")
     args = ap.parse_args()
+    args.stealth = not args.no_stealth   # browser.py reads this
     if not args.merge and not args.sites:
         ap.error("the sites argument is required unless --merge is given")
     if not 1 <= args.jobs <= MAX_JOBS:
@@ -133,7 +135,11 @@ def main():
     try:
         if args.merge:
             merge_parts(Path(args.out), args.clean_parts)
-        elif args.jobs > 1:
+            return
+        # Warm the stealth driver cache here, in one process, before any shard
+        # or site needs it.
+        prepare_stealth_driver(args)
+        if args.jobs > 1:
             sys.exit(run_jobs(args, extra_args=["--shard-todo"]))
         else:
             crawl_list(args, part)

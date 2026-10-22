@@ -13,7 +13,7 @@ Form-detection logic is adapted from Englehardt, Han & Narayanan (2018), "I neve
 - **Browser only.** Every request comes from Chromium page loads; there are no requests outside the browser. Do not reintroduce plain-HTTP pre-screening or recording forms from served markup (removed 2026-10-08).
 - **Selenium**, since 2026-10-21 (was Playwright). Chrome is driven through chromedriver, one driver per site. The exact viewport is set with a CDP `Emulation.setDeviceMetricsOverride` and `--hide-scrollbars`; both are required for recorded `width` and `viewport_coverage` to mean the same thing as in earlier runs, so do not drop them for `--window-size`.
 - Keep polite delays between page loads (`--page-delay` plus random jitter). Do not add parallelism within a single process; scale across separate processes with `--shard`, or `--jobs N`, which spawns those shards for you and merges their output. The `--jobs` parent never crawls.
-- Do not add dependencies beyond `selenium`, `undetected-chromedriver` and the Python standard library without asking. `undetected-chromedriver` is used only by `--stealth` and imported inside `_stealth_driver()`, so the crawler runs without it installed. (Playwright is no longer used by the crawler; `docs/` rendering still uses it, which is why `requirements.txt` mentions it in a comment.)
+- Do not add dependencies beyond `selenium`, `undetected-chromedriver` and the Python standard library without asking. `undetected-chromedriver` is the default driver since 2026-10-22; it is imported inside `_stealth_driver()`, so `--no-stealth` still runs without it installed. (Playwright is no longer used by the crawler; `docs/` rendering still uses it, which is why `requirements.txt` mentions it in a comment.)
 
 ## Setup and commands
 
@@ -29,7 +29,7 @@ python src/find_forms.py inputs/sites.txt --jobs 4                          # 4 
 python src/find_forms.py inputs/sites.txt --shard 0/4                      # or drive the shards yourself
 python src/find_forms.py --merge --out outputs/results                     # fold orphaned *.part* files in
 python src/find_forms.py inputs/sites.txt --headless                      # hide the browser (default: visible window)
-python src/find_forms.py inputs/sites.txt --stealth                       # undetected_chromedriver, for sites that block crawlers
+python src/find_forms.py inputs/sites.txt --no-stealth                    # plain Selenium (default: undetected_chromedriver)
 ```
 
 Rerunning the same command resumes; sites listed in `outputs/results/sites_done.txt` are skipped.
@@ -83,6 +83,8 @@ Also 2026-10-22: the boolean `login_like` became a six-way `form_type`, because 
 
 `subscription`, the target category, is named for what the study is about and recognised by its own rules (newsletter/subscribe wording, and the embed markup of Mailchimp, Klaviyo, Substack and similar), not by elimination: a form that matches nothing is `unknown`, so quote requests, registrations and gated downloads no longer inflate it. Replaying the rules over the 166 forms collected so far gives roughly 105 subscription, 29 login, 8 contact, 4 search, 3 checkout and 17 unknown; the unknowns are mostly non-English buttons, empty headings and registration forms, and are a manual-coding queue rather than a residual category.
 
+Also 2026-10-22: the crawler drives Chrome through `undetected_chromedriver` by default, so that sites which serve automated browsers different content (or block them) are crawled as an ordinary visitor would see them. The measurements are unaffected — verified identical with and without it on the fixture — so data collected before and after this change is comparable. `--no-stealth` reproduces the earlier plain-Selenium behaviour.
+
 Keep this list current if the method changes, since it belongs in the methods section.
 
 ## Outputs (`--out`, default `outputs/results/`)
@@ -128,7 +130,11 @@ After a test run, confirm in the server log that no POST or form-action requests
 ## Known limitations / backlog
 
 - Cookie consent banners can suppress or delay newsletter popups, especially on EU sites. Handling them would require clicking, which is currently out of scope.
-- `--stealth` drives Chrome through `undetected_chromedriver`, which hides `navigator.webdriver` and related fingerprints. It is off by default: the library is unmaintained (3.5.5, 2023), it fetches its own chromedriver and defaults to the newest one, so `_chrome_major()` pins it to the installed browser or it fails with "only supports Chrome version N". Options are passed through intact — dropping them silently changes the measurement regime, since `--hide-scrollbars` alone moves every recorded width by 15px. Verified: standard and `--stealth` return identical measurements on the fixture.
+- **`undetected_chromedriver` is the default driver** (since 2026-10-22; `--no-stealth` falls back to plain Selenium). It hides `navigator.webdriver` and related fingerprints, which plain Selenium sets to `True`. Three things it needs, all handled in `browser.py` and none optional:
+  - `_chrome_major()` pins it to the installed browser's major version. Left alone it fetches the newest chromedriver, which drifts ahead and fails with "only supports Chrome version N".
+  - Options are passed through intact. Dropping them silently changes the measurement regime: `--hide-scrollbars` alone moves every recorded width by 15px. Verified identical measurements with and without stealth on the fixture.
+  - `user_multi_procs=True`, plus `prepare_stealth_driver()` called once from `main()` before any shard starts. Without the first, `--jobs` shards overwrite one shared driver binary and all but one die with `RemoteDisconnected` **after writing partial rows**; without the second, a cold cache fails with "max() arg is an empty sequence".
+  It costs about 1s per site in driver startup, and the library is unmaintained (3.5.5, 2023) and patches Selenium internals, which is why `--no-stealth` stays.
 - Headless Chromium can be detected and served different content, so the browser is visible by default (since 2026-10-11; one window per shard under `--jobs`). `--headless` hides it, e.g. on a machine without a display; compare a few sites both ways before a large headless run.
 - A browsered page takes roughly 15–20 seconds; the deliberate waits (`--popup-wait`, exit intent) dominate.
 - Closed shadow roots, canvas-rendered UIs, and forms behind CAPTCHAs are not detected.

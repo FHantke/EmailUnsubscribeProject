@@ -1,8 +1,7 @@
 selenium
 
-# Only needed for --stealth, which hides the automation fingerprints sites use
-# to spot a crawler. The crawler runs without it; --stealth then exits with a
-# message saying to install it.
+# The default driver: hides the automation fingerprints sites use to spot a
+# crawler. --no-stealth falls back to plain Selenium and does not need this.
 undetected-chromedriver
 
 # Needed only to re-render the documentation, not by the crawler:

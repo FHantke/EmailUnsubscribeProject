@@ -52,6 +52,10 @@ session has full control of the browser, not just a view of it.
 
 - Chromium and chromedriver both come from Debian, so their versions always
   match. A mismatched pair is the usual cause of "session not created".
+- The first crawl downloads the `undetected_chromedriver` binary (~23 MB), the
+  default driver. It is cached in the container, so only the first run pays for
+  it, and it is re-fetched if you recreate the container. `--no-stealth` skips
+  it entirely.
 - Chromium runs with `--no-sandbox`, which it needs inside a container without
   extra privileges. The crawler reads that from `FIND_FORMS_CHROME_FLAGS`, with
   the binary and driver paths in `FIND_FORMS_CHROME_BINARY` and

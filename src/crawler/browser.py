@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import time
+from pathlib import Path
 from urllib.parse import urldefrag, urlparse
 
 from selenium import webdriver
@@ -69,6 +70,26 @@ def _chrome_major(binary):
     return int(m.group(1)) if m else None
 
 
+def prepare_stealth_driver(args):
+    """Make sure undetected_chromedriver has a patched driver cached.
+
+    Its multi-process mode picks the newest driver already in its cache and
+    fails on an empty one ("max() arg is an empty sequence"), and downloading
+    from several shards at once races. Call this once, before any crawling, so
+    the cache is warm and every later driver just copies it. No-op unless
+    --stealth, or if the cache is already populated.
+    """
+    if not args.stealth:
+        return
+    import undetected_chromedriver as uc
+    cache = Path(uc.patcher.Patcher.data_path)
+    if cache.exists() and any(cache.glob("*chromedriver*")):
+        return
+    major = _chrome_major(os.environ.get("FIND_FORMS_CHROME_BINARY") or uc.find_chrome_executable())
+    log.info("  fetching the undetected_chromedriver binary (first run only)")
+    uc.patcher.Patcher(version_main=major).auto()
+
+
 def _stealth_driver(options):
     """Chrome through undetected_chromedriver, which hides the automation
     fingerprints a plain Selenium session leaves (navigator.webdriver and
@@ -84,8 +105,12 @@ def _stealth_driver(options):
     major = _chrome_major(binary)
     if major is None:
         log.warning("  could not read the browser version; undetected_chromedriver will guess its driver")
+    # user_multi_procs gives this process its own copy of the patched driver.
+    # Without it, --jobs shards overwrite one shared binary and all but one die
+    # with RemoteDisconnected, after writing partial rows for the site.
     return uc.Chrome(options=options, version_main=major,
-                     browser_executable_path=binary or None)
+                     browser_executable_path=binary or None,
+                     user_multi_procs=True)
 
 
 def make_driver(args):

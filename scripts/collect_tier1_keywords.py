@@ -241,13 +241,14 @@ def main():
     ap.add_argument("--timeout", type=int, default=30, help="Page load timeout in seconds (default: 30)")
     ap.add_argument("--user-agent", help="Override the browser user agent")
     ap.add_argument("--headless", action="store_true", help="Hide the browser window (default: visible)")
-    ap.add_argument("--stealth", action="store_true",
-                    help="Drive Chrome through undetected_chromedriver (see find_forms.py --stealth)")
+    ap.add_argument("--no-stealth", action="store_true",
+                    help="Drive Chrome with plain Selenium (default: undetected_chromedriver)")
     ap.add_argument("--jobs", type=int, default=1,
                     help=f"Run N browsers in parallel, each in its own process (default: 1, max {MAX_JOBS}, "
                          "~500 MB RAM each)")
     ap.add_argument("--shard", help=argparse.SUPPRESS)  # "i/N", set by --jobs for each child process
     args = ap.parse_args()
+    args.stealth = not args.no_stealth   # browser.py reads this
     setup_logging()  # console only; lets run_jobs() relay each browser's output
     if not 1 <= args.jobs <= MAX_JOBS:
         ap.error(f"--jobs must be between 1 and {MAX_JOBS}")
