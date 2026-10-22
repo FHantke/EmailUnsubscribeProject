@@ -114,9 +114,19 @@ DETECT_PATTERNS = {
 
 # -> form_type. The crawler records every form with an email box, but plenty of
 # those are not signups; this says which kind each one is, so analysis can
-# filter. Checked in order, first match wins, and a form matching nothing is
-# DEFAULT_FORM_TYPE. Ordered most reliable rule first: a password box is near
-# proof of a login, "get in touch" is only a hint.
+# filter. Checked in order, first match wins.
+#
+# Every type is recognised by its own rules, including `subscription`: it is
+# the target of the study, not a leftover bin. A form matching nothing becomes
+# DEFAULT_FORM_TYPE ("unknown"), which means "has an email box, but nothing here
+# recognised it" and is a prompt to code it by hand, not a verdict. About one in
+# ten of the forms collected so far land there: non-English buttons, empty
+# headings, registration forms.
+#
+# The five other types come first, so a login or checkout form that happens to
+# mention a newsletter is typed by what it actually is. Within them, most
+# reliable rule first: a password box is near proof of a login, "get in touch"
+# is only a hint.
 #
 # A type matches when ANY of its detect keys hits and `unless` does not:
 #     fields  input types present in the form, e.g. password
@@ -124,7 +134,8 @@ DETECT_PATTERNS = {
 #     url     the page address (host + path)
 #     unless  blacklist; cancels a match from any of the above
 # Regexes go into the page as JavaScript, same syntax rule as DETECT_PATTERNS.
-DEFAULT_FORM_TYPE = "signup"
+DEFAULT_FORM_TYPE = "unknown"   # matched no rule below; needs manual coding
+TARGET_FORM_TYPE = "subscription"   # what the study is about
 FORM_TYPES = [
     # Same three signals the old login_like column used, so classification of
     # login forms did not shift when form_type replaced it on 2026-10-22. `url`
@@ -133,7 +144,7 @@ FORM_TYPES = [
     # text offers a sign-in to people already subscribed.
     ("login", {
         "fields": ["password"],
-        "text": r"\b(log ?in|sign ?in)(?!g)",
+        "text": r"\b(log ?in|sign ?in|create a\w*\b.{0,12}\baccount)(?!g)",
         "url": r"\b(auth|login|log-in|signin|sign-in|accounts?|myaccount)\b",
         "unless": r"\balready\b.{0,24}\b(subscrib|registered|member|account)",
     }),
@@ -147,13 +158,27 @@ FORM_TYPES = [
     # newsletter popup. `unless` spares footers that invite contact and a signup
     # in the same block.
     ("contact", {
-        "text": r"\b(contact us|get in touch|send (us )?a message|how can we help|enquir|inquir)\w*\b",
+        "text": r"\b(contact (us|form)|get in touch|send (us )?a message|how can we help|enquir|inquir)\w*\b",
         "unless": r"\b(newsletter|subscri)\w*",
     }),
     ("search", {
         "fields": ["search"],
         "text": r"\bsearch\b",
         "unless": r"\b(newsletter|subscri)\w*",
+    }),
+    # The target of the study. Checked after the five above so a login or
+    # checkout form that also mentions a newsletter is not claimed by this one. The second half
+    # matches the email services whose embed markup gives a form away even when
+    # its wording does not.
+    ("subscription", {
+        "text": (
+            r"\b(newsletter|subscri\w*|mailing list|email list|inbox|"
+            r"sign ?(me )?up|stay in the loop|keep up to date|"
+            r"(get|receive|send me)\b.{0,24}\b(updates|news|offers|deals|emails?)|"
+            r"join\b.{0,20}\b(list|community|free))\b"
+            r"|(mailchimp|list-manage\.com|mc4wp|klaviyo|substack|convertkit|"
+            r"mailerlite|constantcontact|emailoctopus)"
+        ),
     }),
 ]
 

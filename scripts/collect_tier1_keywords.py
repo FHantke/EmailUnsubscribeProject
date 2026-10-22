@@ -60,7 +60,7 @@ from selenium.common.exceptions import WebDriverException as SeErr
 
 from crawler.browser import detect_in_all_frames, make_driver
 from crawler.config import (
-    DEFAULT_FORM_TYPE, LINK_TIERS, LOAD_SETTLE_MS, MAX_JOBS, PAINT_SETTLE_MS, STOP,
+    LINK_TIERS, LOAD_SETTLE_MS, MAX_JOBS, PAINT_SETTLE_MS, STOP, TARGET_FORM_TYPE,
 )
 from crawler.jobs import install_stop_handler, run_jobs
 from crawler.util import normalize_site, polite_sleep, setup_logging, short, strip_www
@@ -103,7 +103,7 @@ def terms(text):
 def detect(driver):
     """Signup-form candidates in every frame; anything classified as another
     kind of form (login, checkout, contact, ...) is dropped."""
-    return [c for c in detect_in_all_frames(driver, "kw") if c["form_type"] == DEFAULT_FORM_TYPE]
+    return [c for c in detect_in_all_frames(driver, "kw") if c["form_type"] == TARGET_FORM_TYPE]
 
 
 def read_page(url, args):

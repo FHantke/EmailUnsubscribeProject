@@ -353,7 +353,7 @@ DETECT_JS = r"""
     r.z = effectiveZ(r.el);
     r.modal = modalHint(r.el);
     r.type = formType(r.el, scopeFor(r.el, fixedAncestor(r.el)));
-    r.offTarget = r.type === opts.defaultFormType ? 0 : 1;   // anything but a signup ranks lower
+    r.offTarget = r.type === opts.targetFormType ? 0 : 1;    // anything but a subscription form ranks lower
   });
   cands.sort((a, b) =>
     (b.z - a.z) || (b.modal - a.modal) || (a.offTarget - b.offTarget) || (b.fi.n - a.fi.n));

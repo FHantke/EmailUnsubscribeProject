@@ -160,7 +160,7 @@
     <div class="meta">
       <span>Hrishikesh Jadhav</span>
       <span>Northeastern University</span>
-      <span>Method as of 22 October 2026</span>
+      <span>Method as of 23 October 2026</span>
     </div>
   </header>
 
@@ -291,7 +291,7 @@
         <div class="down" aria-hidden="true">↓</div>
         <div class="step wide">
           <span class="k">Step 5 · rank</span>
-          <span>(1) furthest in front first (highest z-index), so popups come before inline forms; ties go to popup-looking forms; (2) forms that are not signups last; (3) forms with more fields first.</span>
+          <span>(1) furthest in front first (highest z-index), so popups come before inline forms; ties go to popup-looking forms; (2) anything but a subscription form last; (3) forms with more fields first.</span>
         </div>
         <div class="down" aria-hidden="true">↓</div>
         <div class="step wide">
@@ -306,7 +306,7 @@
     <p>Any <code>&lt;button&gt;</code> (except reset) and any submit or image input counts. A short clickable <code>&lt;div&gt;</code>, <code>&lt;span&gt;</code> or link counts only if its text, at most 40 characters, contains a submit word: <em>subscribe</em>, <em>sign up</em>, <em>sign me up</em>, <em>join</em>, <em>submit</em>, <em>send</em>, <em>notify</em>, <em>register</em>, <em>get</em>, <em>continue</em>, <em>next</em>, <em>save</em>, <em>count me in</em>, <em>yes</em>, <em>go</em>, <em>ok</em>, or the Spanish and Portuguese/French stems <em>suscr…</em> and <em>inscr…</em>.</p>
 
     <h3>What kind of form is it?</h3>
-    <p>Any form with an email box is recorded, but a good number are not newsletter signups: a scan of the first 116 collected forms found roughly 26 login or account forms, 8 checkouts and 10 contact forms among them. Each form is therefore classified into a <code>form_type</code>, so those can be filtered out of analysis rather than quietly skewing it. The types are tried in order and the first match wins:</p>
+    <p>Any form with an email box is recorded, but a good number are not subscription forms: a scan of the first 116 collected forms found roughly 26 login or account forms, 8 checkouts and 10 contact forms among them. Each form is therefore classified into a <code>form_type</code>, so those can be filtered out of analysis rather than quietly skewing it. The types are tried in order and the first match wins:</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Type</th><th>Recognised by</th></tr></thead>
@@ -316,11 +316,13 @@
           <tr><td><code>comment</code></td><td><em>leave a reply</em>, <em>post a comment</em>, <em>your comment</em></td></tr>
           <tr><td><code>contact</code></td><td><em>contact us</em>, <em>get in touch</em>, <em>send us a message</em>, <em>enquiry</em></td></tr>
           <tr><td><code>search</code></td><td>a search box, or the word <em>search</em></td></tr>
-          <tr><td><code>signup</code></td><td>the fallback, when nothing above matches</td></tr>
+          <tr><td><code>subscription</code></td><td><strong>the target</strong>: newsletter or subscribe wording, or the embed markup of a mailing-list service (Mailchimp, Klaviyo, Substack and similar)</td></tr>
+          <tr><td><code>unknown</code></td><td>matched nothing above &mdash; it has an email box but was not recognised, so it is coded by hand</td></tr>
         </tbody>
       </table>
     </div>
-    <p>A rule may also carry a blacklist that cancels a match, which is how a newsletter box reading &ldquo;Already subscribed? Sign in&rdquo; stays a signup, and how a footer offering both a newsletter and a way to get in touch is not read as a contact form.</p>
+    <p>A rule may also carry a blacklist that cancels a match, which is how a newsletter box reading &ldquo;Already subscribed? Sign in&rdquo; stays a subscription form, and how a footer offering both a newsletter and a way to get in touch is not read as a contact form.</p>
+    <p>The <code>subscription</code> category &mdash; the one this study is about &mdash; is recognised by its own rules rather than by elimination. That matters: a quote request, a registration or a gated download has an email box too, and under a leftover-bin definition each would have been counted as a subscription form. They now land in <code>unknown</code>, which is a manual-coding queue. Replaying the rules over the 166 forms collected so far gives about 105 subscription, 29 login, 8 contact, 4 search, 3 checkout and 17 unknown.</p>
     <p>Two details of the <code>login</code> rules are worth recording. The page address counts because two-step logins show only an email box and &ldquo;Continue&rdquo;, with the password box on a screen the crawler never opens. And the text match requires a whole word, added after a pilot showed the looser version firing inside other words: 3 of the 5 forms it flagged in an 18-form pilot were newsletter forms caught by &ldquo;By signing up, I agree&hellip;&rdquo;.</p>
     <p class="small muted">Before 22 October 2026 this was a single yes/no column, <code>login_like</code>. The <code>login</code> rules are unchanged from it, so that category is comparable across the change; the other five types are new.</p>
   </section>
@@ -488,7 +490,7 @@
     </ol>
   </section>
 
-  <footer>Find Forms crawler · ISEC Lab, Northeastern University · Method as of 22 October 2026</footer>
+  <footer>Find Forms crawler · ISEC Lab, Northeastern University · Method as of 23 October 2026</footer>
 </main>
 
 <style>

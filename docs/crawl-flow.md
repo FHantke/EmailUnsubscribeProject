@@ -299,10 +299,10 @@ venv/bin/python -c "from playwright.sync_api import sync_playwright; import path
         containing *modal*, *dialog*, *popup*, *lightbox*, *overlay*,
         *flyout* or *slide-in*. As a last resort, the words *modal* or
         *dialog* anywhere in the form's HTML also count. Saved as `modal_hint`.
-     3. **Non-signup forms last.** Every form with an email box is recorded,
-        but many are not signups. `FORM_TYPES` in `config.py` classifies each
-        one into `form_type`, and anything that is not a `signup` goes after
-        the signups. The types are tried in this order, first match wins:
+     3. **Anything but a subscription form last.** Every form with an email
+        box is recorded, but many are not subscription forms. `FORM_TYPES` in
+        `config.py` classifies each one into `form_type`, and anything that is
+        not a `subscription` goes after those that are. The types are tried in this order, first match wins:
 
         | Type | Matches on |
         |---|---|
@@ -311,12 +311,17 @@ venv/bin/python -c "from playwright.sync_api import sync_playwright; import path
         | `comment` | *leave a reply*, *post a comment*, *your comment* |
         | `contact` | *contact us*, *get in touch*, *send us a message*, *enquiry*, … |
         | `search` | a search box, or the word *search* |
-        | `signup` | **the fallback**: matched none of the above |
+        | `subscription` | **the target**: newsletter/subscribe wording, or the embed markup of a mailing-list service (Mailchimp, Klaviyo, Substack, …) |
+        | `unknown` | matched nothing above: has an email box but was not recognised, so code it by hand |
 
         A rule can also carry an `unless` blacklist that cancels a match.
         `login` uses one so a newsletter box reading "Already subscribed? Sign
         in" stays a signup; `contact` and `search` use one so a footer that
         mentions both a newsletter and getting in touch stays a signup.
+
+        `subscription` has its own rules rather than being whatever was left
+        over, so a quote request or a gated download lands in `unknown` instead
+        of inflating the target category. About one form in ten does.
 
         `form_type` replaced the boolean `login_like` on 2026-10-22; the
         `login` rules are the same three signals that column used, so login
@@ -331,7 +336,7 @@ venv/bin/python -c "from playwright.sync_api import sync_playwright; import path
      (no z-index) and a header login (no z-index). Rule 1 puts the popup first.
      The footer form and the login form are tied at 0 and neither looks like a
      popup, so rule 3 puts the login form last, because its `form_type` is not
-     `signup`. Result: popup = 1, footer = 2, login = 3.
+     `subscription`. Result: popup = 1, footer = 2, login = 3.
    - *Things to know when using `rank_on_page`:*
      - Ranking happens **per frame, per phase**. A form inside an iframe is
        ranked only against the other forms in that iframe, and a popup that
@@ -339,8 +344,8 @@ venv/bin/python -c "from playwright.sync_api import sync_playwright; import path
        at that moment. So `rank_on_page = 1` means "first in that frame at that
        moment", not "the main form of the page".
      - The checks are simple word matches, so they can be wrong. The `unless`
-       blacklists cover the confusions seen so far, but a newsletter footer on
-       an account page is still typed `login`, because the address rule fires
+       blacklists cover the confusions seen so far, but a subscription footer
+       on an account page is still typed `login`, because the address rule fires
        whatever the form itself says. Like the other heuristic columns, check
        `modal_hint` and `form_type` against the screenshots.
 6. **Tag and measure:** each candidate gets a `data-ux-form-id` attribute so
