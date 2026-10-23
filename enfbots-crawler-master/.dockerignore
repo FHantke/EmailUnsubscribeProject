@@ -60,3 +60,6 @@ docker-compose
 *.txt
 
 .claude/
+static_resources/*
+!static_resources/chrome_profile_2024_06_30.tar.gz
+!static_resources/firefox_profile_31032022.tar.gz

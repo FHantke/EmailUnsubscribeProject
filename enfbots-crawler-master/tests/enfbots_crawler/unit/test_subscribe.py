@@ -4,12 +4,24 @@ from unittest.mock import MagicMock
 
 import bs4
 import pytest
+from selenium.common.exceptions import (
+    ElementClickInterceptedException,
+    ElementNotInteractableException,
+)
 
 from enfbots_crawler import Config, InputType
+from enfbots_crawler import subscribe as signup
 from enfbots_crawler.credentials import Credentials
 from enfbots_crawler.form_bs import FormBS
 from enfbots_crawler.languages import Language
-from enfbots_crawler.subscribe import Observation, classify_outcome, plan_fill, submit
+from enfbots_crawler.subscribe import (
+    Observation,
+    SubscribeTarget,
+    classify_outcome,
+    plan_fill,
+    sign_up_address,
+    submit,
+)
 
 EN = Language.get(Path("enfbots_crawler/languages"), "en")
 
@@ -103,6 +115,24 @@ def test_email_consent_box_is_not_mistaken_for_sms():
     assert [a for a, _ in actions] == ["alias", "tick"]
 
 
+def test_styled_consent_box_is_ticked_although_the_real_box_is_hidden():
+    # powertoolreplacementparts (Brevo): the required box is hidden behind a drawn one
+    html = f"""<form>{EMAIL}<label>
+        <input type="checkbox" name="IS_SUBSCRIBER" class="input_replaced" data-enfbots-uuid="cb"
+               required><span>I agree to receive your newsletters</span></label>{SUBMIT}</form>"""
+    actions, reason = _plan(html, hidden=("cb",))
+    assert reason is None
+    assert [a for a, _ in actions] == ["alias", "tick_styled"]
+
+
+def test_hidden_boxes_neither_consent_nor_required_stay_untouched():
+    html = f"""<form>{EMAIL}<input type="checkbox" name="gift" id="g" data-enfbots-uuid="cb">
+        <label for="g">This is a gift</label>
+        <input type="checkbox" name="sms" id="s" data-enfbots-uuid="sms" required>
+        <label for="s">Send me SMS text messages</label>{SUBMIT}</form>"""
+    assert _plan(html, hidden=("cb", "sms")) == ([("alias", "mail")], None)
+
+
 def test_hidden_fields_and_honeypots_are_never_touched():
     # Mailchimp's hosted forms carry a hidden "required" comment box against bots
     html = f"""<form>{EMAIL}
@@ -131,19 +161,27 @@ def test_required_select_and_one_radio_per_group():
 
 def _obs(**kw) -> Observation:
     base = dict(url="https://shop.example/", text="join our list", form_visible=True,
-                email_value="news1@study.example", form_valid=True, challenge=False)
+                email_value="news1@study.example", form_valid=True, challenge="")
     return Observation(**(base | kw))
 
 
 @pytest.mark.parametrize(
     "after, status",
     [
-        (dict(challenge=True), "captcha_blocked"),
+        (dict(challenge="datadome"), "captcha_blocked"),
         (dict(text="join our list thank you! check your inbox"), "success_text"),
         (dict(text="join our list please enter a valid email"), "failed"),
         (dict(form_valid=False), "failed"),
         (dict(url="https://shop.example/thanks"), "redirect"),
         (dict(form_visible=False), "form_gone"),
+        # basecamp: the form hid itself, emptied, so the browser calls it invalid
+        (dict(form_visible=False, email_value="", form_valid=False), "form_gone"),
+        # carlsgolfland (sent mail): still shown, but emptied, so invalid
+        (dict(email_value="", form_valid=False), "form_reset"),
+        # the field rewritten with a message that is no keyword
+        (dict(email_value="See you soon!"), "form_reset"),
+        # cookfasteatwell: Mailchimp's page in the new tab didn't load
+        (dict(text="this site can't be reached err_http2_protocol_error"), "page_error"),
         (dict(email_value=""), "form_reset"),
         ({}, "no_change"),
     ],
@@ -152,16 +190,41 @@ def test_classify_outcome(after, status):
     assert classify_outcome(_obs(), _obs(**after))[0] == status
 
 
+def test_page_error_reports_the_error_code():
+    status, detail = classify_outcome(_obs(), _obs(text="err_http2_protocol_error"))
+    assert status == "page_error" and detail["page_error"] == "err_http2_protocol_error"
+
+
 def test_success_text_already_on_the_page_does_not_count():
     before = _obs(text="thank you for visiting")
     assert classify_outcome(before, _obs(text="thank you for visiting"))[0] == "no_change"
 
 
-def _button(text, type_=InputType.BUTTON_SUBMIT, html_type="submit", shown=True):
+def _elem(text, aria_label=None, shown=True, **attrs):
     elem = MagicMock(text=text)
-    elem.get_attribute.return_value = None
+    attrs["aria-label"] = aria_label
+    elem.get_attribute.side_effect = lambda name: attrs.get(name.replace("_", "-"))
     elem.is_displayed.return_value = shown
-    return SimpleNamespace(type=type_, direct_type=type_, html_type=html_type, elem=elem)
+    return elem
+
+
+def _button(text, type_=InputType.BUTTON_SUBMIT, html_type="submit", shown=True, **attrs):
+    return SimpleNamespace(
+        type=type_, direct_type=type_, html_type=html_type, elem=_elem(text, shown=shown, **attrs)
+    )
+
+
+def _form_sel(inputs, typed_submit=(), role_buttons=(), plain_buttons=(), any_submit=()):
+    """A form whose element holds the given controls, found by submit()'s CSS selectors."""
+    by_css = {
+        signup._TYPED_SUBMIT: typed_submit,
+        signup._ROLE_BUTTON: role_buttons,
+        signup._PLAIN_BUTTON: plain_buttons,
+        signup._ANY_SUBMIT: any_submit,
+    }
+    tag = MagicMock()
+    tag.find_elements.side_effect = lambda _by, css: list(by_css[css])
+    return SimpleNamespace(inputs=inputs, br=MagicMock(), tag=tag)
 
 
 def test_submit_clicks_the_submit_button_never_a_dismiss_button():
@@ -169,7 +232,7 @@ def test_submit_clicks_the_submit_button_never_a_dismiss_button():
     close = _button("Close", InputType.BUTTON_SUBMIT)
     yes = _button("Unlock 15% off", InputType.BUTTON_OTHER, "submit")  # <button> without type
     email = SimpleNamespace(elem=MagicMock())
-    form = SimpleNamespace(inputs=[no, close, yes])
+    form = _form_sel([no, close, yes])
 
     assert submit(form, email) == "button:Unlock 15% off"
     yes.elem.click.assert_called_once()
@@ -177,10 +240,78 @@ def test_submit_clicks_the_submit_button_never_a_dismiss_button():
     close.elem.click.assert_not_called()
 
 
+def test_submit_clicks_a_covered_button_through_javascript():
+    # A pop-up or cookie banner over the footer form intercepts the real click
+    covered = _button("Sign Up")
+    covered.elem.click.side_effect = ElementClickInterceptedException("covered by a modal")
+    form = _form_sel([covered])
+    email = SimpleNamespace(elem=MagicMock())
+
+    assert submit(form, email) == "button_js:Sign Up"
+    form.br.activate.assert_called_once_with(covered.elem)
+    email.elem.send_keys.assert_not_called()
+
+
 def test_submit_presses_enter_without_a_button():
     email = SimpleNamespace(elem=MagicMock())
-    assert submit(SimpleNamespace(inputs=[_button("Close")]), email) == "enter"
+    assert submit(_form_sel([_button("Close")]), email) == "enter"
     email.elem.send_keys.assert_called_once()
+
+
+def test_submit_clicks_a_link_with_type_submit():
+    # royalcaribbean: <a role="button" type="submit">; the form's only <button> is a dropdown
+    country = _button("United States", InputType.BUTTON_OTHER, "button")
+    link = _elem("", aria_label="Submit the form to sign up")
+    email = SimpleNamespace(elem=MagicMock())
+    form = _form_sel([country], typed_submit=[link], role_buttons=[link])
+
+    assert submit(form, email) == "button:Submit the form to sign up"
+    link.click.assert_called_once()
+    country.elem.click.assert_not_called()
+    email.elem.send_keys.assert_not_called()
+
+
+def test_submit_clicks_a_role_button_only_if_it_is_the_only_one():
+    email = SimpleNamespace(elem=MagicMock())
+    join, close = _elem("Join"), _elem("", aria_label="Close")
+    assert submit(_form_sel([], role_buttons=[join, close]), email) == "button:Join"
+
+    first, second = _elem("Join"), _elem("Learn more")
+    assert submit(_form_sel([], role_buttons=[first, second]), email) == "enter"
+    first.click.assert_not_called()
+    second.click.assert_not_called()
+
+
+def test_submit_never_clicks_a_menu_toggle():
+    # costco: the country selector is a submit-type button too
+    country = _button("US", InputType.BUTTON_OTHER, "submit", aria_expanded="false")
+    go = _button("Go", aria_label="Go Get Email Offers")
+    email = SimpleNamespace(elem=MagicMock())
+
+    assert submit(_form_sel([country, go]), email) == "button:Go Go Get Email Offers"
+    country.elem.click.assert_not_called()
+
+
+def test_submit_clicks_klaviyos_type_button_when_the_real_submit_is_hidden():
+    # atrius, secretlab: <button type="button">GET MY 10% OFF</button>, hidden <input type=submit>
+    hidden = _button("", InputType.BUTTON_SUBMIT, "submit", shown=False)
+    cta = _elem("GET MY 10% OFF")
+    email = SimpleNamespace(elem=MagicMock())
+
+    assert submit(_form_sel([hidden], plain_buttons=[cta]), email) == "button:GET MY 10% OFF"
+    email.elem.send_keys.assert_not_called()
+
+
+def test_submit_without_enter_uses_the_hidden_submit_through_javascript():
+    email = SimpleNamespace(elem=MagicMock())
+    email.elem.send_keys.side_effect = ElementNotInteractableException("element not interactable")
+    hidden_submit = _elem("", value="Submit")
+    form = _form_sel([], any_submit=[hidden_submit])
+
+    assert submit(form, email) == "submit_js:Submit"
+    form.br.activate.assert_called_once_with(hidden_submit)
+
+    assert submit(_form_sel([]), email) == "not_submitted"
 
 
 def test_us_persona_loads_and_has_no_phone():
@@ -188,6 +319,24 @@ def test_us_persona_loads_and_has_no_phone():
     assert (creds.first_name, creds.postal_code) == ("Jordan", "02115")
     assert creds.country == "United States"
     assert creds.phone is None
+
+
+def test_study_persona_signs_up_with_the_alias():
+    target = SubscribeTarget("news1234567890@study.example", "x", "https://shop.example/", "s", None)
+    assert sign_up_address(Credentials.load("us_jordan"), target) == target.alias
+
+
+@pytest.mark.parametrize(
+    "email, url, expected",
+    [
+        ("jordan+12345@test.example", "https://www.mooncat.com/", "jordan+12345-mooncat@test.example"),
+        ("jordan@test.example", "https://shop.royalcaribbean.co.uk/deals", "jordan+royalcaribbean@test.example"),
+        ("jordan@test.example", "https://tinycraft.co/", "jordan+tinycraft@test.example"),
+    ],
+)
+def test_test_persona_address_is_tagged_with_the_site(email, url, expected):
+    target = SubscribeTarget("test1@test.invalid", "x", url, "s", None)
+    assert sign_up_address(SimpleNamespace(email=email), target) == expected
 
 
 def test_default_credentials_still_come_from_config(monkeypatch):

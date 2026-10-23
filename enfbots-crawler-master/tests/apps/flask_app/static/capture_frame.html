@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Sign-up frame</title>
+</head>
+<body>
+<!-- The iframe of capture_variants.html?v=iframe -->
+<form id="frame-form">
+    <p>Sign up for our newsletter</p>
+    <input type="email" name="email" id="frame-email" required>
+    <button type="submit">Subscribe</button>
+    <p id="frame-done"></p>
+</form>
+<script>
+    document.getElementById("frame-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const body = new FormData();
+        body.append("email", document.getElementById("frame-email").value);
+        body.append("source", "iframe");
+        await fetch("/website/newsletter/subscribe", {method: "POST", body});
+        document.getElementById("frame-done").textContent = "Thanks for subscribing!";
+    });
+</script>
+</body>
+</html>

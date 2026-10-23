@@ -34,6 +34,7 @@ class Credentials:
         phone: str,
         password: str,
         organization: str,
+        email: Optional[str] = None,
     ):
         # Personas carry no password; each set of credentials gets its own
         self.password = password or get_rnd_password()
@@ -49,9 +50,10 @@ class Credentials:
         self.title = title
         self.organization = organization
 
-        # email will be fetched later only if required (in case we found a login form)
+        # email will be fetched later only if required (in case we found a login form). A persona
+        # may bring its own address (test sign-ups); study sign-ups use per-test-case aliases
         self.verify_code: Optional[str] = None
-        self.email: Optional[str] = None
+        self.email: Optional[str] = email
 
         self.username = self.last_name.lower() + get_rnd_str(5)
         self.full_name = f"{self.first_name} {self.last_name}"

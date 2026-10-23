@@ -3,11 +3,12 @@ contains the regform class as well as some form tag related procedures
 """
 from __future__ import annotations
 
+import json
 import logging
 from collections import Counter
 
 # Const
-from typing import Optional
+from typing import Any, Optional
 
 from bs4.element import Tag, ResultSet
 
@@ -64,8 +65,27 @@ class FormBS:
         self.input_counts = Counter([e.estimated_type for e in self.inputs if e.visible])
         self.type = self.classify_form()
 
+        # Where an email-capture form is when it isn't in the page itself (set by find_forms):
+        # the iframe it is in ({"index", "src"}) and the shadow hosts around it, outermost first
+        # (their data-enfbots-uuid, and their tag names for the record)
+        self.frame: Optional[dict[str, Any]] = None
+        self.shadow_hosts: list[str] = []
+        self.shadow_host_tags: list[str] = []
+
     def __str__(self) -> str:
         return f"FormBS [id={self.id}, type={self.type.name}]"
+
+    def location_json(self) -> Optional[str]:
+        """Where the form was found, for capture_forms.frame_path; None for a <form> in the page."""
+        where: dict[str, Any] = {}
+        if self.frame:
+            where["frame"] = self.frame
+        if self.shadow_host_tags:
+            where["shadow_hosts"] = self.shadow_host_tags
+        if self.tag.name != "form":
+            # An email field and a button without a <form> around them
+            where["formless"] = True
+        return json.dumps(where) if where else None
 
     def classify_form(
         self, allow_mailless: bool = False, allow_verification: bool = False

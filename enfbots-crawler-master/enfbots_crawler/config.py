@@ -138,6 +138,7 @@ class Config(metaclass=Singleton):
             "you're on the list",
             "you're in",
             "successfully subscribed",
+            "subscription has been successful",  # Brevo's default message
             "subscription confirmed",
             "check your inbox",
             "check your email",
@@ -146,6 +147,7 @@ class Config(metaclass=Singleton):
             "confirmation email",
             "almost done",
             "almost there",
+            "almost finished",  # Mailchimp's hosted page after an embedded form
             "welcome to the",
             "your discount code",
             "use code",
@@ -162,12 +164,31 @@ class Config(metaclass=Singleton):
         ]
 
         # Email-capture discovery: steps run on the homepage to reveal pop-ups, each followed by
-        # a rescan for forms (any of "delay", "scroll", "exit_intent"; empty disables them)
-        self.POPUP_TRIGGERS: list[str] = ["delay", "scroll", "exit_intent"]
+        # a rescan for forms (any of "delay", "scroll", "exit_intent", "teaser"; empty disables
+        # them). "teaser" clicks the first button of a two-step pop-up ("Spin to win")
+        self.POPUP_TRIGGERS: list[str] = ["delay", "scroll", "exit_intent", "teaser"]
         # "delay" waits until this many seconds after the homepage loaded
         self.POPUP_WAIT_SEC = 12.0
         # Wait after scrolling / exit intent before rescanning
         self.POPUP_STEP_WAIT_SEC = 2.0
+        # Wait after a teaser click (wheels and games animate before the email step)
+        self.POPUP_TEASER_WAIT_SEC = 4.0
+
+        # Email-capture mode also scans iframes for sign-up forms: written by the page itself,
+        # from its own site, or from these vendors (registered domains; the hosts in
+        # CAPTURE_HOST_ALLOWLIST and CAPTURE_UNBLOCK_DOMAINS count too), at most this many a page
+        self.CAPTURE_FRAME_HOSTS: list[str] = [
+            "wisepops.net",
+            "omnisend.com",
+            "sendinblue.com",
+            "brevo.com",
+            "activehosted.com",  # ActiveCampaign
+            "getresponse.com",
+            "emailoctopus.com",
+            "getdrip.com",
+            "cloutselling.com",  # graftonharbor.com's sign-up (smoke-70)
+        ]
+        self.CAPTURE_MAX_FRAMES = 8
 
         # uBlock Origin Lite in the Chrome profile blocks the scripts of many sign-up, pop-up and
         # personalisation vendors. In email-capture mode it stays installed (sites can still

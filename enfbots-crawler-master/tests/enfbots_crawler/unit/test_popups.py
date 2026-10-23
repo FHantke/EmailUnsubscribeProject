@@ -34,6 +34,7 @@ def _site(mocker, tmp_path) -> WebSite:
 def test_reveal_popups_runs_each_trigger_then_rescans(mocker, tmp_path, no_sleep, monkeypatch):
     monkeypatch.setattr(Config(), "ALLOW_SCREENSHOTS", True)
     site = _site(mocker, tmp_path)
+    site.br.click_popup_teaser.return_value = "Spin to win"
 
     site._reveal_popups()
 
@@ -41,22 +42,37 @@ def test_reveal_popups_runs_each_trigger_then_rescans(mocker, tmp_path, no_sleep
         call("delay"),
         call("scroll"),
         call("exit_intent"),
+        call("teaser"),
     ]
     site.br.scroll_through_page.assert_called_once()
     site.br.simulate_exit_intent.assert_called_once()
     # "delay" waits until POPUP_WAIT_SEC after the homepage loaded (5 s ago here)
     assert Config().POPUP_WAIT_SEC - 6 < no_sleep[0] <= Config().POPUP_WAIT_SEC - 5
-    assert no_sleep[1:] == [Config().POPUP_STEP_WAIT_SEC] * 2
+    assert no_sleep[1:] == [Config().POPUP_STEP_WAIT_SEC] * 2 + [Config().POPUP_TEASER_WAIT_SEC]
     assert sorted(p.name for p in tmp_path.iterdir()) == [
         "3_popup_delay.png",
         "4_popup_scroll.png",
         "5_popup_exit_intent.png",
+        "6_popup_teaser.png",
     ]
+
+
+def test_teaser_step_without_a_two_step_popup_scans_nothing(mocker, tmp_path, no_sleep, monkeypatch):
+    monkeypatch.setattr(Config(), "ALLOW_SCREENSHOTS", True)
+    monkeypatch.setattr(Config(), "POPUP_TRIGGERS", ["teaser"])
+    site = _site(mocker, tmp_path)
+    site.br.click_popup_teaser.return_value = None
+
+    site._reveal_popups()
+
+    site.categorize_forms_on_current_page.assert_not_called()
+    assert no_sleep == [] and list(tmp_path.iterdir()) == []
 
 
 def test_reveal_popups_keeps_going_when_a_trigger_fails(mocker, tmp_path, no_sleep):
     site = _site(mocker, tmp_path)
     site.br.scroll_through_page.side_effect = WebDriverException("page went away")
+    site.br.click_popup_teaser.return_value = None
 
     site._reveal_popups()
 
@@ -202,3 +218,19 @@ def test_capture_ublock_mode_selects_the_action(mocker, monkeypatch, mode, calle
     chrome.configure_ublock()
 
     assert {name for name, m in actions.items() if m.called} == ({called} if called else set())
+
+
+def test_teaser_that_leads_to_another_page_goes_back(mocker, tmp_path, no_sleep, monkeypatch):
+    monkeypatch.setattr(Config(), "POPUP_TRIGGERS", ["teaser"])
+    site = _site(mocker, tmp_path)
+    # The homepage before the click, the paywall page after it
+    urls = iter([URL.from_text("https://shop.example/")])
+    type(site.br).current_url = property(
+        lambda _: next(urls, URL.from_text("https://shop.example/subscribe"))
+    )
+    site.br.click_popup_teaser.return_value = "Subscribe"
+
+    site._reveal_popups()
+
+    site.br.driver.back.assert_called_once()
+    site.categorize_forms_on_current_page.assert_not_called()

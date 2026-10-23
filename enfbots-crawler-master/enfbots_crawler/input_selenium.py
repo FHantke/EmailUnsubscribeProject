@@ -15,7 +15,6 @@ import rstr
 from babel import UnknownLocaleError
 from babel.dates import format_date
 from selenium.common.exceptions import WebDriverException, StaleElementReferenceException
-from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.select import Select
 
@@ -29,7 +28,7 @@ from enfbots_crawler.input_bs import InputBS
 
 from enfbots_crawler.keyword_matching import match_keywords_lemmatized
 
-from enfbots_crawler.browser import EnfbotsBrowser
+from enfbots_crawler.browser import EnfbotsBrowser, find_tagged
 
 logger = logging.getLogger("enfbots_crawler")
 
@@ -91,9 +90,14 @@ class InputSelenium:
         return f"[tag={self.html_tag}, type={self.type}]"
 
     @staticmethod
-    def from_bs(browser: EnfbotsBrowser, input_bs_: InputBS) -> InputSelenium:
-        """Constructs the class from InputBS, might raise NoSUchElementException"""
-        tag = browser.driver.find_element(By.ID, input_bs_.id)
+    def from_bs(
+        browser: EnfbotsBrowser, input_bs_: InputBS, scope: typing.Optional[Any] = None
+    ) -> InputSelenium:
+        """
+        Constructs the class from InputBS, might raise NoSUchElementException. scope is where
+        to look (the form's element); the page by default
+        """
+        tag = find_tagged(scope or browser.driver, input_bs_.uuid, input_bs_.id)
         return InputSelenium(tag, browser, input_bs_)
 
     @staticmethod

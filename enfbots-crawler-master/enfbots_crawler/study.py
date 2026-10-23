@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from enfbots_crawler import Config
+from enfbots_crawler.credentials import Credentials
 from enfbots_crawler.database import DBCaptureForm, DBJob, DBTestCase, DBWebsite, DBWebsiteCrawl
 
 logger = logging.getLogger("enfbots_crawler")
@@ -43,9 +44,37 @@ def new_alias(taken: set[str]) -> str:
             return alias
 
 
-def _preference(capture: DBCaptureForm) -> tuple[int, int, int]:
-    # Visible before hidden, newsletter before other kinds, then the first one found
-    return (0 if capture.visible else 1, 0 if capture.kind == "newsletter" else 1, capture.id)
+def placeholder_alias(taken: set[str]) -> str:
+    """
+    Unique stand-in for test cases whose persona brings its own address (test sign-ups): the
+    .invalid domain is reserved and can never receive mail.
+    """
+    while True:
+        digits = "".join(secrets.choice("0123456789") for _ in range(Config().ALIAS_DIGITS))
+        alias = f"test{digits}@test.invalid"
+        if alias not in taken:
+            taken.add(alias)
+            return alias
+
+
+def persona_email(persona: str) -> Optional[str]:
+    """The persona's own address, for test sign-ups; None for study personas."""
+    email = Credentials.load(persona).email
+    if email and "@" not in email:
+        raise ValueError(f"Persona {persona} has an email that is not an address: {email!r}")
+    return email or None
+
+
+def _preference(capture: DBCaptureForm) -> tuple[int, int, int, int]:
+    # Visible before hidden, newsletter before other kinds, Shopify's own form last (it showed an
+    # hCaptcha challenge on 5 of 5 stores in the 2026-10-21/22 pilots, a Klaviyo form on the
+    # same kind of store went through), then the first one found
+    return (
+        0 if capture.visible else 1,
+        0 if capture.kind == "newsletter" else 1,
+        1 if capture.vendor_hint == "shopify" else 0,
+        capture.id,
+    )
 
 
 def selection_reason(capture: DBCaptureForm) -> str:
@@ -83,10 +112,24 @@ def create_test_cases(
     one subscribe job each. Websites with a submitted or still pending test case are skipped, so
     no site is signed up twice. Jobs run in created_at order: every site's first arm, then every
     second arm, with the arm order drawn per site, so a site's two sign-ups are a whole pass apart.
+
+    If the persona (STUDY_PERSONA) has its own email address, this is a test: one test case per
+    website (arm "test"), all signed up with that address, under placeholder aliases.
     """
     rng = rng or random.Random()
+    persona = Config().STUDY_PERSONA
+    shared_email = persona_email(persona)
+    arms_per_site = ("test",) if shared_email else ARMS
+    if shared_email:
+        logger.warning(
+            "Persona %s has its own address %s: test sign-ups, one per site, no study aliases",
+            persona,
+            shared_email,
+        )
     allowed = {host(s) for s in only_sites} if only_sites is not None else None
-    urls = dict(session.execute(select(DBWebsite.id, DBWebsite.url)).all())
+    urls: dict[int, str] = {
+        row.id: row.url for row in session.execute(select(DBWebsite.id, DBWebsite.url))
+    }
     # Submitted, or still to run (pending; error = its job is retried). Dry runs and skipped
     # sign-ups submitted nothing, so their sites can get new test cases
     already = set(
@@ -113,7 +156,7 @@ def create_test_cases(
 
     first, second = [], []
     for website_id, capture in planned:
-        arms = list(ARMS)
+        arms = list(arms_per_site)
         rng.shuffle(arms)
         cases = [
             DBTestCase(
@@ -121,15 +164,15 @@ def create_test_cases(
                 capture_form_id=capture.id,
                 study_id=study_id,
                 arm=arm,
-                alias=new_alias(taken),
-                persona=Config().STUDY_PERSONA,
+                alias=placeholder_alias(taken) if shared_email else new_alias(taken),
+                persona=persona,
                 selection_reason=selection_reason(capture),
                 submit_status="pending",
             )
             for arm in arms
         ]
         first.append(cases[0])
-        second.append(cases[1])
+        second.extend(cases[1:])
     cases = first + second
     if dry:
         return cases

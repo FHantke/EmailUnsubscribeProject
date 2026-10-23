@@ -31,3 +31,5 @@ crawl_archive/
 /enfbots-crawler-master.zip
 /testrun/
 /reports/
+# Test personas carry a real mailbox address
+/enfbots-crawler-master/enfbots_crawler/credentials/*_test.json

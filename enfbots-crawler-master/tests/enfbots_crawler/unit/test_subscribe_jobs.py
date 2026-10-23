@@ -1,14 +1,19 @@
 import datetime
 from contextlib import contextmanager
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from bs4 import BeautifulSoup
 from hyperlink import URL
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import StaleElementReferenceException, WebDriverException
 
 from enfbots_crawler import DomainStatus, main
+from enfbots_crawler import subscribe as signup
 from enfbots_crawler.database import DBTestCase, DBWebsiteCrawl, SessionLocal
 from enfbots_crawler.exceptions import WebsiteException
+from enfbots_crawler.form_bs import FormBS
+from enfbots_crawler.languages import Language
 from enfbots_crawler.study import create_test_cases
 from enfbots_crawler.subscribe import SubscribeResult
 from enfbots_crawler.website import WebSite
@@ -82,6 +87,70 @@ def test_browser_error_is_recorded_and_the_job_left_open(case_id, mocker):
 
     case = _case(case_id)
     assert case.submit_status == "error" and case.submitted_at is None
+
+
+def test_a_bug_is_recorded_and_still_stops_the_crawler(case_id, mocker):
+    mocker.patch("enfbots_crawler.website.signup.run", side_effect=AttributeError("no path"))
+
+    with pytest.raises(AttributeError):
+        _site().subscribe(case_id)
+
+    case = _case(case_id)
+    assert case.submit_status == "error"
+    assert case.submit_detail == {"error": "AttributeError: no path"}
+
+
+def test_run_loads_the_page_as_a_url_and_skips_a_missing_form(tmp_path, monkeypatch):
+    # The real signup.run with a mocked browser (regression: load_page was given a str)
+    monkeypatch.setattr(main.Config(), "ALLOW_SCREENSHOTS", False)
+    monkeypatch.setattr(main.Config(), "POPUP_TRIGGERS", [])
+    site = WebSite.__new__(WebSite)
+    site.br = MagicMock()
+    site.br.find_forms.return_value = []
+    site.br.current_url = URL.from_text("https://shop.example/")
+    site.setup_language = MagicMock(side_effect=RuntimeError("no language"))
+    site.lang = MagicMock(code="en")
+    site.output_path = tmp_path
+    site.dump_id = 0
+    target = signup.SubscribeTarget(
+        "news1234567890@study.example", "us_jordan", "https://shop.example/", "sig", None
+    )
+
+    result = signup.run(site, target)
+
+    assert isinstance(site.br.load_page.call_args.args[0], URL)
+    assert result.status == "skipped_form_not_found" and result.submitted_at is None
+
+
+def test_run_finds_a_rerendered_form_again_once(tmp_path, monkeypatch, mocker):
+    # artpix3d: StaleElementReferenceException while filling, before anything was sent
+    monkeypatch.setattr(main.Config(), "ALLOW_SCREENSHOTS", False)
+    site = WebSite.__new__(WebSite)
+    site.br = MagicMock()
+    site.br.get_html.return_value = "<html></html>"
+    site.br.current_url = URL.from_text("https://shop.example/")
+    site.setup_language = MagicMock(side_effect=RuntimeError("no language"))
+    site.lang = Language.get(Path("enfbots_crawler/languages"), "en")
+    site.output_path = tmp_path
+    site.dump_id = 0
+    html = '<form><input type="email" name="email"><button type="submit">Subscribe</button></form>'
+    form = FormBS(BeautifulSoup(html, "html.parser").form, site.lang)
+    mocker.patch.object(signup, "_find_shown_form", return_value=form)
+    mocker.patch.object(signup, "find_capture_form", return_value=form)
+    attempt = mocker.patch.object(
+        signup,
+        "_attempt",
+        side_effect=[StaleElementReferenceException("re-rendered"), ("success_text", {"attempt": 1})],
+    )
+    target = signup.SubscribeTarget(
+        "news1234567890@study.example", "us_jordan", "https://shop.example/", "sig", None
+    )
+
+    result = signup.run(site, target)
+
+    assert attempt.call_count == 2
+    assert result.status == "success_text" and result.submitted_at is not None
+    site.br.enter_frame.assert_called_with(None)
 
 
 def test_run_domain_runs_subscribe_jobs_instead_of_crawling(monkeypatch):

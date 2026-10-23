@@ -9,7 +9,7 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, cast, List, Tuple, TypeVar, NamedTuple, Any, Iterator
+from typing import Optional, cast, List, Tuple, TypeVar, NamedTuple, Any, Iterator, Callable
 import json
 import hashlib
 import urllib
@@ -705,22 +705,31 @@ class WebSite(BaseWebsite):
         error: Optional[Exception] = None
         try:
             result = signup.run(self, target)
-        except (WebDriverException, TimeoutError, InvalidSessionIdException, HTTPError) as e:
+        except Exception as e:  # pylint: disable=broad-except
+            # Recorded first, re-raised below (the re-raise loses where it came from)
+            logger.exception("Study sign-up failed")
             error = e
-            result = signup.SubscribeResult("error", {"error": str(e)[:500]}, None, None)
+            detail = {"error": f"{type(e).__name__}: {str(e)[:500]}"}
+            result = signup.SubscribeResult("error", detail, None, None)
         finally:
             self.crawl_stat_collector.stop()
 
         with SessionLocal.begin() as session:
             case = session.get(DBTestCase, test_case_id)
+            # Existed above, and test cases are never deleted
+            assert case is not None
             case.submit_status = result.status
             case.submit_detail = result.detail
             case.submit_page_url = result.page_url
             case.submitted_at = result.submitted_at
         logger.info("Study sign-up result for test case %s: %s", test_case_id, result.status)
-        if error is not None:
+        browser_errors = (WebDriverException, TimeoutError, InvalidSessionIdException, HTTPError)
+        if isinstance(error, browser_errors):
             # Like crawl(): the job keeps no ended_at and is retried later (never resubmitted)
             raise WebsiteException(error)
+        if error is not None:
+            # A bug, not the website: stop the crawler as before
+            raise error
 
     def process_newsletter_registration(self) -> None:
         """
@@ -1388,20 +1397,16 @@ class WebSite(BaseWebsite):
         a delay, on scroll or on exit intent. Runs each POPUP_TRIGGERS step in turn and rescans
         the page after it, so captures are recorded with the step that revealed them.
         """
-        steps = {
-            "delay": self._wait_for_popup_delay,
-            "scroll": self.br.scroll_through_page,
-            "exit_intent": self.br.simulate_exit_intent,
-        }
+        steps = self.popup_steps()
         for trigger in Config().POPUP_TRIGGERS:
             if trigger not in steps:
                 logger.warning("Unknown pop-up trigger %s", trigger)
                 continue
             logger.info("Pop-up trigger: %s", trigger)
             try:
-                steps[trigger]()
-                if trigger != "delay":
-                    time.sleep(Config().POPUP_STEP_WAIT_SEC)
+                if not self.run_popup_step(trigger):
+                    logger.info("Pop-up trigger %s: nothing to do", trigger)
+                    continue
                 self.categorize_forms_on_current_page(trigger)
             except WebDriverException as e:
                 logger.warning("Pop-up trigger %s failed: %s", trigger, e.msg)
@@ -1411,6 +1416,36 @@ class WebSite(BaseWebsite):
                 self.dump_id += 1
                 png_bytes = self.br.get_screenshot()
                 (self.output_path / f"{did}_popup_{trigger}.png").write_bytes(png_bytes)
+
+    def popup_steps(self) -> dict[str, Callable[[], Any]]:
+        """The pop-up trigger steps (Config().POPUP_TRIGGERS) by name."""
+        return {
+            "delay": self._wait_for_popup_delay,
+            "scroll": self.br.scroll_through_page,
+            "exit_intent": self.br.simulate_exit_intent,
+            "teaser": cast(EnfbotsBrowser, self.br).click_popup_teaser,
+        }
+
+    def run_popup_step(self, trigger: str) -> bool:
+        """
+        Runs one pop-up step and waits for what it shows. False if it had nothing to do (no
+        two-step pop-up for "teaser"), so there is nothing new to scan for.
+        """
+        before = self.br.current_url
+        result = self.popup_steps()[trigger]()
+        if trigger == "teaser":
+            if not result:
+                return False
+            time.sleep(Config().POPUP_TEASER_WAIT_SEC)
+            if self.br.current_url != before:
+                # The button led to another page (a paid subscription, say): back to this one
+                logger.info("Pop-up teaser %r led to %s, going back", result, self.br.current_url)
+                self.br.driver.back()
+                time.sleep(Config().POPUP_STEP_WAIT_SEC)
+                return False
+        elif trigger != "delay":
+            time.sleep(Config().POPUP_STEP_WAIT_SEC)
+        return True
 
     def _wait_for_popup_delay(self) -> None:
         elapsed = time.monotonic() - self._index_loaded_at

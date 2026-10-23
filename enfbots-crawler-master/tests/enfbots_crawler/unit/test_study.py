@@ -1,4 +1,5 @@
 import datetime
+import json
 import random
 import re
 
@@ -60,6 +61,7 @@ def _discovery(session, crawl_id: str, url: str, *captures: dict) -> int:
                 trigger=c.get("trigger", "inline"),
                 visible=c.get("visible", True),
                 signature=c.get("signature", "s"),
+                vendor_hint=c.get("vendor_hint"),
             )
         )
     return website.id
@@ -108,6 +110,25 @@ def test_pick_captures_prefers_visible_newsletter_forms(discovery):
         assert _sigs(pick_captures(session, "disc")) == {
             "https://shop.example": "visible-newsletter",
             "https://news.example": "a",
+        }
+
+
+def test_pick_captures_prefers_another_form_to_shopifys_own(db):
+    # arlingtonpower: Shopify's footer form (hCaptcha on submit) and a Klaviyo form
+    # pylint: disable=no-member
+    with SessionLocal.begin() as session:
+        _discovery(
+            session,
+            "disc",
+            "https://store.example",
+            {"vendor_hint": "shopify", "signature": "shopify"},
+            {"vendor_hint": "klaviyo", "signature": "klaviyo"},
+        )
+        _discovery(session, "disc", "https://only.example", {"vendor_hint": "shopify"})
+    with SessionLocal.begin() as session:
+        assert _sigs(pick_captures(session, "disc")) == {
+            "https://store.example": "klaviyo",
+            "https://only.example": "s",
         }
 
 
@@ -195,6 +216,38 @@ def test_sites_filter_limit_and_dry_run(discovery):
     with SessionLocal.begin() as session:
         assert len(create_test_cases(session, "disc", "subscribe-1", limit=1)) == 2
     assert len(_cases()) == 2
+
+
+def _persona(tmp_path, monkeypatch, name: str, email) -> None:
+    # A persona file in a temporary credentials folder, based on us_jordan
+    data = json.loads((Config().credentials_dir / "us_jordan.json").read_text())
+    data["email"] = email
+    monkeypatch.setattr(Config(), "credentials_dir", tmp_path)
+    (tmp_path / f"{name}.json").write_text(json.dumps(data))
+    monkeypatch.setattr(Config(), "STUDY_PERSONA", name)
+
+
+def test_persona_with_its_own_address_makes_one_test_case_per_site(
+    discovery, tmp_path, monkeypatch
+):
+    _persona(tmp_path, monkeypatch, "tester", "someone@temp.example")
+    monkeypatch.setattr(Config(), "STUDY_MAIL_DOMAIN", "")  # not needed for test sign-ups
+
+    # pylint: disable=no-member
+    with SessionLocal.begin() as session:
+        cases = create_test_cases(session, "disc", "signup-test")
+        assert [(c.arm, c.persona) for c in cases] == [("test", "tester")] * 2
+        assert all(re.match(r"^test[0-9]{10}@test\.invalid$", c.alias) for c in cases)
+        jobs = session.scalars(select(DBJob).where(DBJob.crawl_id == "signup-test")).all()
+        assert len(jobs) == 2
+
+
+def test_persona_email_must_be_an_address(discovery, tmp_path, monkeypatch):
+    _persona(tmp_path, monkeypatch, "tester", "REPLACE-WITH-YOUR-TEMP-MAIL-ADDRESS")
+    # pylint: disable=no-member
+    with SessionLocal.begin() as session:
+        with pytest.raises(ValueError):
+            create_test_cases(session, "disc", "signup-test")
 
 
 def _alembic_config() -> alembic.config.Config:

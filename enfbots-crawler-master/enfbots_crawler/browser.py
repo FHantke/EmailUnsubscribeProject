@@ -27,8 +27,13 @@ from hyperlink import URL, URLParseError
 from numpy import random
 import undetected_chromedriver as uc
 
+import tldextract
 from selenium.common.exceptions import (
+    ElementClickInterceptedException,
+    ElementNotInteractableException,
     NoAlertPresentException,
+    NoSuchElementException,
+    NoSuchFrameException,
     TimeoutException,
     WebDriverException,
     JavascriptException,
@@ -90,6 +95,184 @@ window.dispatchEvent(new MouseEvent("mouseout", options));
 
 # Allows the sign-up vendors' domains for the browser session, outranking uBlock's filter
 # lists (a higher priority wins within one extension); runs on one of uBlock's own pages
+# Gives all forms and inputs unique ids for matching between Selenium and bs4 and returns
+# whether each is visible. With arguments[0] (email-capture mode) it also tags the elements in
+# open shadow roots and marks containers holding an email field and a button without a <form>
+# around them (data-enfbots-formless), so they can be read as forms too
+_TAG_FORMS_JS = """
+const capture = arguments[0];
+const UUIDGen = () =>
+    ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+        (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
+    );
+
+const isVisible = (elem) => {
+    for (;;) {
+        let parent = elem.parentNode;
+        // Inside a shadow root: go on with its host
+        if (parent instanceof ShadowRoot) parent = parent.host;
+        if (!parent || !parent.getBoundingClientRect) return true;
+        const elemComputedStyle = window.getComputedStyle(elem);
+        if (elemComputedStyle.display === 'none' ||
+            elemComputedStyle.visibility !== 'visible' ||
+            parseFloat(elemComputedStyle.opacity, 10) <= 0) {
+            return false
+        }
+        elem = parent;
+    }
+};
+
+const tag = (e) => {
+    const id = 'crawleruuid-' + UUIDGen();
+    if (!e.hasAttribute('id')) {
+        e.id = id;
+    }
+    if (!e.hasAttribute("data-enfbots-uuid")) {
+        e.setAttribute("data-enfbots-uuid", id);
+    }
+    return e.getAttribute("data-enfbots-uuid");
+};
+
+const EMAIL_HINT = /mail|correo|courriel|e-?post|posta/i;
+const BUTTONS = 'button, input[type=submit], input[type=button], input[type=image], ' +
+    '[role=button], a[type=submit]';
+const isEmail = (i) => !['hidden', 'checkbox', 'radio', 'submit', 'button', 'image']
+    .includes((i.type || '').toLowerCase()) && ((i.type || '').toLowerCase() === 'email' ||
+    EMAIL_HINT.test([i.name, i.id, i.placeholder, i.getAttribute('autocomplete'),
+                     i.getAttribute('aria-label')].join(' ')));
+// The nearest container of a lone email field that also holds a button (a few levels up at
+// most, never one with other forms or many fields in it)
+const markFormless = (root) => {
+    for (const inp of root.querySelectorAll('input')) {
+        if (!isEmail(inp) || inp.closest('form, [data-enfbots-formless]')) continue;
+        let box = inp.parentElement;
+        for (let depth = 0; box && depth < 6; depth++, box = box.parentElement) {
+            if (box === document.body || box === document.documentElement ||
+                box.querySelector('form, [data-enfbots-formless]') ||
+                box.querySelectorAll('input:not([type=hidden]), select, textarea').length > 8) {
+                box = null;
+                break;
+            }
+            if (box.querySelector(BUTTONS)) break;
+        }
+        if (box && box.querySelector(BUTTONS)) {
+            box.setAttribute('data-enfbots-formless', '1');
+            tag(box);
+        }
+    }
+};
+
+const roots = [document];
+if (capture) {
+    const walk = (root) => {
+        for (const el of root.querySelectorAll('*')) {
+            if (el.shadowRoot) {
+                tag(el);
+                roots.push(el.shadowRoot);
+                walk(el.shadowRoot);
+            }
+        }
+    };
+    walk(document);
+}
+const results = {};
+for (const root of roots) {
+    for (const e of root.querySelectorAll("form, input, textarea, select, button")) {
+        results[tag(e)] = isVisible(e);
+    }
+    if (capture) markFormless(root);
+}
+return results;
+"""
+_FORMLESS_ATTR = "data-enfbots-formless"
+
+# Open shadow roots holding an input: their content, and the hosts that lead to them (their
+# data-enfbots-uuid from _TAG_FORMS_JS, and their tag names), outermost first
+_SHADOW_FORMS_JS = """
+const out = [];
+const walk = (root, hosts, tags) => {
+    for (const el of root.querySelectorAll('*')) {
+        if (!el.shadowRoot) continue;
+        const h = [...hosts, el.getAttribute('data-enfbots-uuid')];
+        const t = [...tags, el.tagName.toLowerCase()];
+        if (el.shadowRoot.querySelector('input')) {
+            out.push({hosts: h, tags: t, html: el.shadowRoot.innerHTML});
+        }
+        walk(el.shadowRoot, h, t);
+    }
+};
+walk(document, [], []);
+return out;
+"""
+
+# The first button of a two-step pop-up ("Spin to win", "Claim my discount"): shown, worded
+# like one, inside a fixed overlay (any part of the frame inside an iframe, arguments[0]) that
+# shows no email field yet. Never a dismiss button, a link to another page, a cookie banner or
+# an age gate. Returns [element, text] or null
+_TEASER_JS = r"""
+const inFrame = arguments[0];
+const TEASER = /let'?s go|spin|try (my |your )?luck|claim|unlock|reveal|^yes\b|get (my|your|it|the|\d|\$)|play|i want|count me in|sign me up|join|subscribe|sign up|tell me more/i;
+const DISMISS = /no,? thanks|no thank you|close|dismiss|not now|maybe later|decline|cancel|skip|^x$|^×$|i('| a)m (not|good)|i hate|full price|no,? i/i;
+const AVOID = /cookie|consent|gdpr|privacy (preferences|settings|choices)|years? (old|of age)|age verification|are you (over|at least|of legal)|\b(18|19|21)\+/i;
+const EMAIL_HINT = /mail|correo|courriel|e-?post|posta/i;
+const shown = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' &&
+    parseFloat(getComputedStyle(e).opacity || '1') > 0;
+const isEmail = (i) => (i.type || '').toLowerCase() === 'email' ||
+    EMAIL_HINT.test([i.name, i.id, i.placeholder, i.getAttribute('aria-label')].join(' '));
+const overlayOf = (e) => {
+    if (inFrame) return document.body;
+    for (let a = e; a && a !== document.body; a = a.parentElement) {
+        const s = getComputedStyle(a);
+        if (s.position === 'fixed') return a;
+    }
+    return null;
+};
+for (const b of document.querySelectorAll('button, [role=button], input[type=button], input[type=submit], a')) {
+    if (!shown(b)) continue;
+    const text = (b.innerText || b.value || b.getAttribute('aria-label') || '').trim();
+    if (!text || text.length > 40 || !TEASER.test(text) || DISMISS.test(text)) continue;
+    if (b.tagName === 'A') {
+        const href = b.getAttribute('href') || '';
+        if (href && !href.startsWith('#') && !href.startsWith('javascript')) continue;
+    }
+    const box = overlayOf(b);
+    if (!box || AVOID.test(box.innerText || '')) continue;
+    if ([...box.querySelectorAll('input')].some(i => shown(i) && isEmail(i))) continue;
+    return [b, text];
+}
+return null;
+"""
+
+
+def _css_string(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def find_tagged(context: Any, uuid: Optional[str], id_: Optional[str]) -> WebElement:
+    """
+    An element by the data-enfbots-uuid load_form_info gave it, else by its id. Ids can be
+    empty or used twice on a page (Costco's country menu and newsletter button share one), the
+    uuid can't. context is the driver, an element, or a shadow root (CSS selectors only).
+    """
+    for attr, value in (("data-enfbots-uuid", uuid), ("id", id_)):
+        if value:
+            found = context.find_elements(By.CSS_SELECTOR, f'[{attr}="{_css_string(value)}"]')
+            if found:
+                return found[0]
+    raise NoSuchElementException(f"No element with data-enfbots-uuid={uuid!r} or id={id_!r}")
+
+
+def _form_tags(soup: BeautifulSoup) -> list[Any]:
+    """<form>s, and the containers _TAG_FORMS_JS marked as forms without one."""
+    formless = [t for t in soup.find_all(attrs={_FORMLESS_ATTR: True}) if t.find_parent("form") is None]
+    return list(soup.find_all("form")) + formless
+
+
+def _frame_src(src: str) -> str:
+    """An iframe's src without query or fragment (they often carry per-visit tokens)."""
+    return src.split("?")[0].split("#")[0][:300]
+
+
 _UNBLOCK_RULE_ID = 7_000_001
 _UNBLOCK_JS = """
 const [domains, ruleId, done] = arguments;
@@ -191,6 +374,9 @@ class Browser(ABC):
 
         self.last_loaded_url: Optional[URL] = None
         self.allow_screenshot = allow_screenshot
+        # Texts of the alerts dismiss_dialogs closed, oldest first (a study sign-up judges its
+        # submit by an alert that a JavaScript click opened)
+        self.dismissed_alerts: list[str] = []
 
         self.proxy = proxy
         self.timeout = timeout
@@ -227,7 +413,9 @@ class Browser(ABC):
         # try to dismiss alert windows
         try:
             while True:
-                self.driver.switch_to.alert.dismiss()
+                alert = self.driver.switch_to.alert
+                self.dismissed_alerts.append(alert.text or "")
+                alert.dismiss()
                 logger.debug("Dismissed alert")
                 time.sleep(0.5)
         except (NoAlertPresentException, TimeoutException):
@@ -557,9 +745,155 @@ class EnfbotsBrowser(Browser):
     def find_forms(
         self, lang: Language = Language.get(Config().language_dir, "en")
     ) -> list[FormBS]:
-        form_info = self.load_form_info()
+        if not Config().EMAIL_CAPTURE_ONLY:
+            form_info = self.load_form_info()
+            soup = self.get_soup()
+            return [FormBS(f, lang, form_info) for f in soup.find_all("form")]
+        # Email-capture mode: also email fields without a <form>, forms in open shadow roots
+        # and forms in sign-up vendors' iframes. Ends in the page (not in an iframe)
+        self.driver.switch_to.default_content()
+        forms = self._capture_forms_here(lang)
+        try:
+            forms += self._capture_forms_in_frames(lang)
+        except Exception:  # pylint: disable=broad-except
+            # Extra work on top of the page's own forms: never the end of a crawl
+            logger.exception("Scanning iframes for forms failed")
+            self.driver.switch_to.default_content()
+        return forms
+
+    def _capture_forms_here(self, lang: Language) -> list[FormBS]:
+        """Capture-mode forms in the current page or frame, shadow roots included."""
+        form_info = self.load_form_info(capture=True)
         soup = self.get_soup()
-        return [FormBS(f, lang, form_info) for f in soup.find_all("form")]
+        forms = [FormBS(t, lang, form_info) for t in _form_tags(soup)]
+        for shadow in self.execute_script(_SHADOW_FORMS_JS) or []:
+            shadow_soup = BeautifulSoup(shadow["html"], "html.parser", multi_valued_attributes=None)
+            for t in _form_tags(shadow_soup):
+                form = FormBS(t, lang, form_info)
+                form.shadow_hosts = list(shadow["hosts"])
+                form.shadow_host_tags = list(shadow["tags"])
+                forms.append(form)
+        return forms
+
+    def _capture_frames(self) -> list[tuple[int, WebElement, str]]:
+        """
+        The iframes worth scanning for sign-up forms: shown, not tiny, and written by the page
+        itself, from its own site, or from a sign-up vendor (CAPTURE_FRAME_HOSTS and the other
+        vendor lists). Ads, videos and CAPTCHA frames are left alone. (index, element, src)
+        """
+        page_domain = tldextract.extract(str(self.current_url)).registered_domain
+        hosts = {
+            *Config().CAPTURE_FRAME_HOSTS,
+            *Config().CAPTURE_HOST_ALLOWLIST,
+            *Config().CAPTURE_UNBLOCK_DOMAINS,
+        }
+        chosen: list[tuple[int, WebElement, str]] = []
+        for index, frame in enumerate(self.driver.find_elements(By.TAG_NAME, "iframe")):
+            if len(chosen) >= Config().CAPTURE_MAX_FRAMES:
+                break
+            if not isinstance(frame, WebElement):
+                # A raw reference instead of an element (abc27.com, belk.com, wfla.com)
+                continue
+            try:
+                src = frame.get_attribute("src") or ""
+                size = frame.size
+                if not frame.is_displayed() or size["width"] < 120 or size["height"] < 60:
+                    continue
+            except WebDriverException:
+                continue
+            domain = tldextract.extract(src).registered_domain if "//" in src else ""
+            if not src or src.startswith(("about:", "javascript:")) or domain == page_domain or (
+                domain in hosts
+            ):
+                chosen.append((index, frame, _frame_src(src)))
+        return chosen
+
+    def _capture_forms_in_frames(self, lang: Language) -> list[FormBS]:
+        forms: list[FormBS] = []
+        for index, frame, src in self._capture_frames():
+            try:
+                self.driver.switch_to.frame(frame)
+                found = self._capture_forms_here(lang)
+            except WebDriverException as e:
+                logger.debug("Could not scan iframe %s: %s", src, e.msg)
+                found = []
+            finally:
+                self.driver.switch_to.default_content()
+            for form in found:
+                form.frame = {"index": index, "src": src}
+            forms += found
+        return forms
+
+    def enter_frame(self, frame: Optional[dict[str, Any]]) -> None:
+        """
+        Makes the iframe a form was found in (FormBS.frame) the current frame, or the page for
+        None. The iframe at the same position if it still has the same src, else the first
+        with that src. Raises NoSuchFrameException if there is none.
+        """
+        self.driver.switch_to.default_content()
+        if not frame:
+            return
+        frames = self.driver.find_elements(By.TAG_NAME, "iframe")
+        index = frame.get("index", -1)
+        candidates = ([frames[index]] if 0 <= index < len(frames) else []) + frames
+        for candidate in candidates:
+            if not isinstance(candidate, WebElement):
+                continue
+            try:
+                if _frame_src(candidate.get_attribute("src") or "") == frame.get("src"):
+                    self.driver.switch_to.frame(candidate)
+                    return
+            except WebDriverException:
+                continue
+        raise NoSuchFrameException(f"No iframe with src {frame.get('src')!r}")
+
+    def search_context(self, shadow_hosts: list[str]) -> Any:
+        """Where to look for a form's elements: the current page or frame, or the shadow root."""
+        context: Any = self.driver
+        for host in shadow_hosts:
+            # WebElement.shadow_root (Selenium 4.1+), missing from the type stubs
+            context = cast(Any, find_tagged(context, host, None)).shadow_root
+        return context
+
+    def click_popup_teaser(self) -> Optional[str]:
+        """
+        Two-step pop-ups ("Spin to win", "Claim my discount") show their email field only after
+        a click on their first button. Clicks one such button, in the page or in a sign-up
+        vendor's iframe, and returns its text; None if there is none. Ends in the page.
+        """
+        self.driver.switch_to.default_content()
+        clicked = self._click_teaser_here(in_frame=False)
+        if clicked:
+            return clicked
+        try:
+            frames = self._capture_frames()
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("Listing iframes for a pop-up teaser failed")
+            return None
+        for _, frame, src in frames:
+            try:
+                self.driver.switch_to.frame(frame)
+                clicked = self._click_teaser_here(in_frame=True)
+            except WebDriverException as e:
+                logger.debug("Could not look for a teaser in iframe %s: %s", src, e.msg)
+                clicked = None
+            finally:
+                self.driver.switch_to.default_content()
+            if clicked:
+                return clicked
+        return None
+
+    def _click_teaser_here(self, in_frame: bool) -> Optional[str]:
+        found = self.execute_script(_TEASER_JS, in_frame)
+        if not found:
+            return None
+        elem, text = found
+        try:
+            elem.click()
+        except (ElementClickInterceptedException, ElementNotInteractableException):
+            self.activate(elem)
+        logger.info("Pop-up teaser clicked: %s", text)
+        return str(text)
 
     def load_page(self, url: URL, timeout: Optional[float] = None) -> PageState:
         ps = super().load_page(url, timeout)
@@ -588,47 +922,9 @@ class EnfbotsBrowser(Browser):
             if my_cookie not in self.cookie_tracker:
                 self.cookie_tracker.add(my_cookie)
 
-    def load_form_info(self) -> dict[str, bool]:
+    def load_form_info(self, capture: bool = False) -> dict[str, bool]:
         # give all forms and inputs unique IDs for matching between Selenium and bs4
-        return self.execute_script(
-            """
-            return (function () {
-                const UUIDGen = () =>
-                    ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-                        (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
-                    );
-
-                const isVisible = (elem) => {
-                    while (elem.parentNode && elem.parentNode.getBoundingClientRect) {
-                        const elemComputedStyle = window.getComputedStyle(elem);
-                        if (elemComputedStyle.display === 'none' ||
-                            elemComputedStyle.visibility !== 'visible' ||
-                            parseFloat(elemComputedStyle.opacity, 10) <= 0) {
-                            return false
-                        }
-                        elem = elem.parentNode;
-                    }
-                    return true;
-                };
-
-                const results = {};
-                for (const e of document.querySelectorAll("form, input, textarea, select, button")) {
-                    const id = 'crawleruuid-' + UUIDGen();
-                    if (!e.hasAttribute('id')) {
-                        e.id = id;
-                    }
-                    if (!e.hasAttribute("data-enfbots-uuid")) {
-                        e.setAttribute("data-enfbots-uuid", id);
-                        results[id] = isVisible(e);
-                    } else {
-                        results[e.getAttribute("data-enfbots-uuid")] = isVisible(e);
-                    }
-
-                }
-                return results;
-            })();
-            """
-        )
+        return self.execute_script(_TAG_FORMS_JS, capture) or {}
 
 
 class Firefox(EnfbotsBrowser):

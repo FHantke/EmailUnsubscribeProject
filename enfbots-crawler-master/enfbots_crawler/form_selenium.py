@@ -11,7 +11,6 @@ from typing import Optional
 
 from hyperlink import URL
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.support.wait import WebDriverWait
@@ -24,7 +23,7 @@ from enfbots_crawler import captcha_solver, CaptchaType, Config, InputType, Form
 from enfbots_crawler.credentials import Credentials
 from enfbots_crawler.form_bs import FormBS
 from enfbots_crawler.input_selenium import InputSelenium
-from enfbots_crawler.browser import EnfbotsBrowser, wait_for_page_load
+from enfbots_crawler.browser import EnfbotsBrowser, find_tagged, wait_for_page_load
 
 logger = logging.getLogger("enfbots_crawler")
 
@@ -40,7 +39,7 @@ class FormSelenium:
         self.inputs: list[InputSelenium] = []
         self.radio_groups: defaultdict[str, list[InputSelenium]] = defaultdict(list)
         for input_bs in form_bs.inputs:
-            input_sel = InputSelenium.from_bs(browser, input_bs)
+            input_sel = InputSelenium.from_bs(browser, input_bs, reg_form)
             name = get_attr(input_bs.element, "name")
             if input_bs.direct_type == InputType.RADIO_OTHER and name:
                 self.radio_groups[name].append(input_sel)
@@ -68,7 +67,9 @@ class FormSelenium:
 
     @staticmethod
     def from_bs(browser: EnfbotsBrowser, form_bs: FormBS) -> FormSelenium:
-        tag = browser.driver.find_element(By.ID, form_bs.id)
+        # A form inside shadow DOM is found through its hosts (the iframe, if any, must already
+        # be the current frame: browser.enter_frame)
+        tag = find_tagged(browser.search_context(form_bs.shadow_hosts), form_bs.uuid, form_bs.id)
         form = FormSelenium(browser, tag, form_bs)
         return form
 

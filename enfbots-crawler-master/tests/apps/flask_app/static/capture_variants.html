@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Capture variants</title>
+</head>
+<body>
+<h1>Shop</h1>
+<p>Sign-ups that are not a plain &lt;form&gt; in the page (tests for browser.py and subscribe.py).
+    ?v= picks one: formless, iframe, shadow, teaser.</p>
+<div id="variant"></div>
+<script>
+    // Every variant posts {email, source} like a vendor's script would, then thanks the visitor
+    async function send(email, source, thanks) {
+        const body = new FormData();
+        body.append("email", email);
+        body.append("source", source);
+        await fetch("/website/newsletter/subscribe", {method: "POST", body});
+        thanks.textContent = "Thanks for subscribing!";
+    }
+
+    const box = document.getElementById("variant");
+    const variant = new URLSearchParams(location.search).get("v");
+
+    if (variant === "formless") {
+        // Listrak-style: an email field and a button, no <form>
+        box.innerHTML = `<div class="signup"><p>Get $5 off when you sign up for email</p>
+            <input type="email" placeholder="enter email address" id="formless-email">
+            <button id="formless-go">I'm In</button><p id="formless-done"></p></div>`;
+        document.getElementById("formless-go").addEventListener("click", () => {
+            send(document.getElementById("formless-email").value, "formless",
+                 document.getElementById("formless-done"));
+        });
+    }
+
+    if (variant === "iframe") {
+        // Attentive/Brevo-style: the form lives in an iframe
+        box.innerHTML = `<iframe src="capture_frame.html" width="500" height="250"></iframe>`;
+    }
+
+    if (variant === "shadow") {
+        // Wisepops-style: the form lives in an open shadow root
+        const host = document.createElement("signup-popup");
+        box.appendChild(host);
+        const root = host.attachShadow({mode: "open"});
+        root.innerHTML = `<form id="shadow-form"><p>Join our newsletter</p>
+            <input type="email" name="email" id="shadow-email" required>
+            <button type="submit">Subscribe</button><p id="shadow-done"></p></form>`;
+        root.getElementById("shadow-form").addEventListener("submit", (e) => {
+            e.preventDefault();
+            send(root.getElementById("shadow-email").value, "shadow", root.getElementById("shadow-done"));
+        });
+    }
+
+    if (variant === "teaser") {
+        // Two-step pop-up: the email field appears after "Claim my discount"
+        const popup = document.createElement("div");
+        popup.style = "position: fixed; top: 20%; left: 30%; background: white; border: 1px solid";
+        popup.innerHTML = `<p>Spin to win up to 20% off!</p>
+            <button id="claim">Claim my discount</button> <button id="close">No thanks</button>`;
+        document.body.appendChild(popup);
+        document.getElementById("close").addEventListener("click", () => popup.remove());
+        document.getElementById("claim").addEventListener("click", () => {
+            popup.innerHTML = `<form id="teaser-form"><p>You won 15% off. Where should we send it?</p>
+                <input type="email" name="email" id="teaser-email" required>
+                <button type="submit">Send my code</button><p id="teaser-done"></p></form>`;
+            document.getElementById("teaser-form").addEventListener("submit", (e) => {
+                e.preventDefault();
+                send(document.getElementById("teaser-email").value, "teaser",
+                     document.getElementById("teaser-done"));
+            });
+        });
+    }
+</script>
+</body>
+</html>

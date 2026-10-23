@@ -743,22 +743,34 @@ class CaptchaSolverScanning:  # pragma: no cover
 
 
 # Live check for a displayed challenge (image grid etc.); the frames exist hidden beforehand
-_CHALLENGE_SHOWN_JS = """
-return [...document.querySelectorAll('iframe')].some(f => {
-    if (!/recaptcha\\/(api2|enterprise)\\/bframe|hcaptcha\\.com.*challenge|challenges\\.cloudflare\\.com/.test(f.src)) {
-        return false;
-    }
-    const r = f.getBoundingClientRect();
-    let e = f;
-    while (e) {
-        const s = getComputedStyle(e);
+# Name of the visible challenge on the page ('' if none): CAPTCHA challenge frames, a reCAPTCHA
+# checkbox that is not the invisible badge, and bot-protection challenges (DataDome, HUMAN)
+_CHALLENGE_SHOWN_JS = r"""
+const shown = (e) => {
+    const r = e.getBoundingClientRect();
+    if (r.width <= 50 || r.height <= 50) return false;
+    for (let x = e; x; x = x.parentElement) {
+        const s = getComputedStyle(x);
         if (s.visibility === 'hidden' || s.display === 'none' || parseFloat(s.opacity) === 0) {
             return false;
         }
-        e = e.parentElement;
     }
-    return r.width > 50 && r.height > 50;
-});
+    return true;
+};
+const kinds = [
+    [/recaptcha\/(api2|enterprise)\/bframe/, 'recaptcha'],
+    [/recaptcha\/(api2|enterprise)\/anchor(?!.*size=invisible)/, 'recaptcha_checkbox'],
+    [/hcaptcha\.com.*challenge/, 'hcaptcha'],
+    [/challenges\.cloudflare\.com/, 'turnstile'],
+    [/captcha-delivery\.com/, 'datadome'],
+    [/px-cdn\.net|px-cloud\.net|perimeterx/, 'human'],
+];
+for (const f of document.querySelectorAll('iframe')) {
+    const kind = kinds.find(([re]) => re.test(f.src || ''));
+    if (kind && shown(f)) return kind[1];
+}
+const px = document.querySelector('#px-captcha');
+return px && shown(px) ? 'human' : '';
 """
 
 
@@ -806,8 +818,12 @@ class CaptchaRecorder:
         logger.warning("Image CAPTCHA left unsolved (CAPTCHA_BACKEND=none)")
         return ""
 
+    def challenge_name(self) -> str:
+        """The visible challenge after a submit, e.g. "hcaptcha" or "datadome"; '' if none."""
+        return str(self.browser.execute_script(_CHALLENGE_SHOWN_JS) or "")
+
     def challenge_shown(self) -> bool:
-        return bool(self.browser.execute_script(_CHALLENGE_SHOWN_JS))
+        return bool(self.challenge_name())
 
 
 def js_key_regex(name: str, string: str) -> Optional[str]:

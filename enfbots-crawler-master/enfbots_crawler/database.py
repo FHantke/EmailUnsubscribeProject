@@ -907,8 +907,11 @@ class DBTestCase(Base):
     # Why this capture was chosen for the site, e.g. "visible newsletter"
     selection_reason: Mapped[Optional[str]]
 
-    # pending, dry_run, success_text, form_gone, redirect, captcha_blocked, failed, unknown,
-    # skipped_<reason> (e.g. skipped_form_not_found) or error
+    # pending, dry_run, success_text, form_gone, form_reset, redirect, captcha_blocked (incl.
+    # bot challenges such as DataDome, and CAPTCHA verdicts in an alert), page_error (Chrome's
+    # error page, e.g. Mailchimp's page in a new tab not loading), failed, failed_fill (address
+    # could not be typed; nothing sent), failed_submit (no way to submit; nothing sent),
+    # no_change, skipped_<reason> (e.g. skipped_form_not_found) or error
     submit_status: Mapped[str] = mapped_column(default="pending")
     # Signals behind submit_status: fields filled, keywords seen, URLs, ...
     submit_detail = mapped_column(JSON)
