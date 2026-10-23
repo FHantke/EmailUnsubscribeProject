@@ -152,7 +152,7 @@ FORM_TYPES = [
         # royalcaribbean.com ("Sign up and receive $100 OFF") and on a
         # shoprevivaldesignco.com discount modal, both in the run5 sample.
         "unless": (r"\balready\b.{0,24}\b(subscrib|registered|member|account)"
-                   r"|\b(newsletter|subscri\w*|discount|promo code)\b"
+                   r"|\b(newsletter|subscri\w*|discount\w*|promo code)\b"
                    r"|\bsign ?up and (receive|get|save)\b"),
     }),
     ("checkout", {
