@@ -202,7 +202,26 @@ SHUTDOWN_GRACE = 90   # seconds a shard gets after Ctrl-C to finish its page and
 
 
 # ---------------------------------------------------------------------------
-# 6. Output columns
+# 6. Database
+# ---------------------------------------------------------------------------
+
+# Where every run's rows go. Any SQLAlchemy URL works, so the crawler can be
+# pointed at another database without touching the code — the tables are built
+# from the column lists below, not written out by hand:
+#
+#   sqlite:///outputs/crawl.db               a file in the project (the default)
+#   sqlite:////absolute/path/crawl.db        note the four slashes
+#   postgresql+psycopg://user@host/forms     needs: pip install psycopg
+#   mysql+pymysql://user@host/forms          needs: pip install pymysql
+#
+# A relative sqlite path is read from wherever the crawler is started, which is
+# the repo root. Set FIND_FORMS_DATABASE_URL in the environment to override
+# this for one run without editing the file.
+DATABASE_URL = "sqlite:///outputs/crawl.db"
+
+
+# ---------------------------------------------------------------------------
+# 7. Output columns
 # ---------------------------------------------------------------------------
 
 # Analysis depends on this order: only ever add columns at the END, never
@@ -228,7 +247,7 @@ PAGE_FIELDS = [     # one row per page visited
 
 
 # ---------------------------------------------------------------------------
-# 7. Run state
+# 8. Run state
 # ---------------------------------------------------------------------------
 
 # Not a setting: set by Ctrl-C, checked between pages so a run stops cleanly.

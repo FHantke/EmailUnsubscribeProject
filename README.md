@@ -77,11 +77,14 @@ Each run writes into its `--out` directory:
 |---|---|
 | `screens/<site>/` | Element screenshot and in-context viewport screenshot per form. |
 | `html/<site>/` | The form's HTML. |
-
-Every run's rows go into one SQLite database, `outputs/crawl.db` (`--db` to
-change it), tagged with the run's name — which is the name of its `--out`
-directory. Resume is per run, so a new `--out` starts from scratch.
 | `run.log` | Everything printed during the run, with timestamps, the time taken per site and the total run time. |
+
+The rows themselves go into one database shared by every run, tagged with the
+run's name — which is the name of its `--out` directory. Resume is per run, so
+a new `--out` starts from scratch. The database is `DATABASE_URL` in
+[src/crawler/config.py](src/crawler/config.py), `sqlite:///outputs/crawl.db`
+unless you change it; any SQLAlchemy URL works, so it can point at Postgres or
+MySQL instead. `FIND_FORMS_DATABASE_URL` overrides it for one run.
 
 Query it with any SQLite tool, or get the old CSVs back whenever you want them:
 
@@ -91,7 +94,7 @@ python src/find_forms.py --export-csv            # forms.csv + pages.csv for eve
 ```
 
 Columns such as
-`placement_guess`, `modal_hint`, `login_like` and `consent_text_hint` are
+`placement_guess`, `modal_hint`, `form_type` and `consent_text_hint` are
 heuristics: spot-check them against the screenshots before relying on them.
 The full column reference and schema history are in [CLAUDE.md](CLAUDE.md#outputs---out-default-outputsresults).
 
@@ -104,7 +107,7 @@ src/crawler/
   js.py                JavaScript run in the page (form detection, scrolling, exit intent)
   browser.py           driver setup, page loading, phased detection, screenshots
   crawl.py             per-site flow: landing page, then ranked links
-  output.py            CSV/JSONL writing, resuming, merging parallel runs
+  output.py            database schema and writing, resuming, CSV export
   jobs.py              --jobs process supervisor, Ctrl-C handling
   util.py              small shared helpers
 docker/                Dockerfile, entrypoint and notes for the containerised run

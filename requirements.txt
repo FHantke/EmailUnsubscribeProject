@@ -4,6 +4,11 @@ selenium
 # crawler. --no-stealth falls back to plain Selenium and does not need this.
 undetected-chromedriver
 
+# Database access. The crawler ships with SQLite, which needs nothing extra;
+# SQLAlchemy is what lets DATABASE_URL in config.py point somewhere else
+# (Postgres, MySQL) without changing any code.
+SQLAlchemy
+
 # Needed only to re-render the documentation, not by the crawler:
 #   docs/find-forms-method.pdf and docs/detect-js-flow.png
 # are produced with headless Chromium through Playwright.

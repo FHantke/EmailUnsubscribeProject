@@ -40,9 +40,12 @@ main()
      back to that one shard while the others sat idle.) A manual `--shard`
      keeps the fixed split, because shards on other machines cannot see each
      other's progress.
-4. **Open outputs and resume.** `Output(out_dir, part)` opens `forms.csv`,
-   `pages.csv` and `forms.jsonl` for appending (`*.part<i>.*` for a shard). It
-   reads every `sites_done*.txt`; any site listed there is skipped.
+4. **Open outputs and resume.** `Output(out_dir, part)` connects to the shared
+   database (`DATABASE_URL` in [config.py](../src/crawler/config.py), by default
+   `sqlite:///outputs/crawl.db`) and creates the tables if they are new. Every
+   row it writes is tagged with the run's name, which is the name of `out_dir`.
+   It reads the `sites_done` table for that run; any site listed there is
+   skipped, so resume is per run.
 5. **`install_stop_handler()`:** Ctrl-C or SIGTERM only sets `STOP["now"]`. The
    crawl finishes its current page and stops at the next page boundary, so rows
    are flushed and the driver is quit rather than left orphaned.
@@ -60,7 +63,7 @@ For each remaining site:
    running after `--site-time-limit` (default 2 minutes per `--max-pages`, so 6
    minutes), Chrome and chromedriver are killed, the site gets a `site_timeout`
    row, and the next site starts a fresh driver. Otherwise any exception becomes a `site_error` row in
-   `pages.csv` and the run continues.
+   the `pages` table and the run continues.
 5. Call **`output.mark_done(site)`**, even after an error, so a broken site is
    not retried forever.
 
@@ -145,10 +148,9 @@ is how embedded signup widgets are found:
    - **`capture()`** saves `html/<site>/<sig>.html` (the outerHTML), scrolls
      the form into view, and saves `screens/<site>/<sig>.png` (the element) and
      `<sig>_context.png` (the viewport). A failed step leaves its column empty.
-   - **`output.form()`** writes the row to `forms.csv` and `forms.jsonl` and
-     flushes immediately.
+   - **`output.form()`** inserts the row into `forms` and commits immediately.
 
-Finally it writes one `pages.csv` row with `n_new_forms`.
+Finally it writes one `pages` row with `n_new_forms`.
 
 ## 5. Detection: `DETECT_JS` in [js.py](../src/crawler/js.py), run inside the page
 

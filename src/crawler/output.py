@@ -1,8 +1,7 @@
-"""Everything every run records, in one SQLite database.
+"""Everything every run records, in the database named by config.DATABASE_URL.
 
-By default `outputs/crawl.db` (change it with --db). Four tables, whose columns
-come from FORM_FIELDS and PAGE_FIELDS so config.py stays the single source of
-truth:
+Four tables, whose columns are built from FORM_FIELDS and PAGE_FIELDS so
+config.py stays the single source of truth:
 
     runs        one row per --out, with the command and when it last started
     forms       one row per unique form, keyed (run, site, form_sig)
@@ -16,32 +15,134 @@ can be compared in SQL rather than by hand:
 
 Screenshots and HTML stay as files under --out; the tables hold their paths.
 
-Shards under --jobs all write here, as do separate runs going at once. SQLite
-in WAL mode takes one writer at a time and queues the rest, and rows arrive a
-few per second, so there is nothing to merge afterwards: the primary key does
-the de-duplication that merge_parts() used to do. merge_parts() survives only
-for shards run on *other* machines, which cannot share the file.
+Access goes through SQLAlchemy Core, so pointing DATABASE_URL at Postgres or
+MySQL needs no code change here. Nothing below is dialect-specific: duplicates
+are handled by catching IntegrityError rather than by INSERT OR IGNORE, and the
+SQLite tuning is applied only when the engine is SQLite.
+
+Shards under --jobs all write here, as do separate runs going at once. On
+SQLite that works because of WAL mode plus a busy timeout: one writer at a
+time, the rest queue. The primary key does the de-duplication that the old
+merge step did, so there is nothing to merge afterwards; merge_parts() survives
+only for shards run on machines that cannot reach this database.
 """
 
 import csv
 import json
 import logging
-import sqlite3
+import os
 import sys
 from pathlib import Path
 
-from crawler.config import FORM_FIELDS, PAGE_FIELDS
+from sqlalchemy import (Column, Float, Integer, MetaData, String, Table, Text, event,
+                        insert, inspect, select, text)
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
+from crawler.config import DATABASE_URL, FORM_FIELDS, PAGE_FIELDS
 
 log = logging.getLogger(__name__)
 
-DEFAULT_DB = Path("outputs") / "crawl.db"
-
 # Columns worth storing as numbers, so queries can compare them rather than
-# string-sorting. Everything else is TEXT; a list is stored as JSON.
+# string-sorting. Everything else is Text; a list is stored as JSON.
 _INTEGER = {"rank_on_page", "z_index", "n_fields", "n_checkboxes",
             "n_checkboxes_prechecked", "fields_missing_label", "width", "height",
             "http_status", "n_new_forms"}
 _REAL = {"viewport_coverage"}
+
+_RUN = 128      # a run name is a directory name; keep it bounded for backends that need it
+_KEY = 512      # site and page_url are keys on some backends, which cap index width
+
+
+def database_url():
+    """The configured database, overridable per run without editing config.py."""
+    return os.environ.get("FIND_FORMS_DATABASE_URL") or DATABASE_URL
+
+
+def _coltype(name, key=False):
+    if name in _INTEGER:
+        return Integer
+    if name in _REAL:
+        return Float
+    return String(_KEY) if key else Text
+
+
+def build_metadata():
+    """The four tables, with columns taken from config.py."""
+    md = MetaData()
+    Table("runs", md,
+          Column("run", String(_RUN), primary_key=True),
+          Column("out_dir", Text), Column("command", Text),
+          Column("first_started", Text), Column("last_started", Text))
+    Table("forms", md,
+          Column("run", String(_RUN), primary_key=True),
+          *[Column(c, _coltype(c, key=c in ("site", "form_sig")),
+                   primary_key=c in ("site", "form_sig")) for c in FORM_FIELDS])
+    Table("pages", md,
+          *[Column(c, _coltype(c)) for c in ["run"] + PAGE_FIELDS])
+    Table("sites_done", md,
+          Column("run", String(_RUN), primary_key=True),
+          Column("site", String(_KEY), primary_key=True),
+          Column("finished_at", Text))
+    return md
+
+
+METADATA = build_metadata()
+FORMS, PAGES, RUNS, DONE = (METADATA.tables["forms"], METADATA.tables["pages"],
+                            METADATA.tables["runs"], METADATA.tables["sites_done"])
+
+_engines = {}
+
+
+def get_engine(url=None):
+    """One engine per URL per process. On SQLite this also turns on the settings
+    that let several shards write at once."""
+    from sqlalchemy import create_engine
+    url = url or database_url()
+    if url in _engines:
+        return _engines[url]
+    kwargs = {"future": True}
+    if url.startswith("sqlite"):
+        path = url.split("///", 1)[-1]
+        if path and path != ":memory:":
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+        kwargs["connect_args"] = {"timeout": 60}
+    engine = create_engine(url, **kwargs)
+    if engine.dialect.name == "sqlite":
+        @event.listens_for(engine, "connect")
+        def _sqlite_pragmas(dbapi_conn, connection_record):
+            cur = dbapi_conn.cursor()
+            cur.execute("PRAGMA journal_mode=WAL")    # readers never block the writer
+            cur.execute("PRAGMA busy_timeout=60000")  # queue behind another writer
+            cur.execute("PRAGMA synchronous=NORMAL")  # a crash costs the last transaction
+            cur.close()
+    _engines[url] = engine
+    return engine
+
+
+def ensure_schema(engine):
+    """Create the tables, or bring an existing database up to the current columns.
+
+    A column appended to FORM_FIELDS is added, so an older database keeps
+    working and simply has NULL for it. A column *removed* from the config
+    cannot be reconciled that way, so the database is refused rather than
+    silently read with a stale meaning.
+    """
+    METADATA.create_all(engine)
+    insp = inspect(engine)
+    with engine.begin() as conn:
+        for table in (FORMS, PAGES):
+            have = [c["name"] for c in insp.get_columns(table.name)]
+            for col in table.columns:
+                if col.name not in have:
+                    kind = col.type.compile(engine.dialect)
+                    conn.execute(text(f'ALTER TABLE {table.name} ADD COLUMN "{col.name}" {kind}'))
+                    log.info(f"  {table.name}: added column {col.name}")
+            stale = [c for c in have if c not in table.columns]
+            if stale:
+                log.error(f"{table.name}: this database has columns the current schema does not: "
+                          f"{', '.join(stale)}.\n  Point DATABASE_URL (config.py) at a new database "
+                          f"for this version of the crawler, or export the old one to CSV first.")
+                sys.exit(1)
 
 
 def run_label(out_dir):
@@ -49,64 +150,8 @@ def run_label(out_dir):
     return Path(out_dir).resolve().name
 
 
-def _coltype(name):
-    return "INTEGER" if name in _INTEGER else "REAL" if name in _REAL else "TEXT"
-
-
-def _connect(path):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(str(path), timeout=60, isolation_level=None)
-    db.execute("PRAGMA journal_mode=WAL")    # readers never block the writer
-    db.execute("PRAGMA busy_timeout=60000")  # queue behind another writer rather than failing
-    db.execute("PRAGMA synchronous=NORMAL")  # durable enough; a crash costs the last transaction
-    return db
-
-
-def _table_columns(db, table, schema="main"):
-    return [r[1] for r in db.execute(f"PRAGMA {schema}.table_info({table})")]
-
-
-def _ensure_schema(db):
-    """Create the tables, or bring an existing database up to the current columns.
-
-    A column appended to FORM_FIELDS is added to the table, so an older database
-    keeps working and simply has NULL for it. A column *removed* from the config
-    cannot be reconciled that way, so the file is refused rather than silently
-    read with a stale meaning.
-    """
-    db.execute("CREATE TABLE IF NOT EXISTS runs ("
-               "run TEXT PRIMARY KEY, out_dir TEXT, command TEXT, "
-               "first_started TEXT, last_started TEXT)")
-    cols = ", ".join(f'"{c}" {_coltype(c)}' for c in FORM_FIELDS)
-    db.execute(f'CREATE TABLE IF NOT EXISTS forms ("run" TEXT NOT NULL, {cols}, '
-               f'PRIMARY KEY (run, site, form_sig))')
-    cols = ", ".join(f'"{c}" {_coltype(c)}' for c in PAGE_FIELDS)
-    db.execute(f'CREATE TABLE IF NOT EXISTS pages ("run" TEXT NOT NULL, {cols})')
-    db.execute("CREATE TABLE IF NOT EXISTS sites_done ("
-               "run TEXT NOT NULL, site TEXT NOT NULL, finished_at TEXT, "
-               "PRIMARY KEY (run, site))")
-    db.execute("CREATE INDEX IF NOT EXISTS pages_run_site ON pages (run, site)")
-    # Makes re-merging a database from another machine idempotent.
-    db.execute("CREATE UNIQUE INDEX IF NOT EXISTS pages_once "
-               "ON pages (run, timestamp, site, page_url, status)")
-
-    for table, want in (("forms", ["run"] + FORM_FIELDS), ("pages", ["run"] + PAGE_FIELDS)):
-        have = _table_columns(db, table)
-        for c in want:
-            if c not in have:
-                db.execute(f'ALTER TABLE {table} ADD COLUMN "{c}" {_coltype(c)}')
-                log.info(f"  {table}: added column {c}")
-        stale = [c for c in have if c not in want]
-        if stale:
-            log.error(f"{table}: this database has columns the current schema does not: "
-                      f"{', '.join(stale)}.\n  Point --db at a new file for this version of the "
-                      f"crawler, or export the old one to CSV first.")
-            sys.exit(1)
-
-
 def _encode(value):
-    """A cell as SQLite can store it: lists become JSON, bools become 0/1."""
+    """A cell as the database can store it: lists become JSON, bools 0/1."""
     if isinstance(value, (list, tuple)):
         return json.dumps(list(value), ensure_ascii=False)
     if isinstance(value, bool):
@@ -114,34 +159,31 @@ def _encode(value):
     return value
 
 
-def record_run(db_path, out_dir, command):
+def record_run(out_dir, command, engine=None):
     """Note this run in the `runs` table. Called once per invocation from main(),
     including the --jobs parent, which never writes rows of its own."""
     from crawler.util import now
-    db = _connect(db_path)
-    try:
-        _ensure_schema(db)
-        db.execute(
-            "INSERT INTO runs (run, out_dir, command, first_started, last_started) "
-            "VALUES (?,?,?,?,?) ON CONFLICT(run) DO UPDATE SET "
-            "out_dir=excluded.out_dir, command=excluded.command, "
-            "last_started=excluded.last_started",
-            (run_label(out_dir), str(Path(out_dir).resolve()), command, now(), now()))
-    finally:
-        db.close()
+    engine = engine or get_engine()
+    ensure_schema(engine)
+    label, stamp = run_label(out_dir), now()
+    with engine.begin() as conn:
+        updated = conn.execute(RUNS.update().where(RUNS.c.run == label).values(
+            out_dir=str(Path(out_dir).resolve()), command=command, last_started=stamp)).rowcount
+        if not updated:
+            conn.execute(RUNS.insert().values(
+                run=label, out_dir=str(Path(out_dir).resolve()), command=command,
+                first_started=stamp, last_started=stamp))
 
 
-def read_done(db_path, run):
+def read_done(out_dir, engine=None):
     """Every site this run has already finished."""
-    if not Path(db_path).exists():
-        return set()
-    db = _connect(db_path)
+    engine = engine or get_engine()
     try:
-        if not _table_columns(db, "sites_done"):
-            return set()
-        return {r[0] for r in db.execute("SELECT site FROM sites_done WHERE run = ?", (run,))}
-    finally:
-        db.close()
+        with engine.connect() as conn:
+            rows = conn.execute(select(DONE.c.site).where(DONE.c.run == run_label(out_dir)))
+            return {r[0] for r in rows}
+    except SQLAlchemyError:
+        return set()
 
 
 class Output:
@@ -149,38 +191,56 @@ class Output:
     so a crash loses at most the form in progress, and sites_done makes the next
     run resume where this one stopped."""
 
-    def __init__(self, out_dir, db_path=None, part=None):
+    def __init__(self, out_dir, part=None):
         self.out = Path(out_dir)
         self.out.mkdir(parents=True, exist_ok=True)
         self.run = run_label(out_dir)
         self.part = part                 # which shard this is; only used in logging
-        self.db = _connect(db_path or DEFAULT_DB)
-        _ensure_schema(self.db)
+        self.engine = get_engine()
+        ensure_schema(self.engine)
+        self.conn = self.engine.connect()
         self.done = {r[0] for r in
-                     self.db.execute("SELECT site FROM sites_done WHERE run = ?", (self.run,))}
+                     self.conn.execute(select(DONE.c.site).where(DONE.c.run == self.run))}
+        self.conn.commit()               # close the transaction that select autobegan
         self.n_forms = 0                 # forms written by this process, for the run summary
+
+    def _write(self, table, values, ignore_duplicate):
+        """One row, committed. A duplicate is skipped by catching the constraint
+        rather than with INSERT OR IGNORE, which is SQLite-only.
+
+        The connection autobegins its transaction, so this commits rather than
+        opening one of its own.
+        """
+        try:
+            self.conn.execute(insert(table).values(**values))
+            self.conn.commit()
+        except IntegrityError:
+            self.conn.rollback()
+            if not ignore_duplicate:
+                raise
 
     def form(self, row):
         """Write one form. A form already recorded for this run and site is left
         alone, which is what the old merge step did when folding shards together."""
         self.n_forms += 1
-        cols = ["run"] + [c for c in FORM_FIELDS if c in row]
-        vals = [self.run] + [_encode(row[c]) for c in FORM_FIELDS if c in row]
-        self.db.execute(
-            f'INSERT OR IGNORE INTO forms ({",".join(chr(34)+c+chr(34) for c in cols)}) '
-            f'VALUES ({",".join("?" * len(cols))})', vals)
+        values = {"run": self.run}
+        values.update({c: _encode(row[c]) for c in FORM_FIELDS if c in row})
+        self._write(FORMS, values, ignore_duplicate=True)
 
     def page(self, row):
-        cols = ["run"] + [c for c in PAGE_FIELDS if c in row]
-        vals = [self.run] + [_encode(row[c]) for c in PAGE_FIELDS if c in row]
-        self.db.execute(
-            f'INSERT OR IGNORE INTO pages ({",".join(chr(34)+c+chr(34) for c in cols)}) '
-            f'VALUES ({",".join("?" * len(cols))})', vals)
+        values = {"run": self.run}
+        values.update({c: _encode(row[c]) for c in PAGE_FIELDS if c in row})
+        self._write(PAGES, values, ignore_duplicate=True)
 
     def mark_done(self, site):
         from crawler.util import now
-        self.db.execute("INSERT OR REPLACE INTO sites_done (run, site, finished_at) "
-                        "VALUES (?,?,?)", (self.run, site, now()))
+        stamp = now()
+        updated = self.conn.execute(
+            DONE.update().where(DONE.c.run == self.run, DONE.c.site == site)
+            .values(finished_at=stamp)).rowcount
+        if not updated:
+            self.conn.execute(DONE.insert().values(run=self.run, site=site, finished_at=stamp))
+        self.conn.commit()
         self.done.add(site)
 
     def rel(self, path):
@@ -189,83 +249,83 @@ class Output:
 
     def close(self):
         try:
-            self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        except sqlite3.Error:
+            self.conn.close()
+        except SQLAlchemyError:
             pass
-        self.db.close()
 
 
-def merge_parts(db_path, clean=False):
-    """Fold crawl databases from other machines into this one.
+def merge_parts(clean=False):
+    """Fold databases from machines that cannot reach this one into it.
 
-    Only needed for shards run elsewhere, which cannot write to the same file:
-    copy their database in beside this one as <name>.part<N>.db and run --merge.
-    Shards on this machine already write straight in. Run labels are carried
-    over, so the rows land in the run they belong to.
+    Copy their SQLite file in beside this database as <name>.part<N>.db and run
+    --merge. Run labels are carried over, so rows land in the run they belong
+    to. Shards that can reach the configured database already write straight in.
     """
-    target = Path(db_path)
+    url = database_url()
+    if not url.startswith("sqlite"):
+        log.error("--merge folds in SQLite files; DATABASE_URL is not SQLite. "
+                  "Point the other machines at this database instead.")
+        sys.exit(1)
+    target = Path(url.split("///", 1)[-1])
     others = sorted(p for p in target.parent.glob("*.db")
                     if p.name != target.name and "wal" not in p.name and "shm" not in p.name)
     if not others:
         log.info(f"no other .db files beside {target} to merge")
         return
-    db = _connect(target)
-    _ensure_schema(db)
+    engine = get_engine()
+    ensure_schema(engine)
     forms = pages = 0
-    for other in others:
-        db.execute("ATTACH DATABASE ? AS src", (str(other),))
-        try:
-            for table in ("forms", "pages"):
-                shared = [c for c in _table_columns(db, table)
-                          if c in _table_columns(db, table, schema="src")]
-                cols = ",".join(f'"{c}"' for c in shared)
-                before = db.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
-                db.execute(f"INSERT OR IGNORE INTO {table} ({cols}) SELECT {cols} FROM src.{table}")
-                added = db.execute(f"SELECT count(*) FROM {table}").fetchone()[0] - before
-                forms, pages = (forms + added, pages) if table == "forms" else (forms, pages + added)
-            db.execute("INSERT OR IGNORE INTO sites_done (run, site, finished_at) "
-                       "SELECT run, site, finished_at FROM src.sites_done")
-            if _table_columns(db, "runs", schema="src"):
-                db.execute("INSERT OR IGNORE INTO runs SELECT * FROM src.runs")
-        finally:
-            db.execute("DETACH DATABASE src")
-    db.close()
+    with engine.begin() as conn:
+        for other in others:
+            conn.execute(text("ATTACH DATABASE :p AS src"), {"p": str(other)})
+            try:
+                for table in (FORMS, PAGES):
+                    src_cols = {r[1] for r in conn.execute(text(f"PRAGMA src.table_info({table.name})"))}
+                    cols = ",".join(f'"{c.name}"' for c in table.columns if c.name in src_cols)
+                    before = conn.execute(text(f"SELECT count(*) FROM {table.name}")).scalar()
+                    conn.execute(text(f"INSERT OR IGNORE INTO {table.name} ({cols}) "
+                                      f"SELECT {cols} FROM src.{table.name}"))
+                    added = conn.execute(text(f"SELECT count(*) FROM {table.name}")).scalar() - before
+                    forms, pages = ((forms + added, pages) if table is FORMS else (forms, pages + added))
+                conn.execute(text("INSERT OR IGNORE INTO sites_done (run, site, finished_at) "
+                                  "SELECT run, site, finished_at FROM src.sites_done"))
+                conn.execute(text("INSERT OR IGNORE INTO runs SELECT * FROM src.runs"))
+            finally:
+                conn.execute(text("DETACH DATABASE src"))
     log.info(f"merged {len(others)} database(s): {forms} new form rows, {pages} new page rows")
     if clean:
         for p in others:
             p.unlink()
 
 
-def export_csv(db_path, out_dir=None):
+def export_csv(out_dir=None):
     """Write forms.csv and pages.csv, for Excel, R or pandas.
 
     With --out, only that run and into that directory; otherwise every run,
-    beside the database, with the run name in the first column. Lists are
-    flattened back to "a | b", the way the CSV writer stored them before
-    2026-10-23, so these files read like the ones written then.
+    beside the database (or into outputs/ if it is not a local file), with the
+    run name in the first column. Lists are flattened
+    back to "a | b", the way the CSV writer stored them before 2026-10-23, so
+    these files read like the ones written then.
     """
-    db_path = Path(db_path)
-    if not db_path.exists():
-        log.error(f"{db_path} does not exist; nothing to export")
-        sys.exit(1)
+    engine = get_engine()
+    ensure_schema(engine)
     run = run_label(out_dir) if out_dir else None
-    dest_dir = Path(out_dir) if out_dir else db_path.parent
+    url = database_url()
+    beside = Path(url.split("///", 1)[-1]).parent if url.startswith("sqlite:///") else Path("outputs")
+    dest_dir = Path(out_dir) if out_dir else beside
     dest_dir.mkdir(parents=True, exist_ok=True)
-    db = _connect(db_path)
-    try:
-        for table, fields in (("forms", FORM_FIELDS), ("pages", PAGE_FIELDS)):
-            cols = (fields if run else ["run"] + fields)
-            sql = f"SELECT {','.join(chr(34)+c+chr(34) for c in cols)} FROM {table}"
-            params = ()
+    with engine.connect() as conn:
+        for table, fields in ((FORMS, FORM_FIELDS), (PAGES, PAGE_FIELDS)):
+            cols = fields if run else ["run"] + fields
+            stmt = select(*[table.c[c] for c in cols])
             if run:
-                sql += " WHERE run = ?"
-                params = (run,)
-            dest = dest_dir / f"{table}.csv"
+                stmt = stmt.where(table.c.run == run)
+            dest = dest_dir / f"{table.name}.csv"
             with open(dest, "w", newline="", encoding="utf-8") as f:
                 w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
                 w.writeheader()
                 n = 0
-                for row in db.execute(sql, params):
+                for row in conn.execute(stmt):
                     out = {}
                     for col, val in zip(cols, row):
                         if isinstance(val, str) and val.startswith("[") and val.endswith("]"):
@@ -277,5 +337,3 @@ def export_csv(db_path, out_dir=None):
                     w.writerow(out)
                     n += 1
             log.info(f"wrote {dest} ({n} rows{' from run ' + run if run else ', all runs'})")
-    finally:
-        db.close()

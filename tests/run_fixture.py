@@ -8,7 +8,7 @@ form_type per form against what the fixture is built to produce. Exits non-zero
 on any mismatch. The expectations double as documentation: each one is a case
 the rules got wrong at some point.
 """
-import functools, http.server, json, sqlite3, subprocess, sys, tempfile, threading
+import functools, http.server, json, os, sqlite3, subprocess, sys, tempfile, threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -50,10 +50,12 @@ def main():
     sites = out / "sites.txt"
     sites.write_text(f"http://127.0.0.1:{PORT}/\nhttp://127.0.0.1:{PORT}/login/\n")
     cmd = [sys.executable, str(ROOT / "src" / "find_forms.py"), str(sites),
-           "--out", str(out), "--db", str(out / "crawl.db"), "--headless",
+           "--out", str(out), "--headless",
            "--popup-wait", "5", "--page-delay", "0", "--max-pages", "1"]
+    # Into a throwaway database, so a test run never touches the real one.
+    env = dict(os.environ, FIND_FORMS_DATABASE_URL=f"sqlite:///{out / 'crawl.db'}")
     print(" ".join(cmd), flush=True)
-    subprocess.run(cmd, cwd=ROOT, check=False)
+    subprocess.run(cmd, cwd=ROOT, check=False, env=env)
     httpd.shutdown()
 
     db = sqlite3.connect(str(out / "crawl.db"))

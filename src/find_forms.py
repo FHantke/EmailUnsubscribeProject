@@ -42,17 +42,16 @@ Input: one site per line, as a bare domain or URL. Lines containing commas
 (like a Tranco "rank,domain" CSV) use the last field. Lines starting with # are skipped.
 
 Output, inside --out:
-    forms.csv       one row per unique form per site
-    forms.jsonl     same data with lists kept as JSON
-    pages.csv       one row per page visit, with status and errors
     screens/        element screenshots and in-context viewport screenshots
     html/           outerHTML of each detected form
-    sites_done.txt  progress log; rerunning skips sites listed here
     run.log         everything printed, with timestamps, per-site times and the total
                     run time; appended to on every run (run.part<N>.log for a shard)
-    *.part<N>.*     per-shard output; --merge folds these into the files above.
-                    Parts are the durable log and are kept after merging, so the
-                    canonical files can always be rebuilt.
+
+The rows go into one database shared by every run, tagged with the run's name,
+which is the name of its --out directory: forms, pages, sites_done (the resume
+log) and runs. It is DATABASE_URL in crawler/config.py, sqlite:///outputs/crawl.db
+unless changed; any SQLAlchemy URL works, and FIND_FORMS_DATABASE_URL overrides
+it for one run. --export-csv writes forms.csv and pages.csv back out.
 
 Every request comes from Chromium page loads; robots.txt is not consulted.
 The `source` column is always "browser"
@@ -70,7 +69,7 @@ from crawler.config import MAX_JOBS, SITE_TIME_LIMIT_PER_PAGE_S, STOP
 from crawler.browser import prepare_stealth_driver
 from crawler.crawl import crawl_site
 from crawler.jobs import SiteWatchdog, install_stop_handler, run_jobs
-from crawler.output import DEFAULT_DB, Output, export_csv, merge_parts, record_run
+from crawler.output import Output, export_csv, merge_parts, record_run
 from crawler.util import fmt_duration, load_sites, now, setup_logging, short
 
 log = logging.getLogger("crawler")
@@ -83,9 +82,8 @@ def parse_args():
                     help="Text file with one site per line, or a rank,domain CSV")
     ap.add_argument("--out", default="outputs/results",
                     help="Directory for this run's screenshots and HTML (default: outputs/results). "
-                         "Its name is also the run's name in the database.")
-    ap.add_argument("--db", default=str(DEFAULT_DB),
-                    help=f"The database every run writes to (default: {DEFAULT_DB})")
+                         "Its name is also the run's name in the database, which is set by "
+                         "DATABASE_URL in crawler/config.py.")
     ap.add_argument("--max-pages", type=int, default=3, help="Max pages per site (default: 3)")
     ap.add_argument("--explore", action="store_true",
                     help="Keep visiting top-ranked links even after forms are found (catalogs more page types)")
@@ -109,8 +107,8 @@ def parse_args():
                     help=f"Run N shards as separate processes (default: 1, max {MAX_JOBS}). "
                          "~500 MB RAM each. This process does not crawl.")
     ap.add_argument("--merge", action="store_true",
-                    help="Fold other .db files beside --db into it, then exit. Only needed for "
-                         "shards run on another machine; runs here already share one database.")
+                    help="Fold other SQLite files beside the configured database into it, then "
+                         "exit. Only needed for shards on a machine that cannot reach it.")
     ap.add_argument("--export-csv", action="store_true",
                     help="Write forms.csv and pages.csv from the database, then exit. With a sites "
                          "argument, just that run into --out; without one, every run beside the database.")
@@ -143,15 +141,15 @@ def main():
     try:
         if args.export_csv:
             # With a sites argument the user means "this run"; without one, every run.
-            export_csv(Path(args.db), Path(args.out) if args.sites else None)
+            export_csv(Path(args.out) if args.sites else None)
             return
         if args.merge:
-            merge_parts(Path(args.db), args.clean_parts)
+            merge_parts(clean=args.clean_parts)
             return
         # Note the run before anything writes rows, so a --jobs run appears in
         # the runs table even though its parent writes none itself.
         if args.shard is None:
-            record_run(Path(args.db), Path(args.out), " ".join(sys.argv))
+            record_run(Path(args.out), " ".join(sys.argv))
         # Warm the stealth driver cache here, in one process, before any shard
         # or site needs it.
         prepare_stealth_driver(args)
@@ -169,7 +167,7 @@ def crawl_list(args, part):
     # --limit slices first so --jobs/--shard only divide the same total work.
     if args.limit:
         sites = sites[: args.limit]
-    output = Output(Path(args.out), db_path=Path(args.db), part=part)
+    output = Output(Path(args.out), part=part)
     n_listed, n_done_before = len(sites), sum(1 for s in sites if s in output.done)
     if args.shard:
         i, n = (int(x) for x in args.shard.split("/"))
