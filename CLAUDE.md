@@ -27,7 +27,8 @@ python src/find_forms.py inputs/sites.txt --limit 20                       # qui
 python src/find_forms.py inputs/tranco.csv --explore --max-pages 5         # catalog more page types per site
 python src/find_forms.py inputs/sites.txt --jobs 4                          # 4 shard processes + auto-merge
 python src/find_forms.py inputs/sites.txt --shard 0/4                      # or drive the shards yourself
-python src/find_forms.py --export-csv --out outputs/results               # forms.csv + pages.csv from crawl.db
+python src/find_forms.py --export-csv                                     # forms.csv + pages.csv, every run
+python src/find_forms.py inputs/sites.txt --export-csv --out outputs/results  # just that run
 python src/find_forms.py --merge --out outputs/results                     # fold in a crawl.db from another machine
 python src/find_forms.py inputs/sites.txt --headless                      # hide the browser (default: visible window)
 python src/find_forms.py inputs/sites.txt --no-stealth                    # plain Selenium (default: undetected_chromedriver)
@@ -60,7 +61,7 @@ Selenium 4 (Chrome via chromedriver), Python 3.8+. Run from the repo root. `src/
 - `rank_links()` / `link_tier()`: score same-site visible links using `LINK_TIERS` (the paper's Table 1, plus a signup-address group added 2026-10-11) and skip `LINK_BLACKLIST` text matches, `URL_BLACKLIST` address matches and file links.
 - `capture()`: saves outerHTML, an element screenshot, and an in-context viewport screenshot.
 - `form_signature()`: deduplicates forms. The `seen` set persists across pages and phases within a site, so a form is recorded once with the first phase it appeared in.
-- `Output`: inserts into `crawl.db` and commits after every row. `_ensure_schema()` adds any column appended to `FORM_FIELDS` to an existing database (`ALTER TABLE ADD COLUMN`), so an older run keeps working with NULL for it; a column *removed* from the config cannot be reconciled and the file is refused, which is the SQLite equivalent of the old header check.
+- `Output`: inserts into the shared database, tagging every row with the run, and commits after every row. `record_run()` notes the run itself, called once from `main()` so a `--jobs` run appears even though its parent writes no rows. `_ensure_schema()` adds any column appended to `FORM_FIELDS` to an existing database (`ALTER TABLE ADD COLUMN`), so an older run keeps working with NULL for it; a column *removed* from the config cannot be reconciled and the file is refused, which is the SQLite equivalent of the old header check.
 
 ### Ranking rules (from the paper, in priority order)
 
@@ -88,18 +89,25 @@ Also 2026-10-23: a spot-check of all 81 forms in the `isec_sample_run5_undetect`
 
 Also 2026-10-22: the crawler drives Chrome through `undetected_chromedriver` by default, so that sites which serve automated browsers different content (or block them) are crawled as an ordinary visitor would see them. The measurements are unaffected — verified identical with and without it on the fixture — so data collected before and after this change is comparable. `--no-stealth` reproduces the earlier plain-Selenium behaviour.
 
-Also 2026-10-23: output moved from CSV/JSONL to a SQLite database (`crawl.db`) per `--out` directory. No column changed and no value changed; `--export-csv` reproduces the old files byte-for-byte in layout, with lists flattened back to `a | b`. The part-file and merge machinery is gone for same-machine runs, so a `--jobs` crawl no longer has a window in which its rows exist only in unmerged parts.
+Also 2026-10-23: output moved from CSV/JSONL to a single SQLite database (`outputs/crawl.db`) shared by every run, each row tagged with the run's name. No column changed and no value changed; `--export-csv` reproduces the old files byte-for-byte in layout, with lists flattened back to `a | b`. The part-file and merge machinery is gone for same-machine runs, so a `--jobs` crawl no longer has a window in which its rows exist only in unmerged parts.
 
 Keep this list current if the method changes, since it belongs in the methods section.
 
 ## Outputs (`--out`, default `outputs/results/`)
 
-- `crawl.db`: a SQLite database, the only place rows are written since 2026-10-23 (it replaced `forms.csv`, `forms.jsonl` and `pages.csv`). Three tables, whose columns come from `FORM_FIELDS` and `PAGE_FIELDS` so `config.py` stays the single source of truth:
-  - `forms`, one row per unique form, primary key `(site, form_sig)`. List columns (`field_types`, `field_names`, `submit_text`, `other_clickable_text`) are stored as JSON, so `json_each()` and `json_array_length()` work on them; `forms.jsonl` is gone because nothing is lost any more.
-  - `pages`, one row per page visit. Statuses: `ok`, `load_error`, `site_error`, `site_timeout` (over its time limit; browser killed; since 2026-10-11) (`robots_disallowed` appears only in runs before 2026-10-08). A unique index on `(timestamp, site, page_url, status)` makes re-merging idempotent.
-  - `sites_done`, the resume log.
-- `forms.csv` / `pages.csv`: written only by `--export-csv`, for Excel, R or pandas. Lists are flattened back to `a | b`, so they read exactly like the files written before 2026-10-23.
-- Under `--jobs`, every shard writes into the same `crawl.db`: SQLite in WAL mode takes one writer at a time and queues the rest, and the primary key does the de-duplication the old merge step did, so there are no part files and nothing to merge. `--merge` remains only for shards run on **another machine**, which cannot share the file: copy their `crawl.db` in as `crawl.part<N>.db` and run it. `--clean-parts` deletes those after merging.
+**One SQLite database holds every run**: `outputs/crawl.db` by default, `--db` to change it. It replaced `forms.csv`, `forms.jsonl` and `pages.csv` on 2026-10-23. `--out` no longer separates runs' data — it is the directory for this run's screenshots and HTML, and **its name is the run's name in the database**. Four tables, whose columns come from `FORM_FIELDS` and `PAGE_FIELDS` so `config.py` stays the single source of truth:
+  - `runs`, one row per `--out`, with the command and when it first and last started.
+  - `forms`, one row per unique form, primary key `(run, site, form_sig)`. List columns (`field_types`, `field_names`, `submit_text`, `other_clickable_text`) are stored as JSON, so `json_each()` and `json_array_length()` work on them; `forms.jsonl` is gone because nothing is lost any more.
+  - `pages`, one row per page visit. Statuses: `ok`, `load_error`, `site_error`, `site_timeout` (over its time limit; browser killed; since 2026-10-11) (`robots_disallowed` appears only in runs before 2026-10-08). A unique index on `(run, timestamp, site, page_url, status)` makes re-merging idempotent.
+  - `sites_done`, the resume log, **keyed `(run, site)`** — resume is per run, so a new `--out` starts from nothing even though it shares the database.
+
+  Comparing runs is now a query rather than a script:
+  ```sql
+  SELECT form_type, sum(run='run3') AS plain, sum(run='run5') AS stealth
+  FROM forms GROUP BY form_type;
+  ```
+- `forms.csv` / `pages.csv`: written only by `--export-csv`, for Excel, R or pandas. With a sites argument it exports that one run into `--out`; without one, every run beside the database with `run` as the first column. Lists are flattened back to `a | b`, so they read like the files written before 2026-10-23.
+- Under `--jobs`, every shard writes into the same database, as do separate runs going at once: SQLite in WAL mode takes one writer at a time and queues the rest, and the primary key does the de-duplication the old merge step did, so there are no part files and nothing to merge. `--merge` remains only for shards run on **another machine**, which cannot share the file: copy their database in beside `--db` as `<name>.part<N>.db` and run it; run labels are carried over. `--clean-parts` deletes those after merging.
 - `run.log`: everything printed, with a timestamp and level per line: the command, each site with its time and new-form count, a summary, and the total run time (also logged after Ctrl-C). Appended to on every run. A shard writes `run.part<N>.log`; under `--jobs` the parent's `run.log` also holds every shard's lines, prefixed `[s<N>]`. All modules log through the `crawler` logger, set up by `setup_logging()` in `crawler/util.py`; use it instead of `print()`.
 - `screens/<site>/`: `<sig>.png` and `<sig>_context.png`.
 - `html/<site>/`: `<sig>.html`.

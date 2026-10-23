@@ -50,8 +50,8 @@ def main():
     sites = out / "sites.txt"
     sites.write_text(f"http://127.0.0.1:{PORT}/\nhttp://127.0.0.1:{PORT}/login/\n")
     cmd = [sys.executable, str(ROOT / "src" / "find_forms.py"), str(sites),
-           "--out", str(out), "--headless", "--popup-wait", "5",
-           "--page-delay", "0", "--max-pages", "1"]
+           "--out", str(out), "--db", str(out / "crawl.db"), "--headless",
+           "--popup-wait", "5", "--page-delay", "0", "--max-pages", "1"]
     print(" ".join(cmd), flush=True)
     subprocess.run(cmd, cwd=ROOT, check=False)
     httpd.shutdown()

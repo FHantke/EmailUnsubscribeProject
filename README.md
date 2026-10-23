@@ -75,17 +75,19 @@ Each run writes into its `--out` directory:
 
 | File | Contents |
 |---|---|
-| `crawl.db` | SQLite: `forms` (one row per unique form), `pages` (one per page visit), `sites_done`. |
 | `screens/<site>/` | Element screenshot and in-context viewport screenshot per form. |
 | `html/<site>/` | The form's HTML. |
-| `sites_done.txt` | Progress log used for resuming. |
+
+Every run's rows go into one SQLite database, `outputs/crawl.db` (`--db` to
+change it), tagged with the run's name — which is the name of its `--out`
+directory. Resume is per run, so a new `--out` starts from scratch.
 | `run.log` | Everything printed during the run, with timestamps, the time taken per site and the total run time. |
 
 Query it with any SQLite tool, or get the old CSVs back whenever you want them:
 
 ```bash
-sqlite3 outputs/run1/crawl.db "SELECT form_type, count(*) FROM forms GROUP BY 1"
-python src/find_forms.py --export-csv --out outputs/run1    # writes forms.csv and pages.csv
+sqlite3 outputs/crawl.db "SELECT run, form_type, count(*) FROM forms GROUP BY 1, 2"
+python src/find_forms.py --export-csv            # forms.csv + pages.csv for every run
 ```
 
 Columns such as

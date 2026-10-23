@@ -70,7 +70,7 @@ from crawler.config import MAX_JOBS, SITE_TIME_LIMIT_PER_PAGE_S, STOP
 from crawler.browser import prepare_stealth_driver
 from crawler.crawl import crawl_site
 from crawler.jobs import SiteWatchdog, install_stop_handler, run_jobs
-from crawler.output import Output, export_csv, merge_parts
+from crawler.output import DEFAULT_DB, Output, export_csv, merge_parts, record_run
 from crawler.util import fmt_duration, load_sites, now, setup_logging, short
 
 log = logging.getLogger("crawler")
@@ -81,7 +81,11 @@ def parse_args():
     ap = argparse.ArgumentParser(description="Detection-only crawler for email subscription forms (UX research).")
     ap.add_argument("sites", nargs="?",
                     help="Text file with one site per line, or a rank,domain CSV")
-    ap.add_argument("--out", default="outputs/results", help="Output directory (default: outputs/results)")
+    ap.add_argument("--out", default="outputs/results",
+                    help="Directory for this run's screenshots and HTML (default: outputs/results). "
+                         "Its name is also the run's name in the database.")
+    ap.add_argument("--db", default=str(DEFAULT_DB),
+                    help=f"The database every run writes to (default: {DEFAULT_DB})")
     ap.add_argument("--max-pages", type=int, default=3, help="Max pages per site (default: 3)")
     ap.add_argument("--explore", action="store_true",
                     help="Keep visiting top-ranked links even after forms are found (catalogs more page types)")
@@ -105,10 +109,11 @@ def parse_args():
                     help=f"Run N shards as separate processes (default: 1, max {MAX_JOBS}). "
                          "~500 MB RAM each. This process does not crawl.")
     ap.add_argument("--merge", action="store_true",
-                    help="Fold other crawl*.db files in --out into crawl.db, then exit. Only needed "
-                         "for shards run on another machine; --jobs shards here share one database.")
+                    help="Fold other .db files beside --db into it, then exit. Only needed for "
+                         "shards run on another machine; runs here already share one database.")
     ap.add_argument("--export-csv", action="store_true",
-                    help="Write forms.csv and pages.csv from crawl.db in --out, then exit")
+                    help="Write forms.csv and pages.csv from the database, then exit. With a sites "
+                         "argument, just that run into --out; without one, every run beside the database.")
     ap.add_argument("--clean-parts", action="store_true",
                     help="Delete the merged-in databases after a successful merge (default: keep them)")
     args = ap.parse_args()
@@ -137,11 +142,16 @@ def main():
     t0 = time.monotonic()
     try:
         if args.export_csv:
-            export_csv(Path(args.out))
+            # With a sites argument the user means "this run"; without one, every run.
+            export_csv(Path(args.db), Path(args.out) if args.sites else None)
             return
         if args.merge:
-            merge_parts(Path(args.out), args.clean_parts)
+            merge_parts(Path(args.db), args.clean_parts)
             return
+        # Note the run before anything writes rows, so a --jobs run appears in
+        # the runs table even though its parent writes none itself.
+        if args.shard is None:
+            record_run(Path(args.db), Path(args.out), " ".join(sys.argv))
         # Warm the stealth driver cache here, in one process, before any shard
         # or site needs it.
         prepare_stealth_driver(args)
@@ -159,7 +169,7 @@ def crawl_list(args, part):
     # --limit slices first so --jobs/--shard only divide the same total work.
     if args.limit:
         sites = sites[: args.limit]
-    output = Output(Path(args.out), part)
+    output = Output(Path(args.out), db_path=Path(args.db), part=part)
     n_listed, n_done_before = len(sites), sum(1 for s in sites if s in output.done)
     if args.shard:
         i, n = (int(x) for x in args.shard.split("/"))
