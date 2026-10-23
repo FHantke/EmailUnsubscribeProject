@@ -146,10 +146,20 @@ FORM_TYPES = [
         "fields": ["password"],
         "text": r"\b(log ?in|sign ?in|create a\w*\b.{0,12}\baccount)(?!g)",
         "url": r"\b(auth|login|log-in|signin|sign-in|accounts?|myaccount)\b",
-        "unless": r"\balready\b.{0,24}\b(subscrib|registered|member|account)",
+        # Cancels a match from wording or the address, never from the password
+        # box above. Without this, "Sign in" in a page header bleeds into a
+        # newsletter popup's surrounding text and types it login: seen on
+        # royalcaribbean.com ("Sign up and receive $100 OFF") and on a
+        # shoprevivaldesignco.com discount modal, both in the run5 sample.
+        "unless": (r"\balready\b.{0,24}\b(subscrib|registered|member|account)"
+                   r"|\b(newsletter|subscri\w*|discount|promo code)\b"
+                   r"|\bsign ?up and (receive|get|save)\b"),
     }),
     ("checkout", {
         "text": r"\b(checkout|card number|cvv|billing address|expiry date|place (your )?order|payment method)\b",
+        # A shop page has "checkout" in its cart links, which reaches the text
+        # around a newsletter popup: micargibicycles.com in the run5 sample.
+        "unless": r"\b(newsletter|subscri)\w*",
     }),
     ("comment", {
         "text": r"\b(leave a (repl|comment)|post (a )?comment|your comment)\w*\b",

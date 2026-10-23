@@ -1,0 +1,87 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Find Forms fixture</title></head>
+<body style="margin:0;font:15px sans-serif">
+<!-- One form per FORM_TYPES entry, plus the cases that have caught the rules out.
+     Every form needs a visible email box or the detector never sees it. -->
+
+<header>
+  <!-- must rank last and be login: has a password box -->
+  <form id="hdr_login"><input type="email" name="b_login"><input type="password"><button>Log in</button></form>
+  <!-- must NOT be detected: a search box that merely mentions email -->
+  <form role="search"><input type="text" name="q" placeholder="Search email archive"><button>Go</button></form>
+</header>
+
+<main style="height:2200px">
+  <section><h3>Our newsletter</h3>
+    <form><input type="email" name="a_news"><button>Subscribe</button></form></section>
+
+  <!-- blacklist case: offers a sign-in to existing subscribers, still a subscription -->
+  <section><h3>Stay in the loop</h3>
+    <form><input type="email" name="c_already"><button>Subscribe</button>
+      <p>Already subscribed? Sign in to manage your preferences.</p></form></section>
+
+  <section><h3>Checkout</h3>
+    <form><input type="email" name="d_checkout"><input name="card" placeholder="Card number">
+      <button>Place your order</button></form></section>
+
+  <section><h3>Contact us</h3>
+    <form><input type="email" name="e_contact"><textarea></textarea>
+      <button>Send us a message</button></form></section>
+
+  <section><h3>Leave a reply</h3>
+    <form><input type="email" name="f_comment"><textarea></textarea><button>Post comment</button></form></section>
+
+  <!-- must be unknown: a quote request is not a subscription -->
+  <section><h3>Request a quote</h3>
+    <form><input type="email" name="i_quote"><input name="co" placeholder="Company"><button>Send</button></form></section>
+
+  <!-- recognised by the embed markup alone, with no subscription wording -->
+  <section><h3>Embed with no wording</h3>
+    <form action="https://x.us1.list-manage.com/subscribe/post"><input type="email" name="j_esp"><button>Go</button></form></section>
+
+  <!-- account creation without a password box: must be login, not subscription -->
+  <section><h3>Create a New Account</h3>
+    <form><input type="email" name="k_register"><button>Next</button></form></section>
+
+  <!-- bottom-up: no <form> tag, button is a styled span -->
+  <article><h3 class="signup-title">Get the daily brief</h3>
+    <div class="inline-signup"><input type="text" name="l_bottomup" placeholder="Your email">
+      <span style="cursor:pointer" class="btn">Suscribirse</span></div></article>
+
+  <!-- regression, run5 #43: a job application must not become a subscription -->
+  <section class="join-us"><h3>Careers</h3>
+    <p>Thanks for your interest in joining our team. Current openings are listed below.</p>
+    <form><input name="m_fullname" placeholder="Full name"><input type="email" name="m_jobs">
+      <textarea placeholder="Why you?"></textarea><button>Apply</button></form></section>
+</main>
+
+<!-- regression, run5 #10/#35: a discount popup on a page whose header says "Sign in"
+     must stay a subscription, not be typed login -->
+<div class="modal-overlay" role="dialog" aria-modal="true"
+     style="position:fixed;top:18%;left:28%;width:44%;z-index:9999;background:#fff;border:1px solid #333;padding:18px">
+  <h2>Sign up and receive $100 off your next order</h2>
+  <form><input type="email" name="n_discount"><button>Claim discount</button></form>
+  <p>No thanks, I hate saving money</p></div>
+
+<!-- regression, run5 #56: "checkout" in the cart text must not claim a newsletter popup -->
+<div style="position:fixed;bottom:0;left:0;width:100%;height:70px;z-index:50;background:#eee;padding:8px">
+  <p style="margin:0;font-size:12px">Cart (2) &middot; proceed to checkout &middot; view basket</p>
+  <form><input type="email" name="o_sticky" placeholder="Join our newsletter"><input type="submit" value="Sign up"></form></div>
+
+<footer><h3>Newsletter</h3>
+  <form><input type="email" name="g_footer"><button>Subscribe</button></form>
+  <p>Contact us at the address below. Get in touch any time.</p>
+  <a href="/unsubscribe">Manage preferences</a></footer>
+
+<div id="host"></div>
+<script>
+  const r = document.getElementById('host').attachShadow({mode:'open'});
+  r.innerHTML = '<div class="nl"><h4>Shadow news</h4><input type="email" name="p_shadow" placeholder="Email"><button>Sign me up</button></div>';
+  // delayed popup, for the after_delay phase
+  setTimeout(() => document.body.insertAdjacentHTML('beforeend',
+    '<div style="position:fixed;top:40%;left:35%;width:30%;z-index:500;background:#fff;border:1px solid #666;padding:14px">'
+    + '<h3>Weekly newsletter</h3><form><input type="email" name="q_delayed">'
+    + '<label><input type="checkbox" name="consent" checked> Yes, email me</label>'
+    + '<button>Subscribe</button></form><p>No thanks</p></div>'), 2500);
+</script>
+<iframe src="newsletter/frame.html" width="420" height="160"></iframe>
+</body></html>

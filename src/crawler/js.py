@@ -211,10 +211,12 @@ DETECT_JS = r"""
     const near = plainText(scope);
     const addr = location.hostname + location.pathname;
     for (const t of TYPES) {
-      const hit = t.fields.some(f => el.querySelector('input[type=' + f + ']'))
-        || (t.text && (t.text.test(html) || t.text.test(near)))
+      // A field is hard evidence (a password box really is a login) and ignores
+      // `unless`; wording and the page address are softer and can be cancelled.
+      if (t.fields.some(f => el.querySelector('input[type=' + f + ']'))) return t.name;
+      const soft = (t.text && (t.text.test(html) || t.text.test(near)))
         || (t.url && t.url.test(addr));
-      if (hit && !(t.unless && (t.unless.test(html) || t.unless.test(near)))) return t.name;
+      if (soft && !(t.unless && (t.unless.test(html) || t.unless.test(near)))) return t.name;
     }
     return opts.defaultFormType;
   };
