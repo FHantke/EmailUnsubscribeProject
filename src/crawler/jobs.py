@@ -108,7 +108,7 @@ def run_jobs(args, merge=None, extra_args=()):
     if merge:
         merge()
     else:
-        merge_parts(Path(args.out), args.clean_parts)
+        merge_parts(clean=args.clean_parts)
     bad = [(i, c) for i, c in enumerate(codes) if c not in (0, 130)]
     for i, c in bad:
         log.error(f"shard {i} exited {c}")

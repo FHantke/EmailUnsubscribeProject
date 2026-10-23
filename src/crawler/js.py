@@ -427,12 +427,44 @@ DETECT_JS = r"""
       viewport_coverage: +coverage(rect).toFixed(3),
 
       form_text: scopeText.slice(0, 600),
+
+      // The elements themselves, for submit.py only (opts.withElements).
+      // Selenium turns these into WebElements, which work inside shadow DOM
+      // where a [data-ux-form-id] lookup from Python does not. Off during a
+      // crawl, so detection sends and receives exactly what it always has.
+      ...(opts.withElements ? {
+        form_el: el,
+        email_el: email,
+        text_els: fi.textLike,
+        checkbox_els: fi.checkboxes,
+        submit_els: submits,
+      } : {}),
     };
   };
 
   return cands.map(describe);
 }
 """
+
+# What submit.py needs to know about the fields it was handed: enough to decide
+# which are required, what each one is asking for, and what is already in them.
+# One call for the whole form, rather than an attribute read per field.
+FIELD_INFO_JS = r"""
+(els) => els.map(f => ({
+  name: f.getAttribute('name') || f.id || '',
+  type: (f.tagName === 'INPUT' ? (f.getAttribute('type') || 'text') : f.tagName).toLowerCase(),
+  // Either way of marking a field required; some forms only set the ARIA one.
+  required: !!(f.required || f.getAttribute('aria-required') === 'true'),
+  placeholder: f.getAttribute('placeholder') || '',
+  label: ((f.labels && f.labels[0] ? f.labels[0].innerText : '') ||
+          f.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 80),
+  value: f.value || '',
+  checked: !!f.checked,
+  // For a <select>: the values it offers, so a required one can be answered.
+  options: f.tagName === 'SELECT' ? Array.from(f.options).map(o => o.value) : [],
+}))
+"""
+
 
 # Every <a href> on the page, for rank_links() to filter and score.
 LINKS_JS = r"""

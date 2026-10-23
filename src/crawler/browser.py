@@ -46,12 +46,17 @@ def _call_async(js):
             f"({js.strip()})(arguments[0]).then(() => done(null), e => done(String(e)));")
 
 
-def detect_options(prefix="ux"):
+def detect_options(prefix="ux", with_elements=False):
     """The settings DETECT_JS needs, all from config.py. `prefix` starts every
-    data-ux-form-id the run writes into the page."""
+    data-ux-form-id the run writes into the page.
+
+    `with_elements` also returns the form, email box, fields and submit button
+    as WebElements. Only submit.py asks for them; a crawl leaves it off so the
+    payload it sends and receives is unchanged.
+    """
     return {"prefix": prefix, "budget": DETECT_BUDGET_MS, "maxShadowScan": MAX_SHADOW_SCAN,
             "patterns": DETECT_PATTERNS, "defaultFormType": DEFAULT_FORM_TYPE,
-            "targetFormType": TARGET_FORM_TYPE,
+            "targetFormType": TARGET_FORM_TYPE, "withElements": with_elements,
             "formTypes": [dict(rules, name=name) for name, rules in FORM_TYPES]}
 
 
@@ -220,27 +225,32 @@ def _enter_frame_path(driver, path):
     return True
 
 
-def capture(driver, path, cand, sig, site, output):
+def capture(driver, path, cand, sig, site, output, suffix="", el=None):
     """Save one form's outerHTML, element screenshot and viewport screenshot.
 
     Runs with the driver already switched into the form's frame (`path`), and
     leaves it switched back there. Returns the row fields, with paths relative to
     --out. A step that fails leaves its field empty rather than failing the form.
+
+    `suffix` goes into every filename, so --submit can save the same form again
+    after filling it ("_filled") and after submitting ("_after") without
+    overwriting what detection saved. `el` skips the lookup below when the
+    caller already holds the element, which is the only way to reach a form
+    inside shadow DOM.
     """
     files = {"screenshot": "", "context_screenshot": "", "html_file": ""}
     shot_dir = output.out / "screens" / slug(site)
     html_dir = output.out / "html" / slug(site)
     shot_dir.mkdir(parents=True, exist_ok=True)
     html_dir.mkdir(parents=True, exist_ok=True)
-    selector = f'[data-ux-form-id="{cand["dom_id"]}"]'
-
-    try:
-        el = driver.find_element(By.CSS_SELECTOR, selector)
-    except SeErr:
-        return files
+    if el is None:
+        try:
+            el = driver.find_element(By.CSS_SELECTOR, f'[data-ux-form-id="{cand["dom_id"]}"]')
+        except SeErr:
+            return files
     try:
         html = driver.execute_script("return arguments[0].outerHTML", el)
-        path_html = html_dir / f"{sig}.html"
+        path_html = html_dir / f"{sig}{suffix}.html"
         path_html.write_text(html[:500_000], encoding="utf-8")
         files["html_file"] = output.rel(path_html)
     except SeErr:
@@ -248,7 +258,7 @@ def capture(driver, path, cand, sig, site, output):
     try:
         driver.execute_script("arguments[0].scrollIntoView({block: 'center', inline: 'center'})", el)
         time.sleep(0.3)                       # let the scroll settle before the shot
-        png = shot_dir / f"{sig}.png"
+        png = shot_dir / f"{sig}{suffix}.png"
         png.write_bytes(el.screenshot_as_png)
         files["screenshot"] = output.rel(png)
     except SeErr:
@@ -257,7 +267,7 @@ def capture(driver, path, cand, sig, site, output):
         # The whole window, so the form can be seen in context. Only the top
         # document can be screenshotted, so step out and then back into the frame.
         driver.switch_to.default_content()
-        ctx_png = shot_dir / f"{sig}_context.png"
+        ctx_png = shot_dir / f"{sig}{suffix}_context.png"
         ctx_png.write_bytes(driver.get_screenshot_as_png())
         files["context_screenshot"] = output.rel(ctx_png)
     except SeErr:

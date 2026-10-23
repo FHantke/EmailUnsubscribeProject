@@ -1,12 +1,13 @@
 """Everything every run records, in the database named by config.DATABASE_URL.
 
-Four tables, whose columns are built from FORM_FIELDS and PAGE_FIELDS so
-config.py stays the single source of truth:
+Five tables, whose columns are built from FORM_FIELDS, PAGE_FIELDS and
+SUBMISSION_FIELDS so config.py stays the single source of truth:
 
-    runs        one row per --out, with the command and when it last started
-    forms       one row per unique form, keyed (run, site, form_sig)
-    pages       one row per page visit
-    sites_done  the resume log, per run
+    runs         one row per --out, with the command and when it last started
+    forms        one row per unique form, keyed (run, site, form_sig)
+    pages        one row per page visit
+    sites_done   the resume log, per run
+    submissions  one row per form --submit filled in, keyed (run, site, form_sig)
 
 Every row carries a `run`, which is the name of the --out directory, so runs
 can be compared in SQL rather than by hand:
@@ -38,7 +39,8 @@ from sqlalchemy import (Column, Float, Integer, MetaData, String, Table, Text, e
                         insert, inspect, select, text)
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from crawler.config import DATABASE_URL, FORM_FIELDS, PAGE_FIELDS
+from crawler.config import (DATABASE_URL, FORM_FIELDS, PAGE_FIELDS, SUBMISSION_FIELDS,
+                            TARGET_FORM_TYPE)
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +48,8 @@ log = logging.getLogger(__name__)
 # string-sorting. Everything else is Text; a list is stored as JSON.
 _INTEGER = {"rank_on_page", "z_index", "n_fields", "n_checkboxes",
             "n_checkboxes_prechecked", "fields_missing_label", "width", "height",
-            "http_status", "n_new_forms"}
+            "http_status", "n_new_forms",
+            "n_checkboxes_ticked", "http_status_after", "dry_run"}
 _REAL = {"viewport_coverage"}
 
 _RUN = 128      # a run name is a directory name; keep it bounded for backends that need it
@@ -83,12 +86,19 @@ def build_metadata():
           Column("run", String(_RUN), primary_key=True),
           Column("site", String(_KEY), primary_key=True),
           Column("finished_at", Text))
+    # Keyed like forms, so a site can be submitted to only once per run whatever
+    # happens, and a resumed --submit skips what it already sent.
+    Table("submissions", md,
+          Column("run", String(_RUN), primary_key=True),
+          *[Column(c, _coltype(c, key=c in ("site", "form_sig")),
+                   primary_key=c in ("site", "form_sig")) for c in SUBMISSION_FIELDS])
     return md
 
 
 METADATA = build_metadata()
 FORMS, PAGES, RUNS, DONE = (METADATA.tables["forms"], METADATA.tables["pages"],
                             METADATA.tables["runs"], METADATA.tables["sites_done"])
+SUBMISSIONS = METADATA.tables["submissions"]
 
 _engines = {}
 
@@ -130,7 +140,7 @@ def ensure_schema(engine):
     METADATA.create_all(engine)
     insp = inspect(engine)
     with engine.begin() as conn:
-        for table in (FORMS, PAGES):
+        for table in (FORMS, PAGES, SUBMISSIONS):
             have = [c["name"] for c in insp.get_columns(table.name)]
             for col in table.columns:
                 if col.name not in have:
@@ -186,6 +196,30 @@ def read_done(out_dir, engine=None):
         return set()
 
 
+def submission_targets(out_dir, engine=None):
+    """What --submit would sign up to in a run: per site, the top-ranked form
+    typed as a subscription, in the order the sites were crawled.
+
+    One per site, because submitting is a write and a site is signed up to at
+    most once. Reading this back from the database rather than from a live
+    crawl is what keeps detection and submission separate phases: the forms can
+    be reviewed before anything is sent.
+    """
+    engine = engine or get_engine()
+    ensure_schema(engine)
+    cols = ["site", "form_sig", "page_url", "frame_url", "form_type",
+            "rank_on_page", "heading"]
+    best = {}
+    with engine.connect() as conn:
+        for r in conn.execute(
+                select(*[FORMS.c[c] for c in cols])
+                .where(FORMS.c.run == run_label(out_dir),
+                       FORMS.c.form_type == TARGET_FORM_TYPE)
+                .order_by(FORMS.c.site, FORMS.c.rank_on_page, FORMS.c.timestamp)):
+            best.setdefault(r[0], dict(zip(cols, r)))
+    return list(best.values())
+
+
 class Output:
     """Append-only writer for one run. Every row is committed as it is written,
     so a crash loses at most the form in progress, and sites_done makes the next
@@ -232,6 +266,45 @@ class Output:
         values.update({c: _encode(row[c]) for c in PAGE_FIELDS if c in row})
         self._write(PAGES, values, ignore_duplicate=True)
 
+    def submission(self, row):
+        """Write one submission attempt, replacing any earlier attempt on the
+        same form in this run: a dry run followed by a real one is the normal
+        way --submit is used, and both describe the same attempt.
+
+        What stops a site being signed up to twice is submitted_sites(), not
+        this key, since only outcomes that reached the click count there.
+        """
+        values = {c: _encode(row[c]) for c in SUBMISSION_FIELDS if c in row}
+        updated = self.conn.execute(SUBMISSIONS.update().where(
+            SUBMISSIONS.c.run == self.run, SUBMISSIONS.c.site == row["site"],
+            SUBMISSIONS.c.form_sig == row["form_sig"],
+        ).values(**values)).rowcount
+        if not updated:
+            self.conn.execute(SUBMISSIONS.insert().values(run=self.run, **values))
+        self.conn.commit()
+
+    def update_submission(self, site, form_sig, **fields):
+        """Fill in what the click produced, on the row written before it,
+        leaving the rest of that row alone. Returns whether a row was there."""
+        updated = self.conn.execute(SUBMISSIONS.update().where(
+            SUBMISSIONS.c.run == self.run, SUBMISSIONS.c.site == site,
+            SUBMISSIONS.c.form_sig == form_sig,
+        ).values(**{k: _encode(v) for k, v in fields.items()})).rowcount
+        self.conn.commit()
+        return bool(updated)
+
+    def submitted_sites(self):
+        """Sites that have already had something sent to them, in any run.
+
+        Only outcomes that reached the click count, so a site whose form could
+        not be found is still open to a later attempt.
+        """
+        sites = {r[0] for r in self.conn.execute(
+            select(SUBMISSIONS.c.site).distinct()
+            .where(SUBMISSIONS.c.outcome.in_(("submitted", "submitting"))))}
+        self.conn.commit()
+        return sites
+
     def mark_done(self, site):
         from crawler.util import now
         stamp = now()
@@ -274,25 +347,28 @@ def merge_parts(clean=False):
         return
     engine = get_engine()
     ensure_schema(engine)
-    forms = pages = 0
+    added = {}
     with engine.begin() as conn:
         for other in others:
             conn.execute(text("ATTACH DATABASE :p AS src"), {"p": str(other)})
             try:
-                for table in (FORMS, PAGES):
+                for table in (FORMS, PAGES, SUBMISSIONS):
                     src_cols = {r[1] for r in conn.execute(text(f"PRAGMA src.table_info({table.name})"))}
+                    if not src_cols:
+                        continue      # older database, written before this table existed
                     cols = ",".join(f'"{c.name}"' for c in table.columns if c.name in src_cols)
                     before = conn.execute(text(f"SELECT count(*) FROM {table.name}")).scalar()
                     conn.execute(text(f"INSERT OR IGNORE INTO {table.name} ({cols}) "
                                       f"SELECT {cols} FROM src.{table.name}"))
-                    added = conn.execute(text(f"SELECT count(*) FROM {table.name}")).scalar() - before
-                    forms, pages = ((forms + added, pages) if table is FORMS else (forms, pages + added))
+                    now_n = conn.execute(text(f"SELECT count(*) FROM {table.name}")).scalar()
+                    added[table.name] = added.get(table.name, 0) + now_n - before
                 conn.execute(text("INSERT OR IGNORE INTO sites_done (run, site, finished_at) "
                                   "SELECT run, site, finished_at FROM src.sites_done"))
                 conn.execute(text("INSERT OR IGNORE INTO runs SELECT * FROM src.runs"))
             finally:
                 conn.execute(text("DETACH DATABASE src"))
-    log.info(f"merged {len(others)} database(s): {forms} new form rows, {pages} new page rows")
+    log.info(f"merged {len(others)} database(s): "
+             + ", ".join(f"{n} new {name} rows" for name, n in sorted(added.items())))
     if clean:
         for p in others:
             p.unlink()
@@ -315,7 +391,8 @@ def export_csv(out_dir=None):
     dest_dir = Path(out_dir) if out_dir else beside
     dest_dir.mkdir(parents=True, exist_ok=True)
     with engine.connect() as conn:
-        for table, fields in ((FORMS, FORM_FIELDS), (PAGES, PAGE_FIELDS)):
+        for table, fields in ((FORMS, FORM_FIELDS), (PAGES, PAGE_FIELDS),
+                              (SUBMISSIONS, SUBMISSION_FIELDS)):
             cols = fields if run else ["run"] + fields
             stmt = select(*[table.c[c] for c in cols])
             if run:

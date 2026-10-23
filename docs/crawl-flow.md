@@ -3,9 +3,13 @@
 What happens from the command line to the files on disk, in order. Function
 names link to the code; constants live in `src/crawler/config.py`.
 
+This is the detection phase, which never types into or clicks anything. Signing
+up is the other phase, `--submit`: see [submit-flow.md](submit-flow.md).
+
 ```
 main()
  ├─ --merge ───────────────> merge_parts() ─> exit
+ ├─ --submit ──────────────> submit_run() ─> exit        (see submit-flow.md)
  ├─ --jobs N ──────────────> run_jobs() ─> N × (find_forms.py --shard i/N) ─> merge_parts()
  └─ crawl
      └─ for each site ─────> crawl_site()

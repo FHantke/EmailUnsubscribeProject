@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Daily Dispatch</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 40px; }
+    form { max-width: 420px; border: 1px solid #ccc; border-radius: 8px; padding: 20px; }
+    label { display: block; margin: 10px 0 4px; }
+    input[type=text], input[type=email] { width: 100%; padding: 8px; box-sizing: border-box; }
+    .check { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; font-size: 14px; }
+    button { margin-top: 16px; padding: 10px 18px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Daily Dispatch</h1>
+  <p>Long-form reporting, every weekday morning.</p>
+
+  <!-- The only form on the page, so --submit picks it. It really POSTs, which
+       is how the submit fixture tells a dry run from a live one. -->
+  <form id="signup" method="post" action="/submitted">
+    <h2>Subscribe to our newsletter</h2>
+
+    <label for="s_name">First name</label>
+    <input id="s_name" name="s_name" type="text" required>
+
+    <label for="s_email">Email address</label>
+    <input id="s_email" name="s_email" type="email" placeholder="you@example.com" required>
+
+    <!-- required and unchecked: must be ticked -->
+    <label class="check"><input type="checkbox" name="s_consent" required>
+      I agree to the privacy policy.</label>
+
+    <!-- optional and unchecked: must be left alone, because a form's optional
+         opt-ins and their default state are part of what the study measures -->
+    <label class="check"><input type="checkbox" name="s_offers">
+      Also send me offers from our partners.</label>
+
+    <button type="submit">Subscribe</button>
+  </form>
+</main>
+</body>
+</html>

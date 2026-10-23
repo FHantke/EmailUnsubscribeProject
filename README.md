@@ -5,10 +5,13 @@ subscription forms: newsletter signups, popups, sticky bars and footer forms.
 For each site it finds the signup forms and saves screenshots, HTML and UX
 metadata for later manual coding.
 
-**It never types into, fills, submits or clicks anything.** It loads pages,
+**Crawling never types into, fills, submits or clicks anything.** It loads pages,
 waits, scrolls and moves the mouse the way a first-time visitor would, and
 records what appears. It waits between page loads and visits at most
 `--max-pages` pages per site. It does **not** consult robots.txt.
+
+Signing up is a separate phase with its own flag, `--submit`, described below.
+It never runs during a crawl.
 
 ## Method
 
@@ -69,6 +72,42 @@ option. The ones you are most likely to change:
 | `--site-time-limit S` | 120 × `--max-pages` | Stop a site that runs longer than this (its browser is restarted) and log it as `site_timeout`. |
 | `--no-stealth` | off | Use plain Selenium. By default Chrome is driven through `undetected_chromedriver`, which hides the fingerprints sites use to spot a crawler. |
 
+## Submitting forms
+
+`--submit` signs up to the forms a crawl found, to study what happens after:
+the confirmation flow, double opt-in, the welcome email, and whether the
+address is later leaked or sold. It is the only part of the project that types
+into a page or clicks anything, and it is a **separate phase** — it takes no
+sites argument, reading instead the forms already recorded for the run named by
+`--out`. So you can look through the screenshots first and only then sign up.
+
+```bash
+python src/find_forms.py inputs/sites.txt --out outputs/run6          # 1. crawl
+python src/find_forms.py --submit --out outputs/run6 \                # 2. rehearse
+    --submit-email 'study+{site}@gmail.com' --submit-dry-run
+python src/find_forms.py --submit --out outputs/run6 \                # 3. sign up
+    --submit-email 'study+{site}@gmail.com' --submit-limit 5
+```
+
+Per site it takes the top-ranked subscription form, reopens its page, waits for
+the form to reappear, fills it, **saves a screenshot and the HTML of the filled
+form before clicking**, submits, and saves the result page. Each site is signed
+up to at most once, ever.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--submit-email ADDRESS` | — | Required. `{site}` becomes the site's hostname, so a leaked address is traceable to the site that received it. |
+| `--submit-dry-run` | off | Fill everything in and photograph it, but never click. |
+| `--submit-limit N` | no limit | Stop after N submissions. |
+| `--submit-delay S` | 30 | Seconds between sites — ten times `--page-delay`, because a submission is a write. |
+| `--submit-again` | off | Allow a site that has already been submitted to. |
+
+Only the email box and fields the form marks **required** are filled; optional
+fields and consent checkboxes are left exactly as the site set them, since their
+defaults are part of what the study measures. Results land in the `submissions`
+table. Ethics/IRB sign-off for live submission is an open question — see
+[CLAUDE.md](CLAUDE.md#form-submission---submit-built-2026-10-23).
+
 ## Output
 
 Each run writes into its `--out` directory:
@@ -107,11 +146,13 @@ src/crawler/
   js.py                JavaScript run in the page (form detection, scrolling, exit intent)
   browser.py           driver setup, page loading, phased detection, screenshots
   crawl.py             per-site flow: landing page, then ranked links
+  submit.py            --submit only: filling in and submitting forms
   output.py            database schema and writing, resuming, CSV export
   jobs.py              --jobs process supervisor, Ctrl-C handling
   util.py              small shared helpers
 docker/                Dockerfile, entrypoint and notes for the containerised run
-tests/                 fixture site and run_fixture.py, which checks all 18 forms are typed right
+tests/                 fixture site, run_fixture.py (all 18 forms typed right) and
+                       run_submit_fixture.py (--submit, counting POSTs exactly)
 inputs/                site lists
 scripts/               misc helper scripts (cleanup, analysis, conversions)
 outputs/               one directory per run (not committed)

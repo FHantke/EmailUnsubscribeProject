@@ -2,10 +2,14 @@
 """
 find_forms.py - Discover and catalog email subscription forms for UX research.
 
-DETECTION ONLY. This script never types into, fills, or submits forms. It loads
-pages, triggers popups the way a first-time visitor would (waiting, scrolling,
-moving the mouse toward the top of the window), detects email signup forms, and
-saves screenshots, HTML, and UX-relevant metadata for later coding.
+CRAWLING IS DETECTION ONLY. A crawl never types into, fills, or submits forms.
+It loads pages, triggers popups the way a first-time visitor would (waiting,
+scrolling, moving the mouse toward the top of the window), detects email signup
+forms, and saves screenshots, HTML, and UX-relevant metadata for later coding.
+
+Signing up is a separate phase behind --submit (crawler/submit.py), which works
+from the forms a crawl already recorded rather than from a live scan. See the
+Submitting section below.
 
 Pages are crawled desktop-only, in a 1440x900 viewport.
 
@@ -38,6 +42,17 @@ Usage:
     python src/find_forms.py inputs/sites.txt --shard 0/4   # or drive the shards yourself
     python src/find_forms.py --merge --out outputs/results   # fold *.part* files in by hand
 
+Submitting (a separate phase, over a run that has already been crawled):
+    python src/find_forms.py --submit --out outputs/run6 \
+        --submit-email 'study+{site}@gmail.com' --submit-dry-run   # fill and photograph only
+    python src/find_forms.py --submit --out outputs/run6 \
+        --submit-email 'study+{site}@gmail.com' --submit-limit 5   # really sign up
+
+Takes no sites argument: it reads the forms recorded for --out, takes the
+top-ranked subscription form per site, refills it, saves the filled form, and
+submits it. One submission per site, ever. --submit-email is required and
+{site} in it becomes the site's hostname, so a later leak is traceable.
+
 Input: one site per line, as a bare domain or URL. Lines containing commas
 (like a Tranco "rank,domain" CSV) use the last field. Lines starting with # are skipped.
 
@@ -51,7 +66,9 @@ The rows go into one database shared by every run, tagged with the run's name,
 which is the name of its --out directory: forms, pages, sites_done (the resume
 log) and runs. It is DATABASE_URL in crawler/config.py, sqlite:///outputs/crawl.db
 unless changed; any SQLAlchemy URL works, and FIND_FORMS_DATABASE_URL overrides
-it for one run. --export-csv writes forms.csv and pages.csv back out.
+it for one run. --export-csv writes forms.csv and pages.csv back out. --submit
+adds rows to a `submissions` table, and saves <sig>_filled.* (the form holding
+what was typed, before the click) and <sig>_after.* beside the crawl's shots.
 
 Every request comes from Chromium page loads; robots.txt is not consulted.
 The `source` column is always "browser"
@@ -65,11 +82,12 @@ import sys
 import time
 from pathlib import Path
 
-from crawler.config import MAX_JOBS, SITE_TIME_LIMIT_PER_PAGE_S, STOP
+from crawler.config import MAX_JOBS, SITE_TIME_LIMIT_PER_PAGE_S, STOP, SUBMIT_DELAY_S
 from crawler.browser import prepare_stealth_driver
 from crawler.crawl import crawl_site
 from crawler.jobs import SiteWatchdog, install_stop_handler, run_jobs
 from crawler.output import Output, export_csv, merge_parts, record_run
+from crawler.submit import submit_run
 from crawler.util import fmt_duration, load_sites, now, setup_logging, short
 
 log = logging.getLogger("crawler")
@@ -114,10 +132,46 @@ def parse_args():
                          "argument, just that run into --out; without one, every run beside the database.")
     ap.add_argument("--clean-parts", action="store_true",
                     help="Delete the merged-in databases after a successful merge (default: keep them)")
+
+    # Submission. Off unless --submit is given, and a separate phase from the
+    # crawl: it works from the forms already in the database for --out, so they
+    # can be reviewed before anything real is sent. See crawler/submit.py.
+    sub = ap.add_argument_group(
+        "submitting forms",
+        "Signs up to one form per site of an already-crawled run. This types into and "
+        "submits real forms on real sites; an ordinary crawl never does.")
+    sub.add_argument("--submit", action="store_true",
+                     help="Submit to the top-ranked subscription form of each site in the "
+                          "run named by --out, then exit. Needs --submit-email.")
+    sub.add_argument("--submit-email", metavar="ADDRESS",
+                     help="The address to sign up with. {site} is replaced by the site's "
+                          "hostname, e.g. 'study+{site}@gmail.com', so a later leak can be "
+                          "traced to the site that received it.")
+    sub.add_argument("--submit-dry-run", action="store_true",
+                     help="Fill every form in and save the filled-in screenshots, but never "
+                          "click submit")
+    sub.add_argument("--submit-delay", type=float, default=SUBMIT_DELAY_S,
+                     help=f"Seconds between one site's submission and the next "
+                          f"(default: {SUBMIT_DELAY_S})")
+    sub.add_argument("--submit-limit", type=int, metavar="N",
+                     help="Stop after N submissions (default: no limit)")
+    sub.add_argument("--submit-again", action="store_true",
+                     help="Allow a site that has already been submitted to in some run "
+                          "(default: each site is submitted to at most once, ever)")
     args = ap.parse_args()
     args.stealth = not args.no_stealth   # browser.py reads this
-    if not (args.merge or args.export_csv) and not args.sites:
-        ap.error("the sites argument is required unless --merge or --export-csv is given")
+    if not (args.merge or args.export_csv or args.submit) and not args.sites:
+        ap.error("the sites argument is required unless --merge, --export-csv or --submit is given")
+    if args.submit:
+        # Nothing about the identity used to sign up is ever guessed.
+        if not args.submit_email:
+            ap.error("--submit needs --submit-email, e.g. --submit-email 'study+{site}@gmail.com'")
+        if args.sites:
+            ap.error("--submit works from the forms already crawled into --out, "
+                     "so it takes no sites argument")
+        if args.jobs > 1:
+            ap.error("--submit does not shard: one writer, and submissions are paced "
+                     "with --submit-delay")
     if not 1 <= args.jobs <= MAX_JOBS:
         ap.error(f"--jobs must be between 1 and {MAX_JOBS}")
     if args.jobs > 1 and args.shard:
@@ -145,6 +199,12 @@ def main():
             return
         if args.merge:
             merge_parts(clean=args.clean_parts)
+            return
+        if args.submit:
+            # A phase of its own, over a run that has already been crawled.
+            record_run(Path(args.out), " ".join(sys.argv))
+            prepare_stealth_driver(args)
+            submit_run(args)
             return
         # Note the run before anything writes rows, so a --jobs run appears in
         # the runs table even though its parent writes none itself.

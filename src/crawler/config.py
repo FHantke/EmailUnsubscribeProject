@@ -5,8 +5,9 @@
     3. URL matching     addresses blocked, and which links get followed
     4. Form matching    what counts as an email box, a submit button, a popup
     5. Parallel runs    --jobs
-    6. Output columns   the CSV schemas
-    7. Run state        not a setting
+    6. Database         where every run's rows go
+    7. Output columns   the table schemas
+    8. Run state        not a setting
 
 These values define the recorded data. Note anything that changes a
 measurement in CLAUDE.md, where the method is written down.
@@ -42,6 +43,10 @@ MAX_SHADOW_SCAN = 15000  # elements walked looking for shadow-DOM boxes
 # the first; SiteWatchdog (jobs.py) the second, for a page wedged on load.
 SCRIPT_TIMEOUT_S = 30
 SITE_TIME_LIMIT_PER_PAGE_S = 120   # × --max-pages; --site-time-limit overrides
+
+# --submit only. Submitting is a write, so it is paced harder than page loads.
+SUBMIT_DELAY_S = 30      # between one site's submission and the next; --submit-delay
+SUBMIT_SETTLE_MS = 5000  # wait after the click before reading the result page
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +197,28 @@ FORM_TYPES = [
     }),
 ]
 
+# --submit only: what to type into a form's other required fields, since a
+# signup form often wants a name or a postcode alongside the email. First
+# pattern that matches the field's name, id, placeholder or label wins; a
+# required field matching none gets SUBMIT_FILL_DEFAULT. Optional fields are
+# left alone, so what a site *requires* stays visible in the data.
+# The email box is never filled from here: it gets --submit-email.
+SUBMIT_FILL = [
+    (r"first.?name|given.?name|\bfname\b", "Alex"),
+    (r"last.?name|surname|family.?name|\blname\b", "Taylor"),
+    (r"full.?name|your.?name|\bname\b", "Alex Taylor"),
+    (r"compan|organi|business|employer", "Northeastern University"),
+    (r"job|title|role|position", "Researcher"),
+    (r"zip|postal|postcode", "02115"),
+    (r"city|town", "Boston"),
+    (r"state|province|region", "MA"),
+    (r"countr", "United States"),
+    (r"phone|mobile|tel\b", "6175550123"),
+    (r"birth|\bdob\b|age", "1990-01-01"),
+    (r"url|website", "https://www.northeastern.edu"),
+]
+SUBMIT_FILL_DEFAULT = "Alex Taylor"
+
 
 # ---------------------------------------------------------------------------
 # 5. Parallel runs
@@ -243,6 +270,20 @@ FORM_FIELDS = [
 PAGE_FIELDS = [     # one row per page visited
     "timestamp", "site", "page_url", "final_url",
     "http_status", "status", "n_new_forms", "error",
+]
+
+# One row per form --submit filled in. Append-only, same rule as FORM_FIELDS.
+# Written before the click (outcome "submitting") and updated after, so a
+# browser killed mid-submit still leaves a record of what was sent.
+SUBMISSION_FIELDS = [
+    "timestamp", "site", "form_sig", "page_url", "frame_url",
+    "form_type", "rank_on_page", "email_used", "dry_run", "outcome",
+    # what was filled in, and the form as it looked holding it
+    "fields_filled", "n_checkboxes_ticked", "submit_text_used",
+    "screenshot_filled", "context_screenshot_filled", "html_filled",
+    # what came back
+    "final_url", "http_status_after", "result_heading", "result_text",
+    "screenshot_after", "context_screenshot_after", "html_after", "error",
 ]
 
 

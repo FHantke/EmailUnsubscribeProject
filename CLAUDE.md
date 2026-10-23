@@ -8,7 +8,8 @@ Form-detection logic is adapted from Englehardt, Han & Narayanan (2018), "I neve
 
 ## Hard rules
 
-- **Detection only.** The crawler must never type into, fill, or submit forms, and must never click elements on the page. Navigation happens by `page.goto()` on link URLs. Do not add form-filling, clicking, or submission code unless the user explicitly asks for it in the current session. If that is requested, build it as a separate module behind an explicit opt-in flag, never as a default.
+- **Crawling is detection only.** A crawl must never type into, fill, or submit forms, and must never click elements on the page. Navigation happens by `driver.get()` on link URLs. Keep it that way: do not add form-filling, clicking, or submission to `scan_page()`, `crawl_site()` or anything they call.
+- **Submission is a separate phase**, in `crawler/submit.py`, reached only by `--submit` (built 2026-10-23 at the project lead's request). It is the one module that types or clicks, it never runs during a crawl, and it works from forms already in the database rather than from a live scan. Everything it needs is behind `opts.withElements` in `DETECT_JS`, off by default. If it ever needs to run inside a crawl, that is a decision to take explicitly, not a refactor.
 - robots.txt is **not** consulted (removed 2026-10-08 at the project lead's decision). Per-site politeness rests on the page delays below and on `--max-pages`. Report this in the methods section.
 - **Browser only.** Every request comes from Chromium page loads; there are no requests outside the browser. Do not reintroduce plain-HTTP pre-screening or recording forms from served markup (removed 2026-10-08).
 - **Selenium**, since 2026-10-21 (was Playwright). Chrome is driven through chromedriver, one driver per site. The exact viewport is set with a CDP `Emulation.setDeviceMetricsOverride` and `--hide-scrollbars`; both are required for recorded `width` and `viewport_coverage` to mean the same thing as in earlier runs, so do not drop them for `--window-size`.
@@ -32,6 +33,12 @@ python src/find_forms.py inputs/sites.txt --export-csv --out outputs/results  # 
 python src/find_forms.py --merge --out outputs/results                     # fold in a crawl.db from another machine
 python src/find_forms.py inputs/sites.txt --headless                      # hide the browser (default: visible window)
 python src/find_forms.py inputs/sites.txt --no-stealth                    # plain Selenium (default: undetected_chromedriver)
+
+# Submission: a separate phase over a run that has already been crawled.
+python src/find_forms.py --submit --out outputs/run6 \
+    --submit-email 'study+{site}@gmail.com' --submit-dry-run             # fill and photograph, never click
+python src/find_forms.py --submit --out outputs/run6 \
+    --submit-email 'study+{site}@gmail.com' --submit-limit 5             # really sign up, to 5 sites
 ```
 
 Rerunning the same command resumes; sites already in the database's `sites_done` table for that run are skipped.
@@ -47,6 +54,7 @@ Selenium 4 (Chrome via chromedriver), Python 3.8+. Run from the repo root. `src/
 | `util.py` | `now`, `slug`, `same_site`, `load_sites`, `form_signature`, `link_tier`, ... |
 | `browser.py` | `make_driver()` (`_stealth_driver()` for `--stealth`), `detect_options()`, `rank_links()`, `capture()`, `scan_page()`, `detect_in_all_frames()` |
 | `crawl.py` | `crawl_site()` |
+| `submit.py` | `submit_run()`, `_find_target()`, `_fill()`, `_freeze()`, `_submit_one()` — `--submit` only; the one module that types or clicks |
 | `output.py` | `Output` (SQLAlchemy Core), `database_url()`, `build_metadata()`, `ensure_schema()`, `record_run()`, `read_done()`, `merge_parts()`, `export_csv()` |
 | `jobs.py` | `run_jobs()` (relaunches `sys.argv[0]` per shard), `install_stop_handler()` |
  Site lists live in `inputs/`; misc helper scripts (cleanup, analysis, conversions; not part of the crawler) live in `scripts/`; each run gets its own directory under `outputs/` (git-ignored), e.g. `outputs/news_sites/`.
@@ -100,6 +108,7 @@ Keep this list current if the method changes, since it belongs in the methods se
   - `forms`, one row per unique form, primary key `(run, site, form_sig)`. List columns (`field_types`, `field_names`, `submit_text`, `other_clickable_text`) are stored as JSON, so `json_each()` and `json_array_length()` work on them; `forms.jsonl` is gone because nothing is lost any more.
   - `pages`, one row per page visit. Statuses: `ok`, `load_error`, `site_error`, `site_timeout` (over its time limit; browser killed; since 2026-10-11) (`robots_disallowed` appears only in runs before 2026-10-08). A unique index on `(run, timestamp, site, page_url, status)` makes re-merging idempotent.
   - `sites_done`, the resume log, **keyed `(run, site)`** — resume is per run, so a new `--out` starts from nothing even though it shares the database.
+  - `submissions`, one row per form `--submit` filled in, keyed `(run, site, form_sig)`, columns from `SUBMISSION_FIELDS`. Written only by `crawler/submit.py`; an ordinary crawl never touches it. Re-submitting the same form in the same run replaces its row (a dry run followed by a real one is the normal way `--submit` is used); what stops a site being signed up to twice is `Output.submitted_sites()`, which spans every run.
 
   Comparing runs is now a query rather than a script:
   ```sql
@@ -115,6 +124,8 @@ Keep this list current if the method changes, since it belongs in the methods se
 Schema stability matters because downstream analysis depends on it. Add new columns to the **end** of `FORM_FIELDS`, never rename or reorder existing ones, and note changes here. Since the move to SQLite an appended column no longer needs a fresh `--out`: the table is migrated in place. A removed or renamed one still does.
 
 Schema changes so far:
+
+- 2026-10-23: `submissions` was **added as a new table**, with its columns in `SUBMISSION_FIELDS` (`config.py`), for `--submit`. No existing column changed, and `METADATA.create_all()` adds the table to an existing database on the next run, so nothing needs a fresh `--out`. `SUBMISSION_FIELDS` is append-only on the same terms as `FORM_FIELDS`. Note that four places in `output.py` list the tables by hand rather than walking the metadata — `ensure_schema()`, `merge_parts()`, `export_csv()` and the module's unpack — so a sixth table has to be named in all of them, `merge_parts()` especially, or remote shards lose its rows silently.
 
 - 2026-10-22: `login_like` was **replaced in place** by `form_type`, a fourth deliberate exception to the append-only rule. Same position and same column count, so only the name and the values change: the boolean becomes one of `subscription`, `login`, `checkout`, `comment`, `contact`, `search`, `unknown`. `login` keeps the three signals `login_like` used, so forms that were `login_like=True` are typed `login`; everything that was `False` is now typed, most of it `signup`. Classification lives in `FORM_TYPES` in `config.py`. `Output` refuses to append to a `forms.csv` with the old header, so use a fresh `--out` directory.
 - 2026-10-13: `has_privacy_link` was **removed** from `FORM_FIELDS` at the project lead's request, a third deliberate exception to the append-only rule, together with its `privacy` pattern in `DETECT_PATTERNS`. The 10 columns after it (`consent_text_hint` through `field_names`) each moved one position left. `forms.csv` files written before this date are not column-compatible; `Output` refuses to append to them, so use a fresh `--out` directory.
@@ -145,6 +156,8 @@ The fixture covers: a footer `<form>` with a labeled email input, a delayed `pos
 
 After a test run, confirm in the server log that no POST or form-action requests were made, and spot-check screenshots in `outputs/<run>/screens/`.
 
+Run `python3 tests/run_submit_fixture.py` before and after any change to `crawler/submit.py`. It is the one test that expects a POST, and it counts them exactly: 0 for the crawl, 0 for `--submit-dry-run`, 1 for `--submit`, 0 for a second `--submit`. It also checks the alias substitution, that the required field was filled and the required consent box ticked, that the **optional** box was left alone, that the filled-form capture exists and its saved HTML holds what was typed, and that the POST body carries the alias. 28 checks; it exits non-zero on any failure. It serves `tests/fixture/submit/`, whose form really POSTs, and uses its own throwaway database.
+
 ## Known limitations / backlog
 
 - Cookie consent banners can suppress or delay newsletter popups, especially on EU sites. Handling them would require clicking, which is currently out of scope.
@@ -161,30 +174,67 @@ After a test run, confirm in the server log that no POST or form-action requests
 - `make_driver()` reads `FIND_FORMS_CHROME_BINARY`, `FIND_FORMS_CHROMEDRIVER` and `FIND_FORMS_CHROME_FLAGS` from the environment. They exist for the Docker image, which ships its own Chromium and needs `--no-sandbox`; all three are unset on a normal machine.
 - The post-submit experience (confirmation flow, double opt-in, welcome email) is out of scope for the crawler and is studied manually on a small subsample using a dedicated research email address.
 
-## Planned: form submission (not built; raised 2026-10-14)
+## Form submission (`--submit`, built 2026-10-23)
 
-The project lead intends to add actual form submission later, to study what happens
-after signup. Nothing is implemented, and the hard rules above still hold until it is:
-the crawler stays detection-only.
+Signing up for real, to study what happens after: confirmation flow, double opt-in,
+welcome email, and whether an address is later leaked or sold. Raised 2026-10-14,
+built 2026-10-23 when the project lead asked for it. `crawler/submit.py` is the
+only module in the project that types into a page or clicks anything.
 
-Decisions to settle **before** writing any of it:
+**It is a separate phase, not a step in a crawl.** `--submit` takes no sites
+argument: it reads the `forms` table for the run named by `--out`. A crawl is
+therefore still detection-only in the strongest sense — the submitting code is
+never on its path — and the forms can be spot-checked against their screenshots
+before anything real is sent, which matters given that the 2026-10-23 audit found
+4 of 81 forms mistyped.
 
-- **Shape.** A separate module behind an explicit opt-in flag, never a default and never
-  a change to `scan_page()` (see the hard rule). Detection-only must stay the path a run
-  takes unless that flag is passed, so an ordinary crawl can never submit by accident.
-- **The submit guard is gone.** `SUBMIT_GUARD_JS` cancelled every submit event as a
-  backstop; it was removed on 2026-10-08 at the project lead's request. Nothing now
-  prevents a submission except that no code touches forms. Decide whether the guard
-  comes back for detection-only runs (installed unless the submit flag is passed), so
-  the two modes are separated by more than a code path.
-- **Identity.** Which research email address, and whether to use a per-site alias
-  (`site@domain` or a catch-all) so a later leak or sale can be traced to the site that
-  received it. This is also what makes the post-submit study above measurable.
-- **Approval.** Submitting creates real subscriptions and sometimes real accounts on
-  real sites, which detection-only crawling does not. Confirm whether ethics/IRB
-  sign-off is needed, and record the answer here.
-- **Output.** What a submission attempt records (fields filled, response, confirmation
-  page, resulting URL) and where: new columns appended to the **end** of `FORM_FIELDS`,
-  or a separate `submissions.csv`. The append-only rule governs either choice.
-- **Pacing.** Submission is a write, so per-site rate limits should be stricter than
-  `--page-delay`, and a site should be submitted to at most once.
+Per site it takes the lowest-`rank_on_page` form typed `subscription`, reopens its
+`page_url`, replays the four detection stimuli until the form's `form_sig`
+reappears, fills it, saves the filled form, clicks submit, and records the result.
+Decisions, settled with the project lead before any of it was written:
+
+- **Scope.** The top-ranked subscription form, **one submission per site, ever**.
+  Enforced by `Output.submitted_sites()`, which spans every run; `--submit-again`
+  overrides it. Only outcomes that reached the click count, so a site whose form
+  could not be found stays open to a later attempt.
+- **Identity.** `--submit-email` is required and has no default, so no address is
+  ever guessed. `{site}` in it is replaced by the site's hostname, giving per-site
+  aliases (`study+example.com@gmail.com`) so a later leak or sale is traceable to
+  the site that received it.
+- **What gets filled.** The email box gets the alias. Other fields are touched only
+  when the form marks them **required** (`required` or `aria-required`), with values
+  from `SUBMIT_FILL` in `config.py`; required selects take their first non-empty
+  option. Only unchecked **required** checkboxes are ticked. A form's optional
+  fields and the default state of its consent boxes are themselves study variables,
+  so they are left exactly as the site set them.
+- **The filled form is captured before the click**: `<sig>_filled.png`,
+  `<sig>_filled_context.png` and `<sig>_filled.html`, the record of precisely what
+  was typed and which boxes were ticked. `_freeze()` copies each field's value
+  *property* into its *attribute* first, because `outerHTML` serializes attributes
+  and would otherwise save a blank form. It changes nothing about what is submitted,
+  which reads the properties. The result page is captured the same way with
+  `_after`. Under `--submit-dry-run` the run stops after the filled capture.
+- **The row is written before the click**, with outcome `submitting`, then updated.
+  `SiteWatchdog` can SIGKILL Chromium mid-submit, and a real subscription must never
+  go unrecorded. An error afterwards updates that row rather than replacing it, so
+  what was filled in survives the failure.
+- **The submit guard did not come back.** `SUBMIT_GUARD_JS` cancelled every submit
+  event until it was removed on 2026-10-08; the project lead's decision on
+  2026-10-23 was that detection and submission being separate phases is the
+  separation that matters, so nothing is reinstalled.
+- **Pacing.** `--submit-delay` (default `SUBMIT_DELAY_S`, 30s) between sites, ten
+  times `--page-delay`, because a submission is a write. `--submit` refuses
+  `--jobs > 1`: one writer, one pace. `--submit-limit N` caps a run.
+- **Ethics/IRB: still open.** Submitting creates real subscriptions, and sometimes
+  real accounts, on real sites, which detection-only crawling does not. The project
+  lead deferred the question on 2026-10-23. **Record the answer here before any
+  large live run**; until then prefer `--submit-dry-run` and `--submit-limit`.
+
+Outcomes in the `outcome` column: `submitted`, `filled_only` (dry run), `not_found`
+(the form did not reappear), `no_email_field`, `no_submit_button`, `click_failed`,
+`submitting` (killed between the click and the result), `site_timeout`, `error`.
+A site skipped because it was already submitted to gets no row at all.
+
+Still out of scope: the post-submit experience itself (confirmation flow, double
+opt-in, welcome email) is studied manually on a small subsample from the research
+mailbox, not by the crawler.
