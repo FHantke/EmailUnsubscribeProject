@@ -70,7 +70,7 @@ from crawler.config import MAX_JOBS, SITE_TIME_LIMIT_PER_PAGE_S, STOP
 from crawler.browser import prepare_stealth_driver
 from crawler.crawl import crawl_site
 from crawler.jobs import SiteWatchdog, install_stop_handler, run_jobs
-from crawler.output import Output, merge_parts
+from crawler.output import Output, export_csv, merge_parts
 from crawler.util import fmt_duration, load_sites, now, setup_logging, short
 
 log = logging.getLogger("crawler")
@@ -105,13 +105,16 @@ def parse_args():
                     help=f"Run N shards as separate processes (default: 1, max {MAX_JOBS}). "
                          "~500 MB RAM each. This process does not crawl.")
     ap.add_argument("--merge", action="store_true",
-                    help="Merge *.part* files in --out into the canonical outputs, then exit")
+                    help="Fold other crawl*.db files in --out into crawl.db, then exit. Only needed "
+                         "for shards run on another machine; --jobs shards here share one database.")
+    ap.add_argument("--export-csv", action="store_true",
+                    help="Write forms.csv and pages.csv from crawl.db in --out, then exit")
     ap.add_argument("--clean-parts", action="store_true",
-                    help="Delete part files after a successful merge (default: keep them)")
+                    help="Delete the merged-in databases after a successful merge (default: keep them)")
     args = ap.parse_args()
     args.stealth = not args.no_stealth   # browser.py reads this
-    if not args.merge and not args.sites:
-        ap.error("the sites argument is required unless --merge is given")
+    if not (args.merge or args.export_csv) and not args.sites:
+        ap.error("the sites argument is required unless --merge or --export-csv is given")
     if not 1 <= args.jobs <= MAX_JOBS:
         ap.error(f"--jobs must be between 1 and {MAX_JOBS}")
     if args.jobs > 1 and args.shard:
@@ -133,6 +136,9 @@ def main():
         log.warning(f"{args.jobs} shards is ~{args.jobs * 500} MB of Chromium")
     t0 = time.monotonic()
     try:
+        if args.export_csv:
+            export_csv(Path(args.out))
+            return
         if args.merge:
             merge_parts(Path(args.out), args.clean_parts)
             return
@@ -210,13 +216,10 @@ def crawl_list(args, part):
         # finally below would skip output.close() and lose buffered rows.
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         interrupted = True
-        msg = "Interrupted. Progress is saved; rerun the same command to resume."
-        if part is not None:
-            msg += f" This shard wrote *.part{part}.*; run --merge to fold it in."
-        log.warning(msg)
+        log.warning("Interrupted. Progress is saved; rerun the same command to resume.")
     finally:
-        # Flush the data even if the loop raised: each site's driver is already
-        # quit inside crawl_site(), so only the CSVs are left to close here.
+        # Close the database even if the loop raised: each site's driver is
+        # already quit inside crawl_site(), so only this is left.
         try:
             output.close()
         except Exception:
@@ -224,10 +227,7 @@ def crawl_list(args, part):
     log.info(f"Crawled {n_done} of {len(todo)} sites: {output.n_forms} new form(s), "
              f"{n_errors} site error(s), {n_timeouts} timed out")
     if interrupted:
-        msg = "Stopped. Progress is saved; rerun the same command to resume."
-        if part is not None:
-            msg += f" This shard wrote *.part{part}.*; --merge folds it in."
-        log.warning(msg)
+        log.warning("Stopped. Progress is saved; rerun the same command to resume.")
         sys.exit(130)
 
 

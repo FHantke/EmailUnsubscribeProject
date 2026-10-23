@@ -8,7 +8,7 @@ form_type per form against what the fixture is built to produce. Exits non-zero
 on any mismatch. The expectations double as documentation: each one is a case
 the rules got wrong at some point.
 """
-import csv, http.server, subprocess, sys, tempfile, threading, functools
+import functools, http.server, json, sqlite3, subprocess, sys, tempfile, threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -56,12 +56,13 @@ def main():
     subprocess.run(cmd, cwd=ROOT, check=False)
     httpd.shutdown()
 
-    rows = list(csv.DictReader(open(out / "forms.csv", encoding="utf-8")))
+    db = sqlite3.connect(str(out / "crawl.db"))
+    rows = db.execute("SELECT field_names, form_type FROM forms").fetchall()
     found = {}
-    for r in rows:
-        for name in r["field_names"].split(" | "):
+    for field_names, form_type in rows:
+        for name in json.loads(field_names or "[]"):
             if name in EXPECTED:
-                found[name] = r["form_type"]
+                found[name] = form_type
     bad = 0
     for name, want in EXPECTED.items():
         got = found.get(name, "NOT DETECTED")

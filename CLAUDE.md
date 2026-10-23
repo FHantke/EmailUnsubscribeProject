@@ -27,7 +27,8 @@ python src/find_forms.py inputs/sites.txt --limit 20                       # qui
 python src/find_forms.py inputs/tranco.csv --explore --max-pages 5         # catalog more page types per site
 python src/find_forms.py inputs/sites.txt --jobs 4                          # 4 shard processes + auto-merge
 python src/find_forms.py inputs/sites.txt --shard 0/4                      # or drive the shards yourself
-python src/find_forms.py --merge --out outputs/results                     # fold orphaned *.part* files in
+python src/find_forms.py --export-csv --out outputs/results               # forms.csv + pages.csv from crawl.db
+python src/find_forms.py --merge --out outputs/results                     # fold in a crawl.db from another machine
 python src/find_forms.py inputs/sites.txt --headless                      # hide the browser (default: visible window)
 python src/find_forms.py inputs/sites.txt --no-stealth                    # plain Selenium (default: undetected_chromedriver)
 ```
@@ -45,21 +46,21 @@ Selenium 4 (Chrome via chromedriver), Python 3.8+. Run from the repo root. `src/
 | `util.py` | `now`, `slug`, `same_site`, `load_sites`, `form_signature`, `link_tier`, ... |
 | `browser.py` | `make_driver()` (`_stealth_driver()` for `--stealth`), `detect_options()`, `rank_links()`, `capture()`, `scan_page()`, `detect_in_all_frames()` |
 | `crawl.py` | `crawl_site()` |
-| `output.py` | `Output`, `read_done()`, `merge_parts()` |
+| `output.py` | `Output` (SQLite), `read_done()`, `merge_parts()`, `export_csv()` |
 | `jobs.py` | `run_jobs()` (relaunches `sys.argv[0]` per shard), `install_stop_handler()` |
  Site lists live in `inputs/`; misc helper scripts (cleanup, analysis, conversions; not part of the crawler) live in `scripts/`; each run gets its own directory under `outputs/` (git-ignored), e.g. `outputs/news_sites/`.
 
 - `main()`: loads the site list, applies `--limit` **then** `--shard` (so `--jobs`/`--shard` only divide the same total work), skips done sites, (under `--jobs` the children get a hidden `--shard-todo` and split only the sites not done yet, so a resumed run keeps all N browsers busy; a manual `--shard` keeps the fixed split by position, since shards on other machines cannot see each other's `sites_done`), and catches per-site errors so the run continues. It no longer launches or holds a browser: each site's driver is created and quit inside `crawl_site()`. A `SiteWatchdog` thread (`jobs.py`) kills the process's Chromium when one site exceeds its time limit (`--site-time-limit`, default `SITE_TIME_LIMIT_PER_PAGE_S` × `--max-pages`); the stuck call then fails, the site is logged as `site_timeout`, and the next site gets a fresh browser. The thread is a timer, not a second crawler: it never touches Playwright.
 - `crawl_site()`: per site, opens its own Chrome via `make_driver()` (Selenium has no cheap per-context isolation, so one driver per site is what keeps each site's profile clean), scans the landing page, and follows links from `rank_links()` up to `--max-pages`, stopping at the first page with a form unless `--explore` is set.
 - `run_jobs()`: with `--jobs N`, supervises N `--shard i/N` child processes, pumps their output through a single-threaded `selectors` loop, and calls `merge_parts()` when they exit (or the `merge` callback a script passes in; `scripts/collect_tier1_keywords.py --jobs` reuses it this way). It never drives a browser itself.
-- `merge_parts()`: folds `*.part<N>.*` into the canonical outputs, deduplicating on `(site, form_sig)`. Idempotent, and it keeps the parts, so the canonical files are a derived view that can always be rebuilt.
+- `merge_parts()`: folds other `*.db` files in `--out` into `crawl.db`, for shards run on another machine. Idempotent, and it keeps the source databases.
 - Shutdown is cooperative: SIGINT sets `STOP` and the crawl ends at the next page boundary, so rows are flushed and the driver is quit rather than left orphaned. (Under Playwright this was mandatory for a second reason, now gone: an interrupt landing inside a sync call corrupted its greenlet dispatch and the process span forever.)
 - `scan_page()`: loads a page, then runs detection after four phases in order: `on_load`, `after_delay` (`--popup-wait`), `after_scroll` (`SCROLL_JS`), and `after_exit_intent` (`simulate_exit_intent()`). Detection runs in every frame. New forms are captured and written immediately.
 - `DETECT_JS`: JavaScript evaluated in each frame. Implements top-down detection (`<form>` elements with a visible email input) and bottom-up detection (walk up from an email input outside any form to the first container holding a submit-like element), searches open shadow DOM, ranks candidates, tags each with `data-ux-form-id`, and returns metadata.
 - `rank_links()` / `link_tier()`: score same-site visible links using `LINK_TIERS` (the paper's Table 1, plus a signup-address group added 2026-10-11) and skip `LINK_BLACKLIST` text matches, `URL_BLACKLIST` address matches and file links.
 - `capture()`: saves outerHTML, an element screenshot, and an in-context viewport screenshot.
 - `form_signature()`: deduplicates forms. The `seen` set persists across pages and phases within a site, so a form is recorded once with the first phase it appeared in.
-- `Output`: appends to CSV/JSONL and flushes after every row.
+- `Output`: inserts into `crawl.db` and commits after every row. `_ensure_schema()` adds any column appended to `FORM_FIELDS` to an existing database (`ALTER TABLE ADD COLUMN`), so an older run keeps working with NULL for it; a column *removed* from the config cannot be reconciled and the file is refused, which is the SQLite equivalent of the old header check.
 
 ### Ranking rules (from the paper, in priority order)
 
@@ -87,18 +88,23 @@ Also 2026-10-23: a spot-check of all 81 forms in the `isec_sample_run5_undetect`
 
 Also 2026-10-22: the crawler drives Chrome through `undetected_chromedriver` by default, so that sites which serve automated browsers different content (or block them) are crawled as an ordinary visitor would see them. The measurements are unaffected — verified identical with and without it on the fixture — so data collected before and after this change is comparable. `--no-stealth` reproduces the earlier plain-Selenium behaviour.
 
+Also 2026-10-23: output moved from CSV/JSONL to a SQLite database (`crawl.db`) per `--out` directory. No column changed and no value changed; `--export-csv` reproduces the old files byte-for-byte in layout, with lists flattened back to `a | b`. The part-file and merge machinery is gone for same-machine runs, so a `--jobs` crawl no longer has a window in which its rows exist only in unmerged parts.
+
 Keep this list current if the method changes, since it belongs in the methods section.
 
 ## Outputs (`--out`, default `outputs/results/`)
 
-- `forms.csv` / `forms.jsonl`: one row per unique form per site. Columns are defined in `FORM_FIELDS`.
-- `pages.csv`: one row per page visit. Statuses: `ok`, `load_error`, `site_error`, `site_timeout` (over its time limit; browser killed; since 2026-10-11) (`robots_disallowed` appears only in runs before 2026-10-08).
-- `*.part<N>.*`: per-shard output, written whenever `--shard` is set (including by `--jobs`). `--merge` folds them into the canonical files. Parts are kept after merging, so the canonical files are a derived view that can always be rebuilt; `--clean-parts` deletes them.
+- `crawl.db`: a SQLite database, the only place rows are written since 2026-10-23 (it replaced `forms.csv`, `forms.jsonl` and `pages.csv`). Three tables, whose columns come from `FORM_FIELDS` and `PAGE_FIELDS` so `config.py` stays the single source of truth:
+  - `forms`, one row per unique form, primary key `(site, form_sig)`. List columns (`field_types`, `field_names`, `submit_text`, `other_clickable_text`) are stored as JSON, so `json_each()` and `json_array_length()` work on them; `forms.jsonl` is gone because nothing is lost any more.
+  - `pages`, one row per page visit. Statuses: `ok`, `load_error`, `site_error`, `site_timeout` (over its time limit; browser killed; since 2026-10-11) (`robots_disallowed` appears only in runs before 2026-10-08). A unique index on `(timestamp, site, page_url, status)` makes re-merging idempotent.
+  - `sites_done`, the resume log.
+- `forms.csv` / `pages.csv`: written only by `--export-csv`, for Excel, R or pandas. Lists are flattened back to `a | b`, so they read exactly like the files written before 2026-10-23.
+- Under `--jobs`, every shard writes into the same `crawl.db`: SQLite in WAL mode takes one writer at a time and queues the rest, and the primary key does the de-duplication the old merge step did, so there are no part files and nothing to merge. `--merge` remains only for shards run on **another machine**, which cannot share the file: copy their `crawl.db` in as `crawl.part<N>.db` and run it. `--clean-parts` deletes those after merging.
 - `run.log`: everything printed, with a timestamp and level per line: the command, each site with its time and new-form count, a summary, and the total run time (also logged after Ctrl-C). Appended to on every run. A shard writes `run.part<N>.log`; under `--jobs` the parent's `run.log` also holds every shard's lines, prefixed `[s<N>]`. All modules log through the `crawler` logger, set up by `setup_logging()` in `crawler/util.py`; use it instead of `print()`.
 - `screens/<site>/`: `<sig>.png` and `<sig>_context.png`.
 - `html/<site>/`: `<sig>.html`.
 
-Schema stability matters because downstream analysis depends on it. Add new columns to the **end** of `FORM_FIELDS`, never rename or reorder existing ones, and note changes here.
+Schema stability matters because downstream analysis depends on it. Add new columns to the **end** of `FORM_FIELDS`, never rename or reorder existing ones, and note changes here. Since the move to SQLite an appended column no longer needs a fresh `--out`: the table is migrated in place. A removed or renamed one still does.
 
 Schema changes so far:
 

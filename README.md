@@ -75,12 +75,18 @@ Each run writes into its `--out` directory:
 
 | File | Contents |
 |---|---|
-| `forms.csv`, `forms.jsonl` | One row per unique form per site. |
-| `pages.csv` | One row per page visit, with status and errors. |
+| `crawl.db` | SQLite: `forms` (one row per unique form), `pages` (one per page visit), `sites_done`. |
 | `screens/<site>/` | Element screenshot and in-context viewport screenshot per form. |
 | `html/<site>/` | The form's HTML. |
 | `sites_done.txt` | Progress log used for resuming. |
 | `run.log` | Everything printed during the run, with timestamps, the time taken per site and the total run time. |
+
+Query it with any SQLite tool, or get the old CSVs back whenever you want them:
+
+```bash
+sqlite3 outputs/run1/crawl.db "SELECT form_type, count(*) FROM forms GROUP BY 1"
+python src/find_forms.py --export-csv --out outputs/run1    # writes forms.csv and pages.csv
+```
 
 Columns such as
 `placement_guess`, `modal_hint`, `login_like` and `consent_text_hint` are
