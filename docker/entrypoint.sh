@@ -7,7 +7,17 @@ set -euo pipefail
 cleanup() { pkill -P $$ || true; }
 trap cleanup EXIT
 
-Xvfb "$DISPLAY" -screen 0 "$SCREEN" -nolisten tcp &
+# Xvfb leaves /tmp/.X<n>-lock behind when it is not shut down cleanly, and /tmp
+# survives a container restart (as opposed to a recreate). Without clearing it,
+# every restart dies with "Server is already active for display N". Nothing else
+# in this container owns that display, so a leftover lock is always stale — but
+# check for a live server first rather than assuming.
+if xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
+    echo "an X server is already running on $DISPLAY; reusing it" >&2
+else
+    rm -f "/tmp/.X${DISPLAY#:}-lock" "/tmp/.X11-unix/X${DISPLAY#:}"
+    Xvfb "$DISPLAY" -screen 0 "$SCREEN" -nolisten tcp &
+fi
 for _ in $(seq 100); do
     xdpyinfo -display "$DISPLAY" >/dev/null 2>&1 && break
     sleep 0.1
