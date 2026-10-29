@@ -122,8 +122,8 @@ def test_run_loads_the_page_as_a_url_and_skips_a_missing_form(tmp_path, monkeypa
     assert result.status == "skipped_form_not_found" and result.submitted_at is None
 
 
-def test_run_finds_a_rerendered_form_again_once(tmp_path, monkeypatch, mocker):
-    # artpix3d: StaleElementReferenceException while filling, before anything was sent
+def _run_with_form(tmp_path, monkeypatch, mocker, html, attempts):
+    """The real signup.run on a mocked browser showing html; _attempt returns attempts in turn."""
     monkeypatch.setattr(main.Config(), "ALLOW_SCREENSHOTS", False)
     site = WebSite.__new__(WebSite)
     site.br = MagicMock()
@@ -133,24 +133,50 @@ def test_run_finds_a_rerendered_form_again_once(tmp_path, monkeypatch, mocker):
     site.lang = Language.get(Path("enfbots_crawler/languages"), "en")
     site.output_path = tmp_path
     site.dump_id = 0
-    html = '<form><input type="email" name="email"><button type="submit">Subscribe</button></form>'
     form = FormBS(BeautifulSoup(html, "html.parser").form, site.lang)
     mocker.patch.object(signup, "_find_shown_form", return_value=form)
     mocker.patch.object(signup, "find_capture_form", return_value=form)
-    attempt = mocker.patch.object(
-        signup,
-        "_attempt",
-        side_effect=[StaleElementReferenceException("re-rendered"), ("success_text", {"attempt": 1})],
-    )
+    attempt = mocker.patch.object(signup, "_attempt", side_effect=attempts)
     target = signup.SubscribeTarget(
         "news1234567890@study.example", "us_jordan", "https://shop.example/", "sig", None
     )
+    return site, signup.run(site, target), attempt
 
-    result = signup.run(site, target)
+
+def test_run_finds_a_rerendered_form_again_once(tmp_path, monkeypatch, mocker):
+    # artpix3d: StaleElementReferenceException while filling, before anything was sent
+    html = '<form><input type="email" name="email"><button type="submit">Subscribe</button></form>'
+    site, result, attempt = _run_with_form(
+        tmp_path,
+        monkeypatch,
+        mocker,
+        html,
+        [StaleElementReferenceException("re-rendered"), ("success_text", {"attempt": 1})],
+    )
 
     assert attempt.call_count == 2
     assert result.status == "success_text" and result.submitted_at is not None
     site.br.enter_frame.assert_called_with(None)
+
+
+def test_run_retries_with_all_persona_fields_when_a_field_is_required(tmp_path, monkeypatch, mocker):
+    # lpgaproshop: names and ZIP required without being marked so
+    html = """<form><input type="email" name="email">
+        <input type="text" name="first_name" placeholder="First name">
+        <input type="text" name="zip" placeholder="Zip Code">
+        <button type="submit">Submit</button></form>"""
+    _, result, attempt = _run_with_form(
+        tmp_path,
+        monkeypatch,
+        mocker,
+        html,
+        [("failed", {"failure_keywords": ["is required"]}), ("success_text", {"attempt": 2})],
+    )
+
+    assert attempt.call_count == 2
+    second_plan = attempt.call_args_list[1].args[2]
+    assert {a.field for a in second_plan.actions} >= {"mail", "first_name", "zip"}
+    assert result.status == "success_text" and "first_attempt" in result.detail
 
 
 def test_run_domain_runs_subscribe_jobs_instead_of_crawling(monkeypatch):

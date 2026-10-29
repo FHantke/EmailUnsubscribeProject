@@ -151,6 +151,19 @@ class Config(metaclass=Singleton):
             "welcome to the",
             "your discount code",
             "use code",
+            # signup-round3 (2026-10-23): abercrombie "Thanks! You're officially on our email
+            # list", tcgplayer "All set! Keep an eye on your inbox"
+            "thanks!",
+            "on our email list",
+            "you're officially",
+            "all set",
+            "keep an eye on your inbox",
+            "you're signed up",
+            "you are signed up",
+            "you've been subscribed",
+            "you have been subscribed",
+            "successfully signed up",
+            "welcome aboard",
         ]
         self.SUBSCRIBE_FAILURE_KEYWORDS: list[str] = [
             "already subscribed",

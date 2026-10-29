@@ -19,6 +19,7 @@ from enfbots_crawler.subscribe import (
     SubscribeTarget,
     classify_outcome,
     plan_fill,
+    should_retry,
     sign_up_address,
     submit,
 )
@@ -342,3 +343,45 @@ def test_test_persona_address_is_tagged_with_the_site(email, url, expected):
 def test_default_credentials_still_come_from_config(monkeypatch):
     monkeypatch.setattr(Config(), "CREDENTIALS", "us_jordan")
     assert Credentials.get().last_name == "Ellery"
+
+
+def test_city_is_filled_on_the_retry_with_all_persona_fields():
+    # foundtv: name and city required without being marked so
+    html = f"""<form>{EMAIL}
+        <input type="text" name="full_name" placeholder="Full name">
+        <input type="text" name="city" placeholder="City">{SUBMIT}</form>"""
+    assert _plan(html) == ([("alias", "mail")], None)
+    actions, reason = _plan(html, fill_all=True)
+    assert reason is None and ("persona", "city") in actions
+
+
+@pytest.mark.parametrize(
+    "status, keywords, retry",
+    [
+        ("no_change", [], True),
+        ("failed", [], True),  # refused without saying why
+        ("failed", ["is required"], True),  # lpgaproshop, foundtv, schoolofmusic.ucla.edu
+        ("failed", ["please enter"], True),
+        ("failed", ["please enter", "valid email"], False),  # the address itself
+        ("failed", ["already subscribed"], False),
+        ("failed", ["is required", "something went wrong"], False),
+        ("success_text", [], False),
+        ("captcha_blocked", [], False),
+    ],
+)
+def test_should_retry(status, keywords, retry):
+    assert should_retry(status, {"failure_keywords": keywords}) is retry
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # signup-round3: both sites signed up, recorded as no_change
+        "Thanks! You’re officially on our email list. Just a few more steps to go..",
+        "All set! Keep an eye on your inbox.",
+    ],
+)
+def test_round3_thank_yous_count_as_success(text):
+    after = _obs(text="join our list " + signup._page_text(text))
+    status, detail = classify_outcome(_obs(), after)
+    assert status == "success_text" and detail["success_keywords"]

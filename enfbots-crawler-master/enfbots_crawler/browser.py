@@ -206,31 +206,43 @@ return out;
 """
 
 # The first button of a two-step pop-up ("Spin to win", "Claim my discount"): shown, worded
-# like one, inside a fixed overlay (any part of the frame inside an iframe, arguments[0]) that
-# shows no email field yet. Never a dismiss button, a link to another page, a cookie banner or
-# an age gate. Returns [element, text] or null
+# like one, inside a fixed overlay that is no bar across the window (any part of the frame
+# inside an iframe, arguments[0]) and shows no email field yet. Never a dismiss button, a link to
+# another page, a cookie banner or an age gate, and never what discovery-3 clicked by mistake:
+# menu toggles and buttons in a sticky header ("Toggle sign in/subscriber menu dropdown",
+# "REVEAL MENU", "Sign Up"), video controls ("Play", "Replay"), SMS sign-ups ("Subscribe to
+# text"). Returns [element, text] or null
 _TEASER_JS = r"""
 const inFrame = arguments[0];
-const TEASER = /let'?s go|spin|try (my |your )?luck|claim|unlock|reveal|^yes\b|get (my|your|it|the|\d|\$)|play|i want|count me in|sign me up|join|subscribe|sign up|tell me more/i;
+const TEASER = /let'?s go|spin|try (my |your )?luck|claim|unlock|reveal|^yes\b|get (my|your|it|the|\d|\$)|play (now|to win|& win|and win)|i want|count me in|sign me up|join|subscribe|sign up|tell me more/i;
 const DISMISS = /no,? thanks|no thank you|close|dismiss|not now|maybe later|decline|cancel|skip|^x$|^×$|i('| a)m (not|good)|i hate|full price|no,? i/i;
+const NOT_TEASER = /menu|toggle|dropdown|navigation|\bsearch\b|\bcart\b|\baccount\b|sign ?in|log ?in|\btext(s|ing)?\b|\bsms\b|video|watch|replay|pause|mute/i;
 const AVOID = /cookie|consent|gdpr|privacy (preferences|settings|choices)|years? (old|of age)|age verification|are you (over|at least|of legal)|\b(18|19|21)\+/i;
 const EMAIL_HINT = /mail|correo|courriel|e-?post|posta/i;
 const shown = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' &&
     parseFloat(getComputedStyle(e).opacity || '1') > 0;
 const isEmail = (i) => (i.type || '').toLowerCase() === 'email' ||
     EMAIL_HINT.test([i.name, i.id, i.placeholder, i.getAttribute('aria-label')].join(' '));
+// Opens a menu, a list or a panel rather than a pop-up's next step
+const isToggle = (b) => b.hasAttribute('aria-expanded') || b.hasAttribute('aria-controls') ||
+    !['', 'false', null].includes(b.getAttribute('aria-haspopup'));
+const IN_CHROME = 'header, nav, [role=navigation], [role=banner], [role=menu], [role=menubar]';
 const overlayOf = (e) => {
     if (inFrame) return document.body;
     for (let a = e; a && a !== document.body; a = a.parentElement) {
-        const s = getComputedStyle(a);
-        if (s.position === 'fixed') return a;
+        if (getComputedStyle(a).position !== 'fixed') continue;
+        // A pop-up or a teaser tab, not a sticky header or a bar across the window
+        const r = a.getBoundingClientRect();
+        const bar = r.width >= 0.6 * window.innerWidth && r.height < 120;
+        return bar ? null : a;
     }
     return null;
 };
 for (const b of document.querySelectorAll('button, [role=button], input[type=button], input[type=submit], a')) {
-    if (!shown(b)) continue;
+    if (!shown(b) || isToggle(b) || b.closest(IN_CHROME)) continue;
     const text = (b.innerText || b.value || b.getAttribute('aria-label') || '').trim();
-    if (!text || text.length > 40 || !TEASER.test(text) || DISMISS.test(text)) continue;
+    if (!text || text.length > 40 || !TEASER.test(text) || DISMISS.test(text) ||
+        NOT_TEASER.test(text)) continue;
     if (b.tagName === 'A') {
         const href = b.getAttribute('href') || '';
         if (href && !href.startsWith('#') && !href.startsWith('javascript')) continue;

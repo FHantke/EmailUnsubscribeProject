@@ -61,10 +61,22 @@ def test_discovery_clicks_the_teaser_of_a_two_step_popup(flask_app_function, bro
     browser.load_page(_page(flask_app_function, "teaser"))
     assert _captures(browser) == []
 
+    # The page also has the decoys of the "decoys" variant, in front of the pop-up
     assert browser.click_popup_teaser() == "Claim my discount"
     assert len(_captures(browser)) == 1
     # Nothing more to click once the email step shows
     assert browser.click_popup_teaser() is None
+    assert browser.execute_script("return document.body.dataset.decoyClicked || null") is None
+
+
+def test_teaser_step_leaves_headers_menus_videos_and_sms_bars_alone(
+    flask_app_function, browser, capture_mode
+):
+    # Buttons the teaser step clicked by mistake in discovery-3
+    browser.load_page(_page(flask_app_function, "decoys"))
+
+    assert browser.click_popup_teaser() is None
+    assert browser.execute_script("return document.body.dataset.decoyClicked || null") is None
 
 
 def _target(site: WebSite, url) -> signup.SubscribeTarget:

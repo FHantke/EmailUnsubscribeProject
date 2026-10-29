@@ -7,7 +7,7 @@
 <body>
 <h1>Shop</h1>
 <p>Sign-ups that are not a plain &lt;form&gt; in the page (tests for browser.py and subscribe.py).
-    ?v= picks one: formless, iframe, shadow, teaser.</p>
+    ?v= picks one: formless, iframe, shadow, teaser, decoys (only buttons the teaser step must not click).</p>
 <div id="variant"></div>
 <script>
     // Every variant posts {email, source} like a vendor's script would, then thanks the visitor
@@ -50,6 +50,35 @@
             e.preventDefault();
             send(root.getElementById("shadow-email").value, "shadow", root.getElementById("shadow-done"));
         });
+    }
+
+    if (variant === "teaser" || variant === "decoys") {
+        // What the teaser step must leave alone (it clicked such buttons in discovery-3): a
+        // sticky header with a sign-up link button and a menu toggle, a video overlay, an SMS bar
+        const header = document.createElement("header");
+        header.style = "position: fixed; top: 0; left: 0; right: 0; height: 160px; background: #eee";
+        header.innerHTML = `<button id="decoy-signup">Sign Up</button>
+            <button id="decoy-menu" aria-expanded="false">Join our community</button>`;
+        document.body.appendChild(header);
+        // A promo bar across the window, built from plain divs
+        const bar = document.createElement("div");
+        bar.style = "position: fixed; bottom: 0; left: 0; right: 0; height: 50px; background: #fc0";
+        bar.innerHTML = `<button id="decoy-bar">Join now and save</button>`;
+        document.body.appendChild(bar);
+        const video = document.createElement("div");
+        video.style = "position: fixed; bottom: 60px; right: 0; width: 320px; height: 200px; background: #000";
+        video.innerHTML = `<button id="decoy-play">Play to win the video</button>
+            <button id="decoy-replay">Replay</button>`;
+        document.body.appendChild(video);
+        const sms = document.createElement("div");
+        sms.style = "position: fixed; bottom: 220px; left: 0; width: 400px; height: 150px; background: #ddd";
+        sms.innerHTML = `<p>Get alerts on your phone</p><button id="decoy-sms">Subscribe to text</button>`;
+        document.body.appendChild(sms);
+        for (const id of ["decoy-signup", "decoy-menu", "decoy-bar", "decoy-play", "decoy-replay", "decoy-sms"]) {
+            document.getElementById(id).addEventListener("click", () => {
+                document.body.setAttribute("data-decoy-clicked", id);
+            });
+        }
     }
 
     if (variant === "teaser") {

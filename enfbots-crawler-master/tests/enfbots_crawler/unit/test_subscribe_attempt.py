@@ -152,7 +152,8 @@ def test_thank_you_with_curly_quotes_replacing_the_form_is_a_success(monkeypatch
     gone = {"text": "Thanks! You’re in.", "formVisible": False, "emailValue": "", "valid": False}
     br, _ = _browser(after=gone)
     (status, detail), _, _ = _attempt(monkeypatch, br, [ADDRESS])
-    assert status == "success_text" and detail["success_keywords"] == ["you're in"]
+    # The curly apostrophe is normalised, so "you're in" matches (besides "thanks!")
+    assert status == "success_text" and "you're in" in detail["success_keywords"]
 
 
 @pytest.mark.parametrize(

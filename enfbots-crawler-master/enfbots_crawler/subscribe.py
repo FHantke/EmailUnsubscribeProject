@@ -50,6 +50,7 @@ PERSONA_FIELDS = {
     InputType.LAST_NAME: "last_name",
     InputType.FULL_NAME: "full_name",
     InputType.ZIP: "postal_code",
+    InputType.CITY: "city",
     InputType.BIRTH_DAY: "birth_day",
     InputType.BIRTH_MONTH: "birth_month",
     InputType.BIRTH_YEAR: "birth_year",
@@ -130,6 +131,9 @@ return {
 """
 # Chrome's own error page (e.g. ERR_HTTP2_PROTOCOL_ERROR when Mailchimp's page didn't load)
 _PAGE_ERROR = re.compile(r"\berr_[a-z0-9_]+\b")
+# Failure keywords that say a field is missing, so a retry with all persona fields can help
+# ("please enter a valid email" also matches "valid email" and is not retried)
+_MISSING_FIELD_KEYWORDS = {"is required", "please enter"}
 # A JavaScript alert after the submit that is a CAPTCHA's verdict (cokesburykids:
 # "Google reCAPTCHA verification failed.")
 _CAPTCHA_ALERT = re.compile(r"captcha|robot|verification failed", re.I)
@@ -688,6 +692,20 @@ def _attempt(
     return status, detail | observed
 
 
+def should_retry(status: str, detail: dict[str, Any]) -> bool:
+    """
+    Whether to try once more with all persona fields: the form didn't react, refused without
+    saying why, or said a field is missing (lpgaproshop, foundtv: names, ZIP and city were
+    required without being marked so). Never after a complaint about the address itself.
+    """
+    if status == "no_change":
+        return True
+    if status != "failed":
+        return False
+    keywords = set(detail.get("failure_keywords") or [])
+    return keywords <= _MISSING_FIELD_KEYWORDS
+
+
 def run(site: WebSite, target: SubscribeTarget) -> SubscribeResult:
     """One study sign-up on the current browser (a fresh profile per job)."""
     # The study never pays for or solves CAPTCHAs
@@ -733,8 +751,7 @@ def run(site: WebSite, target: SubscribeTarget) -> SubscribeResult:
     # Nothing was sent in a dry run, when the address could not be typed or nothing submitted
     nothing_sent = ("dry_run", "failed_fill", "failed_submit")
     submitted_at = None if status in nothing_sent else datetime.datetime.now()
-    retry = status == "no_change" or (status == "failed" and not detail.get("failure_keywords"))
-    if retry:
+    if should_retry(status, detail):
         # The form may require a persona field without marking it; try once with all of them
         refound = find_capture_form(site, target)
         second = plan_fill(refound, fill_all=True) if refound is not None else None
