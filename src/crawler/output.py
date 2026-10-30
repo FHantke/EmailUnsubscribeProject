@@ -39,8 +39,7 @@ from sqlalchemy import (Column, Float, Integer, MetaData, String, Table, Text, e
                         insert, inspect, select, text)
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from crawler.config import (DATABASE_URL, FORM_FIELDS, PAGE_FIELDS, SUBMISSION_FIELDS,
-                            TARGET_FORM_TYPE)
+from crawler.config import DATABASE_URL, FORM_FIELDS, PAGE_FIELDS, SUBMISSION_FIELDS
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +49,8 @@ _INTEGER = {"rank_on_page", "z_index", "n_fields", "n_checkboxes",
             "n_checkboxes_prechecked", "fields_missing_label", "width", "height",
             "http_status", "n_new_forms",
             "n_checkboxes_ticked", "http_status_after", "dry_run",
-            "form_visible_after", "email_kept", "form_valid_after"}
+            "form_visible_after", "email_kept", "form_valid_after",
+            "eligible", "captcha_visible"}
 _REAL = {"viewport_coverage"}
 
 _RUN = 128      # a run name is a directory name; keep it bounded for backends that need it
@@ -199,7 +199,12 @@ def read_done(out_dir, engine=None):
 
 def submission_targets(out_dir, engine=None):
     """What --submit would sign up to in a run: per site, the top-ranked form
-    typed as a subscription, in the order the sites were crawled.
+    detection marked eligible, in the order the sites were crawled.
+
+    `eligible` already means "typed as a subscription, and asks for nothing the
+    study will not give" - the reasoning happened at capture time and
+    `reject_reason` says what ruled each other form out. Filtering here on that
+    one column is what keeps the decision in one place.
 
     One per site, because submitting is a write and a site is signed up to at
     most once. Reading this back from the database rather than from a live
@@ -214,8 +219,7 @@ def submission_targets(out_dir, engine=None):
     with engine.connect() as conn:
         for r in conn.execute(
                 select(*[FORMS.c[c] for c in cols])
-                .where(FORMS.c.run == run_label(out_dir),
-                       FORMS.c.form_type == TARGET_FORM_TYPE)
+                .where(FORMS.c.run == run_label(out_dir), FORMS.c.eligible == 1)
                 .order_by(FORMS.c.site, FORMS.c.rank_on_page, FORMS.c.timestamp)):
             best.setdefault(r[0], dict(zip(cols, r)))
     return list(best.values())

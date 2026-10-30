@@ -107,14 +107,22 @@ def flat(value):
 def form_signature(cand, frame_url):
     """Stable 10-character ID for a form; dedupes it across pages and phases and names its files.
 
-    Built from attributes that survive re-rendering (detection method, frame host,
-    email field name/id/placeholder, submit text, field count, heading), never from
-    position, so the same footer form on every page of a site hashes the same.
+    Built from what the form *is*, never from where it sits, so the same footer
+    form on every page of a site hashes the same: the frame's host, the form's
+    action, its fields sorted by name and type, and its heading.
+
+    Sorted, so re-rendering the fields in another order does not make a new form.
+    The button's text used to be in here and was taken out on 2026-10-30: on
+    royalcaribbean.com it held the visitor's country, so the same form hashed
+    differently depending on where it was crawled from. The heading stays,
+    because without it a site's footer form and its popup - often identical in
+    fields and action - would collapse into one row, and telling those apart is
+    the point of the study.
     """
+    fields = sorted(f"{n}:{t}" for n, t in zip(cand["field_names"], cand["field_types"]))
     key = "|".join([
-        cand["detection_method"], urlparse(frame_url).netloc,
-        cand["email_name"], cand["email_id"], cand["email_placeholder"],
-        "/".join(cand["submit_text"]), str(cand["n_fields"]), cand["heading"][:60],
+        urlparse(frame_url).netloc, cand.get("form_action", ""),
+        ";".join(fields), cand["heading"][:60],
     ])
     return hashlib.sha1(key.encode("utf-8")).hexdigest()[:10]
 

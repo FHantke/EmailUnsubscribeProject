@@ -35,6 +35,21 @@ EXPECTED = {
     "q_delayed": "subscription",     # appears only in the after_delay phase
     "r_iframe": "subscription",      # inside an iframe
     "s_picker": "subscription",      # a country picker beside the real submit
+    "t_vendor": "subscription",      # Mailchimp embed; its dropdown must not retype it
+}
+
+# field name -> (column, expected value). The columns added 2026-10-30, where
+# what a form is wired to and whether the study may use it are the point.
+EXPECTED_COLS = {
+    "t_vendor": {
+        "vendor": "mailchimp",                 # from the list-manage.com action
+        "captcha_type": "recaptcha_v2",
+        "captcha_visible": 1,
+        "eligible": 0,
+        "reject_reason": "phone",              # the phone is checked before the CAPTCHA
+    },
+    "a_news": {"eligible": 1, "reject_reason": "", "vendor": ""},
+    "b_login": {"eligible": 0, "reject_reason": "password"},
 }
 
 # field name -> expected submit_text. Only where which element was picked as the
@@ -69,13 +84,18 @@ def main():
     httpd.shutdown()
 
     db = sqlite3.connect(str(out / "crawl.db"))
-    rows = db.execute("SELECT field_names, form_type, submit_text FROM forms").fetchall()
-    found, submits = {}, {}
-    for field_names, form_type, submit_text in rows:
+    extra = sorted({c for cols in EXPECTED_COLS.values() for c in cols})
+    rows = db.execute(
+        "SELECT field_names, form_type, submit_text, form_text, "
+        + ", ".join(extra) + " FROM forms").fetchall()
+    found, submits, cols, texts = {}, {}, {}, {}
+    for field_names, form_type, submit_text, form_text, *rest in rows:
         for name in json.loads(field_names or "[]"):
             if name in EXPECTED:
                 found[name] = form_type
                 submits[name] = json.loads(submit_text or "[]")
+                cols[name] = dict(zip(extra, rest))
+                texts[name] = form_text or ""
     bad = 0
     for name, want in EXPECTED.items():
         got = found.get(name, "NOT DETECTED")
@@ -89,9 +109,23 @@ def main():
         if got != want:
             bad += 1
         print(f"  {flag} {name:12} submit_text {got} (expected {want})")
+    for name, want in EXPECTED_COLS.items():
+        for col, value in want.items():
+            got = cols.get(name, {}).get(col, "NOT DETECTED")
+            flag = "ok  " if got == value else "FAIL"
+            if got != value:
+                bad += 1
+            print(f"  {flag} {name:12} {col:15} = {got!r} (expected {value!r})")
+    # A dropdown's choices are not the form's wording.
+    for name, leak in (("t_vendor", "United States"), ("t_vendor", "Contact us for enquiries")):
+        got = leak not in texts.get(name, "")
+        if not got:
+            bad += 1
+        print(f"  {'ok  ' if got else 'FAIL'} {name:12} form_text leaves out {leak!r}")
     extra = len(rows) - len([n for n in found])
-    print(f"\n{len(rows)} forms recorded, {len(EXPECTED) + len(EXPECTED_SUBMIT) - bad}/"
-          f"{len(EXPECTED) + len(EXPECTED_SUBMIT)} checks as expected. Output: {out}")
+    n = (len(EXPECTED) + len(EXPECTED_SUBMIT)
+         + sum(len(v) for v in EXPECTED_COLS.values()) + 2)
+    print(f"\n{len(rows)} forms recorded, {n - bad}/{n} checks as expected. Output: {out}")
     return 1 if bad else 0
 
 

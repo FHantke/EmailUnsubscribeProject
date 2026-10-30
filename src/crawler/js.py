@@ -43,6 +43,9 @@ DETECT_JS = r"""
   const MODAL_HTML = re(P.modal_html);   // last-resort popup check on the form's HTML
   const SUBMIT_HINT = re(P.submit);      // text that makes a short clickable element a submit button
   const CONSENT_HINT = re(P.consent);    // -> consent_text_hint
+  // Personal data the study never invents (SUBMIT_REFUSE in config.py). A form
+  // that *requires* one of these cannot be signed up to; the reason is recorded.
+  const REFUSE = (opts.refuse || []).map(r => ({re: re(r.pattern), reason: r.reason}));
   // Elements that might be a submit button; isSubmitLike() decides.
   const SUBMIT_SEL = 'button, input[type=submit], input[type=image], input[type=button], [role=button], a, div, span';
 
@@ -207,12 +210,29 @@ DETECT_JS = r"""
 
   // The plain text inside `scope`, leaving out links, buttons and scripts, so a
   // sentence like "Log in to Hulu" counts but a "Sign in" menu link does not.
+  // What a visitor reads in `scope`, minus each dropdown's list of choices.
+  // innerText includes every <option>, so a country select would spend the
+  // whole 600-character form_text budget on country names and push the form's
+  // actual wording off the end. Subtracting each select's own innerText keeps
+  // innerText's other behaviour, including leaving hidden text out.
+  const shownText = scope => {
+    let t = scope.innerText || '';
+    for (const s of scope.querySelectorAll('select')) {
+      const choices = s.innerText;
+      if (choices && choices.trim()) t = t.split(choices).join(' ');
+    }
+    return clean(t);
+  };
+
   const plainText = scope => {
     const out = [];
     const walk = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
     for (let n = walk.nextNode(); n && out.length < 2000; n = walk.nextNode()) {
       const p = n.parentElement;
-      if (p && !p.closest('a, button, [role=button], script, style, noscript, template')) out.push(n.nodeValue);
+      // `option` with the rest: a dropdown's 200 country names are choices it
+      // offers, not wording the form shows, and they would otherwise vote on
+      // form_type - "Reason for enquiry" would read as a contact form.
+      if (p && !p.closest('a, button, [role=button], option, script, style, noscript, template')) out.push(n.nodeValue);
     }
     return clean(out.join(' ')).slice(0, 20000);
   };
@@ -222,9 +242,14 @@ DETECT_JS = r"""
   // tried in turn against the form's own HTML (attributes included, so
   // class="login-box" counts), the plain text around it, and the page address.
   const formType = (el, scope) => {
-    const html = el.outerHTML.slice(0, 20000);
+    // Options stripped for the same reason plainText drops them, and because a
+    // <select> of countries is markup, not something the form says.
+    const html = el.outerHTML.slice(0, 200000)
+      .replace(/<option\b[^>]*>[\s\S]*?<\/option>/gi, ' ').slice(0, 20000);
     const near = plainText(scope);
-    const addr = location.hostname + location.pathname;
+    // The action is part of the address a form rule may match: a login form
+    // sitting on a homepage still posts to /account/login.
+    const addr = location.hostname + location.pathname + ' ' + (el.getAttribute('action') || '');
     for (const t of TYPES) {
       // A field is hard evidence (a password box really is a login) and ignores
       // `unless`; wording and the page address are softer and can be cancelled.
@@ -300,14 +325,86 @@ DETECT_JS = r"""
   };
 
 
+  // ---- Helpers: vendor, CAPTCHA, eligibility ---------------------------------
+
+  // The email platform behind the form, from the markup its embed leaves behind.
+  const vendorOf = el => {
+    const h = el.outerHTML.slice(0, 50000).toLowerCase();
+    for (const [needle, name] of (opts.vendors || [])) if (h.includes(needle)) return name;
+    return '';
+  };
+
+  // A CAPTCHA widget inside the form. `visible` means it wants the visitor to
+  // do something; an invisible one scores the session on its own and does not
+  // stand in the way of a sign-up. Only the form is searched, not the page: a
+  // CAPTCHA somewhere else does not necessarily guard this form.
+  const captchaIn = el => {
+    const sel = '[class*="captcha"], [class*="turnstile"], iframe';
+    for (const e of Array.from(el.querySelectorAll(sel)).slice(0, 200)) {
+      const cls = (e.getAttribute('class') || '').toLowerCase();
+      const onButton = e.tagName === 'BUTTON' || e.tagName === 'INPUT';
+      const invisible = (e.getAttribute('data-size') || '') === 'invisible' || onButton;
+      if (cls.includes('g-recaptcha')) {
+        if (e.getAttribute('data-action') && onButton) return {type: 'recaptcha_v3', visible: false};
+        return {type: invisible ? 'recaptcha_v2_invisible' : 'recaptcha_v2', visible: !invisible};
+      }
+      if (cls.includes('h-captcha')) {
+        return {type: invisible ? 'hcaptcha_invisible' : 'hcaptcha', visible: !invisible};
+      }
+      if (cls.includes('cf-turnstile')) {
+        // Err towards "needs interaction" unless it says otherwise.
+        const hidden = ['interaction-only', 'execute']
+          .includes(e.getAttribute('data-appearance') || '');
+        return {type: 'turnstile', visible: !hidden};
+      }
+      if (e.tagName === 'IFRAME') {
+        const src = e.getAttribute('src') || '';
+        if (/recaptcha\/(api2|enterprise)\/anchor.*size=invisible/.test(src))
+          return {type: 'recaptcha_v2_invisible', visible: false};
+        if (/recaptcha\/(api2|enterprise)\/anchor/.test(src))
+          return {type: 'recaptcha_v2', visible: true};
+        if (/hcaptcha\.com.*frame=checkbox/.test(src)) return {type: 'hcaptcha', visible: true};
+        if (/challenges\.cloudflare\.com/.test(src)) return {type: 'turnstile', visible: true};
+      }
+    }
+    return null;
+  };
+
+  // Why --submit could not sign up to this form, or '' if it could. The first
+  // blocking rule wins, and they are ordered hardest evidence first: a password
+  // box is a fact, the form's type is a guess. Recording the reason at capture
+  // time is what makes the forms the study cannot use analysable later, rather
+  // than a silent gap.
+  const rejectReason = (el, fi, type, captcha, nEmail) => {
+    if (nEmail > 2) return 'multiple_email';     // email + confirm is normal; more is not
+    for (let i = 0; i < fi.textLike.length; i++) {
+      const f = fi.textLike[i], t = typeOf(f);
+      if (t === 'password') return 'password';
+      if (t === 'textarea' && isRequired(f)) return 'message_field';
+      if (!isRequired(f) || isEmailInput(f)) continue;
+      const fieldHints = [f.getAttribute('name'), f.id, f.getAttribute('placeholder'),
+                          labelText(f), f.getAttribute('autocomplete')].filter(Boolean).join(' ');
+      for (const r of REFUSE) {
+        if (r.re.test(fieldHints)) return r.reason;
+      }
+    }
+    if (captcha && captcha.visible) return 'interactive_captcha';
+    if (type !== opts.targetFormType) return 'type_' + type;
+    return '';
+  };
+
+
   // ---- Helpers: the form's fields --------------------------------------------
 
   // The fields a person fills in: visible inputs/selects/textareas, plus every
   // checkbox and radio (often styled invisible), minus hidden inputs and buttons.
   // Returns them grouped, with `types` and `names` in matching order:
   // text-like fields, then checkboxes, then one entry per radio group.
+  const typeOf = f => f.tagName === 'INPUT' ? (f.getAttribute('type') || 'text').toLowerCase() : f.tagName.toLowerCase();
+  // Either way a form marks a field required; some set only the ARIA one.
+  const isRequired = f => !!(f.required || f.getAttribute('aria-required') === 'true');
+
   const fieldInfo = el => {
-    const typeOf = f => f.tagName === 'INPUT' ? (f.getAttribute('type') || 'text').toLowerCase() : f.tagName.toLowerCase();
     const fields = Array.from(el.querySelectorAll('input, select, textarea')).filter(f => {
       const t = typeOf(f);
       if (['hidden', 'submit', 'button', 'image', 'reset'].includes(t)) return false;
@@ -320,7 +417,13 @@ DETECT_JS = r"""
     // Same order as `types`: the name attribute, else the id, else ''. A radio group's name is the group's.
     const nameOf = f => f.getAttribute('name') || f.id || '';
     const names = textLike.map(nameOf).concat(checkboxes.map(nameOf), Array.from(radioGroups).map(g => g || ''));
-    return { checkboxes, textLike, types, names, n: textLike.length + checkboxes.length + radioGroups.size };
+    // Same order again: what the form insists on is part of its design.
+    const required = textLike.map(isRequired).concat(
+      checkboxes.map(isRequired),
+      Array.from(radioGroups).map(g => fields.some(
+        f => typeOf(f) === 'radio' && (f.name || f.id) === g && isRequired(f))));
+    return { checkboxes, textLike, types, names, required,
+             n: textLike.length + checkboxes.length + radioGroups.size };
   };
 
 
@@ -391,7 +494,10 @@ DETECT_JS = r"""
     const rect = el.getBoundingClientRect();
     const fx = fixedAncestor(el);
     const scope = scopeFor(el, fx);
-    const scopeText = clean(scope.innerText);
+    const scopeText = shownText(scope);
+    const captcha = captchaIn(el);
+    const nEmail = fi.textLike.filter(isEmailInput).length;
+    const reject = rejectReason(el, fi, r.type, captcha, nEmail);
 
     const submits = Array.from(el.querySelectorAll(SUBMIT_SEL)).slice(0, 300).filter(isSubmitLike)
       // A button's own label <span> qualifies too: it carries the same words and
@@ -421,6 +527,7 @@ DETECT_JS = r"""
       n_fields: fi.n,
       field_types: fi.types,
       field_names: fi.names,
+      field_required: fi.required,
       n_checkboxes: fi.checkboxes.length,
       n_checkboxes_prechecked: fi.checkboxes.filter(c => c.checked).length,
       fields_missing_label: fi.textLike.filter(f => !labelText(f)).length,
@@ -446,6 +553,14 @@ DETECT_JS = r"""
       viewport_coverage: +coverage(rect).toFixed(3),
 
       form_text: scopeText.slice(0, 600),
+
+      // What the form is wired to, and whether the study may sign up to it.
+      form_action: el.getAttribute('action') || '',
+      vendor: vendorOf(el),
+      captcha_type: captcha ? captcha.type : '',
+      captcha_visible: captcha ? captcha.visible : null,
+      eligible: reject === '',
+      reject_reason: reject,
 
       // The elements themselves, for submit.py only (opts.withElements).
       // Selenium turns these into WebElements, which work inside shadow DOM

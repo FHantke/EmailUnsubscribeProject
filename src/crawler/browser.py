@@ -23,7 +23,8 @@ from selenium.webdriver.common.by import By
 from crawler.config import (
     BLOCKED_URL_PATTERNS, DEFAULT_FORM_TYPE, DESKTOP_VIEWPORT, DETECT_BUDGET_MS, DETECT_PATTERNS,
     FORM_TYPES, LINK_BLACKLIST, LOAD_SETTLE_MS, MAX_SHADOW_SCAN, PAINT_SETTLE_MS, SCRIPT_TIMEOUT_S,
-    SCROLL_BUDGET_MS, SKIP_EXTENSIONS, TARGET_FORM_TYPE, URL_BLACKLIST,
+    SCROLL_BUDGET_MS, SKIP_EXTENSIONS, SUBMIT_REFUSE, TARGET_FORM_TYPE, URL_BLACKLIST,
+    VENDOR_HINTS,
 )
 from crawler.js import DETECT_JS, EXIT_INTENT_JS, LINKS_JS, SCROLL_JS
 from crawler.util import form_signature, link_tier, now, same_site, short, slug
@@ -57,7 +58,11 @@ def detect_options(prefix="ux", with_elements=False):
     return {"prefix": prefix, "budget": DETECT_BUDGET_MS, "maxShadowScan": MAX_SHADOW_SCAN,
             "patterns": DETECT_PATTERNS, "defaultFormType": DEFAULT_FORM_TYPE,
             "targetFormType": TARGET_FORM_TYPE, "withElements": with_elements,
-            "formTypes": [dict(rules, name=name) for name, rules in FORM_TYPES]}
+            "formTypes": [dict(rules, name=name) for name, rules in FORM_TYPES],
+            # The same refusal rules --submit fills by, so a form is judged
+            # unusable once, at detection, rather than twice in two places.
+            "refuse": [{"pattern": p, "reason": r} for p, r in SUBMIT_REFUSE],
+            "vendors": VENDOR_HINTS}
 
 
 def _chrome_major(binary):

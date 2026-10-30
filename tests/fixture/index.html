@@ -89,6 +89,22 @@
   </a>
 </form>
 
+<!-- t_vendor: a Mailchimp embed with a required phone number, a country
+     dropdown whose options must not become the form's wording, and a visible
+     reCAPTCHA. Eligible must be false, for the phone before the CAPTCHA. -->
+<form id="mc" action="https://example.us1.list-manage.com/subscribe/post">
+  <h2>Join the list</h2>
+  <label for="t_email">Email</label><input id="t_email" name="t_vendor" type="email" required>
+  <label for="t_phone">Mobile phone</label><input id="t_phone" name="t_phone" type="tel" required>
+  <label for="t_country">Country</label>
+  <select id="t_country" name="t_country">
+    <option>Choose a country</option><option>United States</option>
+    <option>Contact us for enquiries</option>
+  </select>
+  <div class="g-recaptcha" data-sitekey="x"></div>
+  <button type="submit">Subscribe</button>
+</form>
+
 <div id="host"></div>
 <script>
   const r = document.getElementById('host').attachShadow({mode:'open'});

@@ -117,6 +117,37 @@ DETECT_PATTERNS = {
     "consent": r"consent|i agree|unsubscribe|privacy|opt.?out|terms",
 }
 
+# -> vendor. The email platform behind a form, from the markup its embed leaves
+# in the page. Most specific first; the first substring found wins. Recorded
+# rather than guessed at later, so "do Klaviyo popups differ from Mailchimp
+# ones" is a question the data can answer.
+VENDOR_HINTS = [
+    ("klaviyo", "klaviyo"),
+    ("list-manage.com", "mailchimp"),
+    ("mc4wp", "mailchimp"),
+    ("mailchimp", "mailchimp"),
+    ("hsforms", "hubspot"),
+    ("hubspot", "hubspot"),
+    ("sibforms", "brevo"),
+    ("sendinblue", "brevo"),
+    ("omnisend", "omnisend"),
+    ("attentive", "attentive"),
+    ("privy", "privy"),
+    ("convertkit", "convertkit"),
+    ("mailerlite", "mailerlite"),
+    ("constantcontact", "constantcontact"),
+    ("activecampaign", "activecampaign"),
+    ("createsend", "campaignmonitor"),
+    ("exacttarget", "salesforce_marketing_cloud"),
+    ("demandware", "salesforce_commerce_cloud"),
+    ("iterable", "iterable"),
+    ("braze", "braze"),
+    ("substack", "substack"),
+    ("emailoctopus", "emailoctopus"),
+    ("contact[tags]", "shopify"),
+]
+
+
 # -> form_type. The crawler records every form with an email box, but plenty of
 # those are not signups; this says which kind each one is, so analysis can
 # filter. Checked in order, first match wins.
@@ -311,6 +342,14 @@ FORM_FIELDS = [
     "screenshot", "context_screenshot", "html_file", "form_text",
     "source",       # added 2026-10-07; always "browser" since 2026-10-08
     "field_names",  # added 2026-10-10; one per field, in field_types order
+    # added 2026-10-30
+    "form_action",      # the form's action attribute, resolved
+    "field_required",   # one per field, in field_types order
+    "vendor",           # the email platform behind it, from VENDOR_HINTS
+    "captcha_type",     # recaptcha_v2, turnstile, ... ; empty if none in the form
+    "captcha_visible",  # whether that CAPTCHA needs the visitor to interact
+    "eligible",         # could --submit sign up to this form?
+    "reject_reason",    # if not, the first rule it failed
 ]
 
 PAGE_FIELDS = [     # one row per page visited

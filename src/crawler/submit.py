@@ -32,8 +32,7 @@ from crawler.browser import (_call, _call_async, _enter_frame_path, capture, det
 from crawler.config import (DETECT_PATTERNS, LOAD_SETTLE_MS, PAINT_SETTLE_MS, SCROLL_BUDGET_MS,
                             SITE_TIME_LIMIT_PER_PAGE_S, STOP, SUBMIT_DISMISS, SUBMIT_FILL,
                             SUBMIT_FILL_DEFAULT, SUBMIT_REFUSE, SUBMIT_SETTLE_MS, SUBMIT_SMS,
-                            SUBSCRIBE_FAILURE_KEYWORDS, SUBSCRIBE_SUCCESS_KEYWORDS,
-                            TARGET_FORM_TYPE)
+                            SUBSCRIBE_FAILURE_KEYWORDS, SUBSCRIBE_SUCCESS_KEYWORDS)
 from crawler.jobs import SiteWatchdog, install_stop_handler
 from crawler.js import DETECT_JS, FIELD_INFO_JS, OBSERVE_JS, SCROLL_JS
 from crawler.output import Output, submission_targets
@@ -587,7 +586,7 @@ def submit_run(args):
         if args.submit_limit:
             todo = todo[: args.submit_limit]
         if not todo:
-            log.info(f"nothing to submit: {len(targets)} {TARGET_FORM_TYPE} form(s) in run "
+            log.info(f"nothing to submit: {len(targets)} eligible form(s) in run "
                      f"'{output.run}', {n_skipped} site(s) already submitted to")
             return
         if n_skipped:
