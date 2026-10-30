@@ -20,25 +20,42 @@ produce *extra* disagreement, never hide a real one:
 Read a disagreement as "go and look at this form", not as a failure.
 """
 import csv
-import re
 import sys
 from collections import Counter
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from crawler.classify import form_type, vendor      # noqa: E402
 
-_INPUT_TYPE = re.compile(r"<input\b[^>]*\btype\s*=\s*[\"']?([a-zA-Z]+)", re.I)
-_BARE_INPUT = re.compile(r"<input\b(?![^>]*\btype\s*=)", re.I)
+class _InputTypes(HTMLParser):
+    """Collects the type of every <input> in a saved form.
+
+    A parser rather than a regex because it skips comments for free: a start
+    tag inside <!-- --> never reaches handle_starttag, where a regex cannot
+    tell the two apart. 51 of the saved forms carry a comment and 3 have an
+    <input> inside one, which the regex counted as a real field.
+    """
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.found = set()
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "input":
+            # <input> with no type is a text box; so is a bare type= with no value.
+            self.found.add((dict(attrs).get("type") or "text").lower())
 
 
 def input_types(html):
     """Every input type in the saved markup; a typeless <input> is a text box."""
-    found = {m.lower() for m in _INPUT_TYPE.findall(html)}
-    if _BARE_INPUT.search(html):
-        found.add("text")
-    return sorted(found)
+    parser = _InputTypes()
+    try:
+        parser.feed(html)
+    except Exception:          # markup saved truncated: keep whatever parsed
+        pass
+    return sorted(parser.found)
 
 
 def replay(run_dir):
