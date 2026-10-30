@@ -14,7 +14,6 @@ Form-detection logic is adapted from Englehardt, Han & Narayanan (2018), "I neve
 - **Browser only.** Every request comes from Chromium page loads; there are no requests outside the browser. Do not reintroduce plain-HTTP pre-screening or recording forms from served markup (removed 2026-10-08).
 - **Selenium**, since 2026-10-21 (was Playwright). Chrome is driven through chromedriver, one driver per site. The exact viewport is set with a CDP `Emulation.setDeviceMetricsOverride` and `--hide-scrollbars`; both are required for recorded `width` and `viewport_coverage` to mean the same thing as in earlier runs, so do not drop them for `--window-size`.
 - Keep polite delays between page loads (`--page-delay` plus random jitter). Do not add parallelism within a single process; scale across separate processes with `--shard`, or `--jobs N`, which spawns those shards for you and merges their output. The `--jobs` parent never crawls.
-- Do not add dependencies beyond `selenium`, `undetected-chromedriver`, `SQLAlchemy` and the Python standard library without asking. SQLAlchemy is how `DATABASE_URL` in `config.py` can name a database other than SQLite without a code change. `undetected-chromedriver` is the default driver since 2026-10-22; it is imported inside `_stealth_driver()`, so `--no-stealth` still runs without it installed. (Playwright is no longer used by the crawler; `docs/` rendering still uses it, which is why `requirements.txt` mentions it in a comment.)
 
 ## Setup and commands
 
