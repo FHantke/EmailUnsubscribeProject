@@ -282,11 +282,12 @@ def _submit_controls(cand):
     DETECT_JS counts any <button> as submit-like whatever its text says, which
     is right for detection and wrong here: a popup's "No thanks" is a button
     too, and clicking it dismisses the form instead of sending it. Dismiss
-    wording and menu-openers are dropped, and anything hidden is tried last.
+    wording is dropped, and anything hidden is tried last. Menu-openers never
+    arrive: isSubmitLike() drops those during detection.
     """
     pairs = list(zip(cand.get("submit_els") or [], cand.get("submit_info") or []))
     usable = [(el, i) for el, i in pairs
-              if not i["toggle"] and not re.search(SUBMIT_DISMISS, (i["text"] or "").strip(), re.I)]
+              if not re.search(SUBMIT_DISMISS, (i["text"] or "").strip(), re.I)]
     # Visible ones first, each group in page order; a hidden submit input is
     # still worth a scripted click if nothing on screen works.
     return ([(el, i["text"]) for el, i in usable if i["displayed"]]
@@ -518,10 +519,10 @@ def _submit_one(driver, target, args, output):
 
     controls = _submit_controls(cand)
     row["submit_text_used"] = controls[0][1] if controls else ""
-    if not controls:
-        row["outcome"] = "no_submit_button"
-        output.submission(row)
-        return row["outcome"]
+    # No button is not a dead end. An icon-only <div> button with no label is
+    # invisible to isSubmitLike(), and such a form is still sent by pressing
+    # Enter in its email box, which _do_submit() tries next. Giving up here
+    # would throw those away unattempted.
     if args.submit_dry_run:
         row["outcome"] = "filled_only"
         output.submission(row)
@@ -536,8 +537,11 @@ def _submit_one(driver, target, args, output):
     tabs = set(driver.window_handles)
     how = _do_submit(driver, cand, cand.get("email_el"))
     if not how:
-        output.update_submission(site, sig, outcome="click_failed")
-        return "click_failed"
+        # Tell the two apart: nothing to click at all, or a button that would
+        # not take a click. Enter has been tried either way by this point.
+        outcome = "click_failed" if controls else "no_submit_button"
+        output.update_submission(site, sig, outcome=outcome)
+        return outcome
     time.sleep(SUBMIT_SETTLE_MS / 1000)
 
     # An open alert blocks every driver call, so it has to be taken first.

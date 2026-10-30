@@ -34,6 +34,16 @@ EXPECTED = {
     "p_shadow": "subscription",      # inside open shadow DOM
     "q_delayed": "subscription",     # appears only in the after_delay phase
     "r_iframe": "subscription",      # inside an iframe
+    "s_picker": "subscription",      # a country picker beside the real submit
+}
+
+# field name -> expected submit_text. Only where which element was picked as the
+# submit button is itself the point of the case.
+EXPECTED_SUBMIT = {
+    # royalcaribbean.com: the <button> country picker must lose to the
+    # <a role=button type=submit>, whose spinner/label/icon children must not
+    # disqualify it.
+    "s_picker": ["Sign Up"],
 }
 
 
@@ -59,12 +69,13 @@ def main():
     httpd.shutdown()
 
     db = sqlite3.connect(str(out / "crawl.db"))
-    rows = db.execute("SELECT field_names, form_type FROM forms").fetchall()
-    found = {}
-    for field_names, form_type in rows:
+    rows = db.execute("SELECT field_names, form_type, submit_text FROM forms").fetchall()
+    found, submits = {}, {}
+    for field_names, form_type, submit_text in rows:
         for name in json.loads(field_names or "[]"):
             if name in EXPECTED:
                 found[name] = form_type
+                submits[name] = json.loads(submit_text or "[]")
     bad = 0
     for name, want in EXPECTED.items():
         got = found.get(name, "NOT DETECTED")
@@ -72,8 +83,15 @@ def main():
         if got != want:
             bad += 1
         print(f"  {flag} {name:12} -> {got:13} (expected {want})")
+    for name, want in EXPECTED_SUBMIT.items():
+        got = submits.get(name, "NOT DETECTED")
+        flag = "ok  " if got == want else "FAIL"
+        if got != want:
+            bad += 1
+        print(f"  {flag} {name:12} submit_text {got} (expected {want})")
     extra = len(rows) - len([n for n in found])
-    print(f"\n{len(rows)} forms recorded, {len(EXPECTED) - bad}/{len(EXPECTED)} as expected. Output: {out}")
+    print(f"\n{len(rows)} forms recorded, {len(EXPECTED) + len(EXPECTED_SUBMIT) - bad}/"
+          f"{len(EXPECTED) + len(EXPECTED_SUBMIT)} checks as expected. Output: {out}")
     return 1 if bad else 0
 
 

@@ -168,7 +168,7 @@ src/crawler/
   jobs.py              --jobs process supervisor, Ctrl-C handling
   util.py              small shared helpers
 docker/                Dockerfile, entrypoint and notes for the containerised run
-tests/                 fixture site, run_fixture.py (all 18 forms typed right) and
+tests/                 fixture site, run_fixture.py (all 19 forms typed right) and
                        run_submit_fixture.py (--submit, counting POSTs exactly)
 inputs/                site lists
 scripts/               misc helper scripts (cleanup, analysis, conversions)

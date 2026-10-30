@@ -132,11 +132,15 @@ what was filled in survives the failure.
 `_submit_controls()` picks the button. `DETECT_JS` counts any `<button>` as
 submit-like whatever its text says, which is right for detection and wrong here: a
 popup's "No thanks" is a button too, and clicking it dismisses the form instead of
-sending it. So dismiss wording (`SUBMIT_DISMISS`) and menu-openers
-(`aria-expanded`/`aria-haspopup`) are dropped, visible controls are tried before
-hidden ones, and if none works it presses **Enter in the email box**. Never
-`form.submit()`, which skips the site's own handlers and can send an AJAX form
-twice.
+sending it, so dismiss wording (`SUBMIT_DISMISS`) is dropped and visible controls
+are tried before hidden ones. Menu-openers never arrive — `isSubmitLike()` rejects
+those during detection, since 2026-10-30.
+
+If nothing works, or there was no button to begin with, it presses **Enter in the
+email box**. A submit button drawn as an icon-only `<div>` with no label is
+invisible to detection, and such a form is still sent that way, so a missing button
+is not a reason to give up unattempted. Never `form.submit()`, which skips the
+site's own handlers and can send an AJAX form twice.
 
 After `SUBMIT_SETTLE_MS` an open JavaScript alert is accepted first — it would
 block every later call — and a tab the submit opened (Mailchimp's `target="_blank"`
@@ -195,7 +199,7 @@ N times the limit. Ctrl-C stops at the next site, as in a crawl.
 | `no_email_field` | Found, but with nowhere to put the address |
 | `skipped_phone`, `skipped_password`, `skipped_username`, `skipped_address`, `skipped_payment_card`, `skipped_verification_code` | The form requires data the study does not invent; nothing was typed or sent |
 | `failed_fill` | The address would not stay in the box; nothing was sent |
-| `no_submit_button` | Found and filled, but nothing submit-like in it |
+| `no_submit_button` | Nothing submit-like in it, and Enter in the email box did not send it either |
 | `click_failed` | Neither a real click nor a scripted one worked |
 | `submitting` | Killed between the click and the result; something may have been sent |
 | `site_timeout` | Over `--site-time-limit`; the browser was killed |

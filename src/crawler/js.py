@@ -154,14 +154,29 @@ DETECT_JS = r"""
   //   - <input type="submit"> or type="image"; type="button" only with submit words
   //   - a short (<=40 chars) link/div/span with at most 2 children, submit words,
   //     and something that makes it clickable (role=button, a link, cursor:pointer)
+  // Opens a menu or a list - a country picker, a language switcher - so it is
+  // never the form's submit button, whatever tag it is built from. Checked
+  // first because royalcaribbean.com's country picker is a <button>, which the
+  // next line would otherwise accept outright.
+  const isToggle = el => el.getAttribute('aria-expanded') !== null ||
+    !['false', '', null].includes(el.getAttribute('aria-haspopup'));
+
   const isSubmitLike = el => {
     const tag = el.tagName, type = (el.getAttribute('type') || '').toLowerCase();
+    if (isToggle(el)) return false;
     if (tag === 'BUTTON') return type !== 'reset' && isVisible(el);
     if (tag === 'INPUT') {
       const ok = type === 'submit' || type === 'image' || (type === 'button' && SUBMIT_HINT.test(clickText(el)));
       return ok && isVisible(el);
     }
-    if (el.children.length > 2) return false;
+    // An element that says it is a button is one, however it is built inside:
+    // a spinner, a label and an icon are three children and quite ordinary.
+    // The count only stops an anonymous wrapper <div> being read as a button,
+    // and that guess is not needed once the page has said what the element is.
+    // royalcaribbean.com's submit is an <a role=button type=submit> with those
+    // exact three children, and was being thrown away for having them.
+    const declared = type === 'submit' || el.getAttribute('role') === 'button';
+    if (!declared && el.children.length > 2) return false;
     const txt = clickText(el);
     if (!txt || txt.length > 40 || !SUBMIT_HINT.test(txt)) return false;
     const clickable = el.getAttribute('role') === 'button' || tag === 'A' || getComputedStyle(el).cursor === 'pointer';
@@ -378,7 +393,11 @@ DETECT_JS = r"""
     const scope = scopeFor(el, fx);
     const scopeText = clean(scope.innerText);
 
-    const submits = Array.from(el.querySelectorAll(SUBMIT_SEL)).slice(0, 300).filter(isSubmitLike);
+    const submits = Array.from(el.querySelectorAll(SUBMIT_SEL)).slice(0, 300).filter(isSubmitLike)
+      // A button's own label <span> qualifies too: it carries the same words and
+      // inherits cursor:pointer from the button around it. Keep the outer
+      // element and drop its parts, or one button is counted several times.
+      .filter((s, _, all) => !all.some(o => o !== s && o.contains(s)));
     // Other buttons/links around the form, e.g. "No thanks" or a close button.
     const others = Array.from(scope.querySelectorAll('a, button, [role=button]'))
       .filter(b => !el.contains(b) && isVisible(b))
@@ -441,13 +460,8 @@ DETECT_JS = r"""
         // One entry per submit_els element, in the same order, so Python can
         // tell a "Subscribe" from a popup's "No thanks" without re-reading the
         // DOM. submit_text above is filtered and capped, so it does not line up.
-        submit_info: submits.map(s => ({
-          text: clickText(s),
-          // Opens a menu or list (a country picker), so never a submit button.
-          toggle: s.getAttribute('aria-expanded') !== null ||
-                  !['false', '', null].includes(s.getAttribute('aria-haspopup')),
-          displayed: isVisible(s),
-        })),
+        // Menu-openers are already gone: isSubmitLike() drops them.
+        submit_info: submits.map(s => ({text: clickText(s), displayed: isVisible(s)})),
       } : {}),
     };
   };

@@ -72,6 +72,23 @@
   <p>Contact us at the address below. Get in touch any time.</p>
   <a href="/unsubscribe">Manage preferences</a></footer>
 
+<!-- s_picker: royalcaribbean.com's shape. A country picker built as a <button>
+     sits beside the real submit, an <a role=button type=submit> holding a
+     spinner, a label and an icon. The picker must not be taken for the submit
+     button, and the real one must not be thrown out for having three children:
+     submit_text has to come out as just "Sign Up". -->
+<form id="rc">
+  <h2>Never miss the latest updates</h2>
+  <label for="rc_email">Email Address</label>
+  <input id="rc_email" name="s_picker" type="email" required>
+  <button type="button" aria-expanded="false" aria-haspopup="listbox"
+          aria-label="Select Country/Location, currently United States">Country/Location United States</button>
+  <a role="button" type="submit" href="#" aria-label="Submit the form to sign up"
+     style="display:inline-block;padding:6px 12px;border:1px solid #333">
+    <div class="spinner"></div><span>Sign Up</span><svg width="16" height="16" aria-hidden="true"></svg>
+  </a>
+</form>
+
 <div id="host"></div>
 <script>
   const r = document.getElementById('host').attachShadow({mode:'open'});
