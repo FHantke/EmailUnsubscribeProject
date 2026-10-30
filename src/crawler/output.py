@@ -49,7 +49,8 @@ log = logging.getLogger(__name__)
 _INTEGER = {"rank_on_page", "z_index", "n_fields", "n_checkboxes",
             "n_checkboxes_prechecked", "fields_missing_label", "width", "height",
             "http_status", "n_new_forms",
-            "n_checkboxes_ticked", "http_status_after", "dry_run"}
+            "n_checkboxes_ticked", "http_status_after", "dry_run",
+            "form_visible_after", "email_kept", "form_valid_after"}
 _REAL = {"viewport_coverage"}
 
 _RUN = 128      # a run name is a directory name; keep it bounded for backends that need it

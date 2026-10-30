@@ -75,12 +75,29 @@ the submit button as real WebElements. That avoids a second, drifting copy of
 1. The email box gets the address from `--submit-email`, with `{site}` replaced by
    the site's hostname — per-site aliases, so a later leak or sale is traceable to
    the site that received the address. No email box → outcome `no_email_field`.
-2. Every other field is touched **only if the form marks it required** (`required`
+2. A second email box — "confirm your email" — gets the alias too.
+3. **Refusals run first, over every required field.** If the form requires a phone
+   number, password, username, street address, card details or a verification code
+   (`SUBMIT_REFUSE`), the whole sign-up is abandoned with `skipped_<reason>` and
+   **nothing is typed into it at all**. A made-up phone number or address is harder
+   to defend than not signing up, and a password or username would create an
+   account rather than a subscription. The site stays eligible for a later attempt,
+   since nothing was sent.
+4. Every other field is touched **only if the form marks it required** (`required`
    or `aria-required`) and it is empty. The value comes from `SUBMIT_FILL` in
    [config.py](../src/crawler/config.py) — the first pattern matching the field's
    name, id, placeholder or label — falling back to `SUBMIT_FILL_DEFAULT`. A
    required `<select>` takes its first non-empty option.
-3. Checkboxes: only **unchecked required** ones are ticked.
+5. Checkboxes: only **unchecked required** ones are ticked — except a **pre-ticked
+   SMS box**, which is unticked. The study signs up for email and gives no phone
+   number for anyone to text. That is the one place a site's default is changed,
+   and it costs nothing: the pre-ticked state was already recorded at detection
+   time as `n_checkboxes_prechecked`.
+
+Then the address is **read back out of the box**. A popup taking focus mid-typing
+would otherwise submit a half-typed address and subscribe a stranger. It is typed
+once more, and if it still will not stick the outcome is `failed_fill` and nothing
+is submitted.
 
 Optional fields and the default state of consent boxes are left exactly as the
 site set them, because they are themselves what the study measures: a column like
@@ -112,16 +129,54 @@ The `submissions` row is written **before** the click, with outcome `submitting`
 never go unrecorded. An error later updates that row rather than replacing it, so
 what was filled in survives the failure.
 
-`_click()` scrolls the submit button into view and clicks it, falling back to the
-page's own `.click()` when something covers it — a consent box behind a styled
-label, a button under a cookie banner. It never calls `form.submit()`: a real
-click is what the page's own JavaScript listens for.
+`_submit_controls()` picks the button. `DETECT_JS` counts any `<button>` as
+submit-like whatever its text says, which is right for detection and wrong here: a
+popup's "No thanks" is a button too, and clicking it dismisses the form instead of
+sending it. So dismiss wording (`SUBMIT_DISMISS`) and menu-openers
+(`aria-expanded`/`aria-haspopup`) are dropped, visible controls are tried before
+hidden ones, and if none works it presses **Enter in the email box**. Never
+`form.submit()`, which skips the site's own handlers and can send an AJAX form
+twice.
 
-After `SUBMIT_SETTLE_MS`, `_result()` captures `<sig>_after.*` and reads the final
-URL, the HTTP status, the first heading and the first 600 characters of the page.
-If the form navigated away, its element is stale and only the context screenshot
-survives — which is the thank-you page, the thing worth having. Outcome
-`submitted`.
+After `SUBMIT_SETTLE_MS` an open JavaScript alert is accepted first — it would
+block every later call — and a tab the submit opened (Mailchimp's `target="_blank"`
+embeds) is read and closed. Then `_result()` captures `<sig>_after.*` and reads the
+final URL, HTTP status, first heading and first 600 characters. If the form
+navigated away, its element is stale and only the context screenshot survives —
+which is the thank-you page, the thing worth having. Outcome `submitted`.
+
+## 5b. The verdict
+
+`outcome` says what the crawler did; **`result` says what the site appears to have
+done about it**. `classify_outcome()` compares an observation taken after filling
+but *before* clicking with one taken after.
+
+The idea worth understanding: **only text that newly appeared counts**. A success
+message is usually already somewhere in the page before anything is submitted — the
+fixture page's own marketing copy says "Check your inbox each Monday" — so finding
+one afterwards proves nothing. `_new_keywords()` diffs the two.
+
+`OBSERVE_JS` gathers more than body text. It appends what the form's own fields
+hold and show, because some forms write their answer into the email box itself, and
+it reads `form.checkValidity()`. When the form has navigated away its elements are
+stale, so the observation falls back to reading the page text alone — without that,
+every ordinary non-AJAX form would be filed as a bare `redirect`.
+
+| Check, in order | `result` |
+|---|---|
+| New `ERR_*` in the text | `page_error` |
+| New `SUBSCRIBE_SUCCESS_KEYWORDS` | `success_text` |
+| New `SUBSCRIBE_FAILURE_KEYWORDS` | `failed` |
+| `checkValidity()` false **and** form on screen **and** address still in it | `failed` |
+| URL changed | `redirect` |
+| Form gone | `form_gone` |
+| Address no longer in the box | `form_reset` (AJAX forms clear on success) |
+| — | `no_change` |
+
+The three conditions on the validity row matter: a form that emptied or hid itself
+is invalid too, but because it *accepted* the address, so those have to fall
+through to `form_gone`/`form_reset`. `success_keywords` and `failure_keywords`
+record which words fired, so a verdict can always be traced to its evidence.
 
 ## 6. Pacing
 
@@ -138,6 +193,8 @@ N times the limit. Ctrl-C stops at the next site, as in a crawl.
 | `filled_only` | `--submit-dry-run`: filled and photographed, never clicked |
 | `not_found` | The form did not reappear in any phase or frame |
 | `no_email_field` | Found, but with nowhere to put the address |
+| `skipped_phone`, `skipped_password`, `skipped_username`, `skipped_address`, `skipped_payment_card`, `skipped_verification_code` | The form requires data the study does not invent; nothing was typed or sent |
+| `failed_fill` | The address would not stay in the box; nothing was sent |
 | `no_submit_button` | Found and filled, but nothing submit-like in it |
 | `click_failed` | Neither a real click nor a scripted one worked |
 | `submitting` | Killed between the click and the result; something may have been sent |

@@ -125,6 +125,8 @@ Schema stability matters because downstream analysis depends on it. Add new colu
 
 Schema changes so far:
 
+- 2026-10-30: eight columns were **appended to the end** of `SUBMISSION_FIELDS` for the submission verdict: `result`, `success_keywords`, `failure_keywords`, `form_visible_after`, `email_kept`, `form_valid_after`, `alert_text`, `new_tab_url`. Append-only, so an existing database gains them by `ALTER TABLE ADD COLUMN` and rows written before this date have NULL for all eight. `outcome` is unchanged in meaning, but gained the values `skipped_*` and `failed_fill`.
+
 - 2026-10-23: `submissions` was **added as a new table**, with its columns in `SUBMISSION_FIELDS` (`config.py`), for `--submit`. No existing column changed, and `METADATA.create_all()` adds the table to an existing database on the next run, so nothing needs a fresh `--out`. `SUBMISSION_FIELDS` is append-only on the same terms as `FORM_FIELDS`. Note that four places in `output.py` list the tables by hand rather than walking the metadata — `ensure_schema()`, `merge_parts()`, `export_csv()` and the module's unpack — so a sixth table has to be named in all of them, `merge_parts()` especially, or remote shards lose its rows silently.
 
 - 2026-10-22: `login_like` was **replaced in place** by `form_type`, a fourth deliberate exception to the append-only rule. Same position and same column count, so only the name and the values change: the boolean becomes one of `subscription`, `login`, `checkout`, `comment`, `contact`, `search`, `unknown`. `login` keeps the three signals `login_like` used, so forms that were `login_like=True` are typed `login`; everything that was `False` is now typed, most of it `signup`. Classification lives in `FORM_TYPES` in `config.py`. `Output` refuses to append to a `forms.csv` with the old header, so use a fresh `--out` directory.
@@ -156,7 +158,10 @@ The fixture covers: a footer `<form>` with a labeled email input, a delayed `pos
 
 After a test run, confirm in the server log that no POST or form-action requests were made, and spot-check screenshots in `outputs/<run>/screens/`.
 
-Run `python3 tests/run_submit_fixture.py` before and after any change to `crawler/submit.py`. It is the one test that expects a POST, and it counts them exactly: 0 for the crawl, 0 for `--submit-dry-run`, 1 for `--submit`, 0 for a second `--submit`. It also checks the alias substitution, that the required field was filled and the required consent box ticked, that the **optional** box was left alone, that the filled-form capture exists and its saved HTML holds what was typed, and that the POST body carries the alias. 28 checks; it exits non-zero on any failure. It serves `tests/fixture/submit/`, whose form really POSTs, and uses its own throwaway database.
+Run `python3 tests/run_submit_fixture.py` before and after any change to `crawler/submit.py`. It is the one test that expects a POST, and it counts them exactly: 0 for the crawl, 0 for `--submit-dry-run`, 1 for `--submit`, 0 for a second `--submit`. 39 checks; it exits non-zero on any failure. It uses its own throwaway database and serves two sites, on two ports so that each gets its own submission:
+
+- `tests/fixture/submit/` — a newsletter form that really POSTs. Checks the alias substitution; that the required name field was filled and the required consent box ticked; that the **optional** box was left alone and the **pre-ticked SMS** box unticked; that the filled-form capture exists and its saved HTML holds what was typed; that the POST body carries the alias and no `s_sms`; that the form was sent by its **Subscribe** button and not its **"No thanks"** one; and that the verdict is `success_text` from the keyword the result page newly showed — while "check your inbox", which that page's marketing copy says all along, is correctly **not** counted.
+- `tests/fixture/submit/phone/` — a newsletter form demanding a phone number. Must end `skipped_phone`, with nothing typed and no POST ever sent to it.
 
 ## Known limitations / backlog
 
@@ -201,12 +206,33 @@ Decisions, settled with the project lead before any of it was written:
   ever guessed. `{site}` in it is replaced by the site's hostname, giving per-site
   aliases (`study+example.com@gmail.com`) so a later leak or sale is traceable to
   the site that received it.
-- **What gets filled.** The email box gets the alias. Other fields are touched only
-  when the form marks them **required** (`required` or `aria-required`), with values
-  from `SUBMIT_FILL` in `config.py`; required selects take their first non-empty
-  option. Only unchecked **required** checkboxes are ticked. A form's optional
-  fields and the default state of its consent boxes are themselves study variables,
-  so they are left exactly as the site set them.
+- **What gets filled.** The email box gets the alias, as does a second "confirm your
+  email" box. Other fields are touched only when the form marks them **required**
+  (`required` or `aria-required`), with values from `SUBMIT_FILL` in `config.py`;
+  required selects take their first non-empty option. Only unchecked **required**
+  checkboxes are ticked. A form's optional fields and the default state of its
+  consent boxes are themselves study variables, so they are left exactly as the
+  site set them.
+- **What is refused** (added 2026-10-30). A form that *requires* phone, password,
+  username, street address, card details or a verification code is **skipped**,
+  outcome `skipped_<reason>`, rather than filled with invented data — a made-up
+  phone number or address is harder to defend than not signing up, and a password
+  or username would create an account rather than a subscription. The rules are
+  `SUBMIT_REFUSE` in `config.py`, checked before `SUBMIT_FILL` and never against the
+  email box. Nothing is typed into a form that is going to be skipped, and the site
+  stays eligible for a later attempt. A required field matching no rule is still
+  filled with `SUBMIT_FILL_DEFAULT` and recorded in `fields_filled`, which is where
+  this is laxer than the reference implementation it was taken from.
+- **SMS opt-ins are never accepted** (added 2026-10-30). A text-message box
+  (`SUBMIT_SMS`) is never ticked, and a **pre-ticked** one is unticked: the study
+  signs up for email and gives no phone number for anyone to text. This is the one
+  deliberate exception to leaving defaults alone, and it costs nothing, because the
+  pre-ticked state was already recorded at detection time in
+  `n_checkboxes_prechecked`.
+- **The address is read back before anything is sent** (added 2026-10-30). A popup
+  taking focus mid-typing would otherwise submit a half-typed address and subscribe
+  a stranger. If the email box does not hold the alias, it is typed once more, and
+  failing that the outcome is `failed_fill` and the form is not submitted.
 - **The filled form is captured before the click**: `<sig>_filled.png`,
   `<sig>_filled_context.png` and `<sig>_filled.html`, the record of precisely what
   was typed and which boxes were ticked. `_freeze()` copies each field's value
@@ -230,10 +256,43 @@ Decisions, settled with the project lead before any of it was written:
   lead deferred the question on 2026-10-23. **Record the answer here before any
   large live run**; until then prefer `--submit-dry-run` and `--submit-limit`.
 
-Outcomes in the `outcome` column: `submitted`, `filled_only` (dry run), `not_found`
-(the form did not reappear), `no_email_field`, `no_submit_button`, `click_failed`,
-`submitting` (killed between the click and the result), `site_timeout`, `error`.
-A site skipped because it was already submitted to gets no row at all.
+- **Which button is clicked** (added 2026-10-30). `DETECT_JS` counts any `<button>`
+  as submit-like whatever its text says — right for detection, wrong here, since a
+  popup's "No thanks" is a button too and clicking it dismisses the form instead of
+  sending it. `_submit_controls()` drops `SUBMIT_DISMISS` wording and menu-openers
+  (`aria-expanded`/`aria-haspopup`), tries visible controls before hidden ones, and
+  falls back to pressing Enter in the email box. Never `form.submit()`, which skips
+  the site's own handlers and can send an AJAX form twice.
+
+**Two columns describe a submission**: `outcome` is what the crawler did, `result`
+(added 2026-10-30) is what the site appears to have done about it.
+
+`outcome`: `submitted`, `filled_only` (dry run), `not_found` (the form did not
+reappear), `no_email_field`, `skipped_<phone|password|username|address|payment_card|
+verification_code>`, `failed_fill` (the address would not go in), `no_submit_button`,
+`click_failed`, `submitting` (killed between the click and the result),
+`site_timeout`, `error`. A site skipped because it was already submitted to gets no
+row at all.
+
+`result`, from `classify_outcome()`, comparing the page just before the click with
+the page after it: `success_text`, `failed`, `page_error`, `redirect`, `form_gone`,
+`form_reset` (the box was emptied, which AJAX forms do on success), `no_change`.
+
+The thing that makes this worth more than a keyword search: **only text that newly
+appeared counts** (`_new_keywords()`). A success message is usually already in the
+page before anything is submitted — the fixture page says "Check your inbox each
+Monday" in its marketing copy — so presence afterwards proves nothing. The lists are
+`SUBSCRIBE_SUCCESS_KEYWORDS` and `SUBSCRIBE_FAILURE_KEYWORDS` in `config.py`;
+`success_keywords`/`failure_keywords` record which ones actually fired, so a verdict
+can always be traced to its evidence. `OBSERVE_JS` also reads the form's own field
+values, because some forms write their answer into the email box, and
+`form.checkValidity()`, because a browser refusing the form is strong evidence of
+failure — but only when the form is still on screen with the address still in it,
+since a form that emptied or hid itself is invalid for the opposite reason.
+When a form navigates away its elements go stale, so the observation falls back to
+reading the page text alone; without that every ordinary non-AJAX form would look
+like a bare `redirect`. `result` is a heuristic like `form_type`: spot-check it
+against the `_after` screenshots.
 
 Still out of scope: the post-submit experience itself (confirmation flow, double
 opt-in, welcome email) is studied manually on a small subsample from the research

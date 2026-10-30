@@ -438,6 +438,16 @@ DETECT_JS = r"""
         text_els: fi.textLike,
         checkbox_els: fi.checkboxes,
         submit_els: submits,
+        // One entry per submit_els element, in the same order, so Python can
+        // tell a "Subscribe" from a popup's "No thanks" without re-reading the
+        // DOM. submit_text above is filtered and capped, so it does not line up.
+        submit_info: submits.map(s => ({
+          text: clickText(s),
+          // Opens a menu or list (a country picker), so never a submit button.
+          toggle: s.getAttribute('aria-expanded') !== null ||
+                  !['false', '', null].includes(s.getAttribute('aria-haspopup')),
+          displayed: isVisible(s),
+        })),
       } : {}),
     };
   };
@@ -463,6 +473,31 @@ FIELD_INFO_JS = r"""
   // For a <select>: the values it offers, so a required one can be answered.
   options: f.tagName === 'SELECT' ? Array.from(f.options).map(o => o.value) : [],
 }))
+"""
+
+
+# The state --submit compares before and after the click, to judge what happened.
+# Takes the form and its email box.
+#
+# The text is not just the body's: a form that answers in place often writes its
+# message into its own fields, so what the fields hold and show is appended. The
+# email box's value is read separately, because an AJAX form that empties it has
+# usually accepted the address, while one that keeps it has usually not.
+OBSERVE_JS = r"""
+([form, email]) => {
+  const shown = e => !!e && e.isConnected && e.getClientRects().length > 0 &&
+                     getComputedStyle(e).visibility !== 'hidden';
+  const fields = form ? Array.from(
+      form.querySelectorAll('input:not([type=hidden]):not([type=password]), textarea'))
+    .map(f => `${f.value || ''} ${f.placeholder || ''}`).join(' ') : '';
+  return {
+    text: [document.body ? document.body.innerText : '', fields].join(' '),
+    form_visible: shown(email),
+    email_value: email ? email.value : '',
+    // What the browser itself makes of the form as filled in; null once it is gone.
+    form_valid: form && form.isConnected && form.checkValidity ? form.checkValidity() : null,
+  };
+}
 """
 
 

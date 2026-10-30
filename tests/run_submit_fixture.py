@@ -18,7 +18,8 @@ import urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PORT = 8898
+PORT = 8898          # the newsletter form that should be signed up to
+PORT_PHONE = 8897    # a separate site, so it gets its own submission
 EMAIL = "study+{site}@example.org"
 WANT_EMAIL = "study+127.0.0.1@example.org"      # {site} becomes the hostname
 
@@ -49,15 +50,18 @@ def run(cmd, env):
 
 def main():
     handler = functools.partial(Handler, directory=str(ROOT / "tests" / "fixture"))
-    httpd = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), handler)
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    servers = [http.server.ThreadingHTTPServer(("127.0.0.1", p), handler)
+               for p in (PORT, PORT_PHONE)]
+    for httpd in servers:
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
     out = Path(tempfile.mkdtemp(prefix="submit-fixture-"))
     db_path = out / "crawl.db"
     env = dict(os.environ, FIND_FORMS_DATABASE_URL=f"sqlite:///{db_path}")
     base = [sys.executable, str(ROOT / "src" / "find_forms.py"), "--out", str(out), "--headless"]
     sites = out / "sites.txt"
-    sites.write_text(f"http://127.0.0.1:{PORT}/submit/\n")
+    sites.write_text(f"http://127.0.0.1:{PORT}/submit/\n"
+                     f"http://127.0.0.1:{PORT_PHONE}/submit/phone/\n")
 
     def query(sql):
         db = sqlite3.connect(str(db_path))
@@ -75,15 +79,17 @@ def main():
     print("\n1. crawl (detection only)")
     run(base + [str(sites), "--popup-wait", "2", "--page-delay", "0", "--max-pages", "1"], env)
     forms = query("SELECT form_type, field_names FROM forms")
-    check("one subscription form detected", len(forms) == 1 and forms[0][0] == "subscription", forms)
+    check("two subscription forms detected",
+          len(forms) == 2 and {f[0] for f in forms} == {"subscription"}, forms)
     check("crawling sent no POST", not Handler.posts, Handler.posts)
 
     print("\n2. --submit --submit-dry-run")
-    run(base + ["--submit", "--submit-email", EMAIL, "--submit-dry-run", "--popup-wait", "2"], env)
+    run(base + ["--submit", "--submit-email", EMAIL, "--submit-dry-run", "--popup-wait", "2",
+                "--submit-delay", "0"], env)
     rows = query("SELECT outcome, email_used, fields_filled, n_checkboxes_ticked, "
                  "screenshot_filled, context_screenshot_filled, html_filled, dry_run "
-                 "FROM submissions")
-    check("one submissions row", len(rows) == 1, rows)
+                 "FROM submissions WHERE site LIKE '%:" + str(PORT) + "/%'")
+    check("one submissions row for the newsletter site", len(rows) == 1, rows)
     if rows:
         outcome, email, filled, ticked, shot, ctx, html, dry = rows[0]
         filled = json.loads(filled or "[]")
@@ -93,6 +99,7 @@ def main():
         check("the required name field was filled", any(f.startswith("s_name=") for f in filled), filled)
         check("the required consent box was ticked", ticked == 1 and "s_consent=checked" in filled, filled)
         check("the optional box was left alone", not any("s_offers" in f for f in filled), filled)
+        check("the pre-ticked SMS box was unticked", "s_sms=unticked_sms" in filled, filled)
         check("filled form photographed", bool(shot) and (out / shot).exists(), shot)
         check("filled form in context", bool(ctx) and (out / ctx).exists(), ctx)
         check("filled HTML saved", bool(html) and (out / html).exists(), html)
@@ -102,9 +109,22 @@ def main():
             check("saved filename marks it as the filled one", "_filled." in html, html)
     check("a dry run sent no POST", not Handler.posts, Handler.posts)
 
+    print("\n2b. the form demanding a phone number")
+    rows = query("SELECT outcome, fields_filled FROM submissions "
+                 f"WHERE site LIKE '%:{PORT_PHONE}/%'")
+    check("one row for the phone site", len(rows) == 1, rows)
+    if rows:
+        check("skipped rather than filled with a made-up number",
+              rows[0][0] == "skipped_phone", rows[0][0])
+        check("no phone number was typed",
+              not any("phone" in f for f in json.loads(rows[0][1] or "[]")), rows[0][1])
+
     print("\n3. --submit (for real)")
-    run(base + ["--submit", "--submit-email", EMAIL, "--popup-wait", "2"], env)
+    run(base + ["--submit", "--submit-email", EMAIL, "--popup-wait", "2",
+                "--submit-delay", "0"], env)
     check("exactly one POST", len(Handler.posts) == 1, Handler.posts)
+    check("the phone form was never POSTed to",
+          not any(p == "/submitted-phone" for p, _ in Handler.posts), Handler.posts)
     if Handler.posts:
         path, body = Handler.posts[0]
         sent = urllib.parse.parse_qs(body)      # form-urlencoded: + and @ are escaped
@@ -113,20 +133,32 @@ def main():
         check("the required name was sent", sent.get("s_name") == ["Alex"], sent)
         check("consent was sent", "s_consent" in sent, sent)
         check("the optional box was not sent", "s_offers" not in sent, sent)
-    rows = query("SELECT outcome, context_screenshot_after, result_text, http_status_after "
-                 "FROM submissions WHERE dry_run = 0")
+        check("SMS was not opted into", "s_sms" not in sent, sent)
+    rows = query("SELECT outcome, context_screenshot_after, result_text, http_status_after, "
+                 "result, success_keywords, failure_keywords, submit_text_used "
+                 f"FROM submissions WHERE dry_run = 0 AND site LIKE '%:{PORT}/%'")
     check("one live submissions row", len(rows) == 1, rows)
     if rows:
-        outcome, ctx_after, result, status = rows[0]
+        outcome, ctx_after, text, status, result, ok_kw, bad_kw, how = rows[0]
+        ok_kw = json.loads(ok_kw or "[]")
         check("outcome is submitted", outcome == "submitted", outcome)
         check("result page photographed", bool(ctx_after) and (out / ctx_after).exists(), ctx_after)
-        check("result page text captured", "Thanks for subscribing" in (result or ""), result)
+        check("result page text captured", "Thanks for subscribing" in (text or ""), text)
         check("result status recorded", status == 200, status)
+        check("verdict is success_text", result == "success_text", result)
+        check("the newly appeared keyword counted", "thanks for subscribing" in ok_kw, ok_kw)
+        check("the keyword already on the page did not count",
+              "check your inbox" not in ok_kw, ok_kw)
+        check("no failure keywords", json.loads(bad_kw or "[]") == [], bad_kw)
+        check("submitted via Subscribe, not the No thanks button",
+              "subscribe" in (how or "").lower(), how)
 
     print("\n4. --submit again (a site is submitted to once)")
-    run(base + ["--submit", "--submit-email", EMAIL, "--popup-wait", "2"], env)
+    run(base + ["--submit", "--submit-email", EMAIL, "--popup-wait", "2",
+                "--submit-delay", "0"], env)
     check("no second POST", len(Handler.posts) == 1, Handler.posts)
-    check("no extra row", len(query("SELECT 1 FROM submissions WHERE dry_run = 0")) == 1)
+    check("no extra row", len(query(
+        f"SELECT 1 FROM submissions WHERE dry_run = 0 AND site LIKE '%:{PORT}/%'")) == 1)
 
     httpd.shutdown()
     bad = checks.count(False)

@@ -104,8 +104,25 @@ up to at most once, ever.
 
 Only the email box and fields the form marks **required** are filled; optional
 fields and consent checkboxes are left exactly as the site set them, since their
-defaults are part of what the study measures. Results land in the `submissions`
-table. Ethics/IRB sign-off for live submission is an open question — see
+defaults are part of what the study measures. Two exceptions, both deliberate:
+
+- A form that **requires** a phone number, password, username, street address,
+  card details or a verification code is **skipped** rather than filled with
+  invented data (`outcome = skipped_phone`, and so on). Nothing is typed into it
+  and nothing is sent.
+- A **pre-ticked SMS** box is unticked. The study signs up for email, and gives no
+  phone number for anyone to text.
+
+Each row gets both an `outcome` (what the crawler did) and a `result` (what the
+site appears to have done): `success_text`, `failed`, `redirect`, `form_gone`,
+`form_reset`, `page_error` or `no_change`. The verdict counts only wording that
+**newly appeared** after the click, since a "thanks for subscribing" is usually
+somewhere on the page before you submit anything; `success_keywords` records which
+words actually fired. Like `form_type`, it is a heuristic to spot-check against the
+screenshots, not ground truth.
+
+Results land in the `submissions` table. Ethics/IRB sign-off for live submission is
+an open question — see
 [CLAUDE.md](CLAUDE.md#form-submission---submit-built-2026-10-23).
 
 ## Output

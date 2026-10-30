@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Evening Register</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 40px; }
+    form { max-width: 420px; border: 1px solid #ccc; border-radius: 8px; padding: 20px; }
+    label { display: block; margin: 10px 0 4px; }
+    input { width: 100%; padding: 8px; box-sizing: border-box; }
+    button { margin-top: 16px; padding: 10px 18px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Evening Register</h1>
+
+  <!-- A newsletter form that demands a phone number. The study never invents
+       one, so this must be skipped with "skipped_phone" and never POSTed to. -->
+  <form id="signup" method="post" action="/submitted-phone">
+    <h2>Subscribe to our newsletter</h2>
+
+    <label for="p_email">Email address</label>
+    <input id="p_email" name="p_email" type="email" required>
+
+    <label for="p_phone">Mobile phone number</label>
+    <input id="p_phone" name="p_phone" type="tel" required>
+
+    <button type="submit">Subscribe</button>
+  </form>
+</main>
+</body>
+</html>

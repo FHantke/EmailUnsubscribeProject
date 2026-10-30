@@ -15,7 +15,10 @@
 <body>
 <main>
   <h1>Daily Dispatch</h1>
-  <p>Long-form reporting, every weekday morning.</p>
+  <!-- Visible before the submit, and holds the success keyword "check your
+       inbox": a naive contains-check would call every submit a success. Only
+       text that newly appears may count. -->
+  <p>Long-form reporting, every weekday morning. Check your inbox each Monday.</p>
 
   <!-- The only form on the page, so --submit picks it. It really POSTs, which
        is how the submit fixture tells a dry run from a live one. -->
@@ -37,6 +40,14 @@
     <label class="check"><input type="checkbox" name="s_offers">
       Also send me offers from our partners.</label>
 
+    <!-- pre-ticked SMS: must be unticked. The study signs up for email, and
+         gives no phone number for anyone to text. -->
+    <label class="check"><input type="checkbox" name="s_sms" checked>
+      Send me text message offers on my mobile.</label>
+
+    <!-- A <button> is submit-like whatever it says, so this one must be
+         recognised as a dismiss and skipped, or the form is never sent. -->
+    <button type="button" onclick="document.getElementById('signup').hidden = true">No thanks</button>
     <button type="submit">Subscribe</button>
   </form>
 </main>

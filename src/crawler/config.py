@@ -219,6 +219,52 @@ SUBMIT_FILL = [
 ]
 SUBMIT_FILL_DEFAULT = "Alex Taylor"
 
+# Data the study never invents. A form that *requires* one of these is skipped
+# with outcome "skipped_<reason>" rather than filled in: a made-up phone number
+# or street address is harder to defend than not signing up at all, and a
+# password or username would create an account rather than a subscription.
+# Checked before SUBMIT_FILL, and only on fields that are not the email box.
+SUBMIT_REFUSE = [
+    (r"phone|mobile|\btel\b|telephone|\bcell\b", "phone"),
+    (r"password|passwd|\bpin\b|passcode", "password"),
+    (r"user.?name|\blogin\b|screen.?name", "username"),
+    (r"street|\baddr(ess)?\b|address.?[12]\b|apartment|\bsuite\b|\bunit\b", "address"),
+    (r"card|\bcvv\b|\bcvc\b|security.?code|expir|credit|\biban\b|account.?number", "payment_card"),
+    (r"verif|confirm.*code|\botp\b|one.?time|security.?question|\bssn\b|social.?security",
+     "verification_code"),
+]
+
+# Text-message opt-ins. Never ticked, and unticked when the site pre-ticked one:
+# the study signs up for email, not SMS, and it gives no phone number to send to.
+# The pre-ticked state is already recorded at detection time
+# (n_checkboxes_prechecked), so unticking here does not disturb that measurement.
+SUBMIT_SMS = (r"\bsms\b|\bmms\b|\btext(s|ing| ?messages?| me| alerts?| offers?)\b"
+              r"|mobile (alerts?|messages?|marketing)|\bautodial")
+
+# Buttons that close a popup rather than submit it. A <button> counts as
+# submit-like whatever its text says, so without this a popup's "No thanks"
+# can be clicked instead of its "Subscribe".
+SUBMIT_DISMISS = (r"no,? thanks|no thank you|\bclose\b|dismiss|not now|maybe later"
+                  r"|decline|cancel|\bskip\b|^x$|^×$")
+
+# -> the `result` column. Judged by what text *newly appeared* after the click,
+# since a success message is usually already in the page, hidden, beforehand.
+# Lower case; the page text is lowercased and curly quotes are normalised first.
+SUBSCRIBE_SUCCESS_KEYWORDS = [
+    "thank you for subscribing", "thanks for subscribing", "thank you for signing up",
+    "thanks for signing up", "you're subscribed", "you are subscribed", "you're in",
+    "you're on the list", "successfully subscribed", "subscription confirmed",
+    "check your inbox", "check your email", "confirm your subscription",
+    "confirmation email", "almost there", "one more step", "welcome aboard",
+    "you have been added", "has been added to our list", "we'll be in touch",
+]
+SUBSCRIBE_FAILURE_KEYWORDS = [
+    "invalid email", "enter a valid", "not a valid", "please enter", "is required",
+    "required field", "already subscribed", "already on our list", "already registered",
+    "something went wrong", "an error occurred", "try again", "could not be",
+    "unable to subscribe", "too many requests", "please complete", "please check",
+]
+
 
 # ---------------------------------------------------------------------------
 # 5. Parallel runs
@@ -284,6 +330,10 @@ SUBMISSION_FIELDS = [
     # what came back
     "final_url", "http_status_after", "result_heading", "result_text",
     "screenshot_after", "context_screenshot_after", "html_after", "error",
+    # added 2026-10-30: the verdict, from the page before vs after the click
+    "result", "success_keywords", "failure_keywords",
+    "form_visible_after", "email_kept", "form_valid_after",
+    "alert_text", "new_tab_url",
 ]
 
 
