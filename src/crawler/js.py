@@ -30,15 +30,6 @@ DETECT_JS = r"""
   const P = opts.patterns, re = src => new RegExp(src, 'i');
   const EMAIL_HINT = re(P.email);        // an input described like this is an email box ...
   const NOT_EMAIL = re(P.not_email);     // ... unless it is also described like this
-  // Form-type rules from config.py FORM_TYPES, in priority order: the first
-  // whose detect keys hit, and whose `unless` does not, names the form.
-  const TYPES = (opts.formTypes || []).map(t => ({
-    name: t.name,
-    fields: t.fields || [],
-    text: t.text ? re(t.text) : null,
-    url: t.url ? re(t.url) : null,
-    unless: t.unless ? re(t.unless) : null,
-  }));
   const MODAL_HINT = re(P.modal);        // popup-like class/id: ranks first
   const MODAL_HTML = re(P.modal_html);   // last-resort popup check on the form's HTML
   const SUBMIT_HINT = re(P.submit);      // text that makes a short clickable element a submit button
@@ -238,27 +229,6 @@ DETECT_JS = r"""
   // many are not signups; this labels them so analysis can filter. Each type is
   // tried in turn against the form's own HTML (attributes included, so
   // class="login-box" counts), the plain text around it, and the page address.
-  const formType = (el, scope) => {
-    // Options stripped for the same reason plainText drops them, and because a
-    // <select> of countries is markup, not something the form says.
-    const html = el.outerHTML.slice(0, 200000)
-      .replace(/<option\b[^>]*>[\s\S]*?<\/option>/gi, ' ').slice(0, 20000);
-    const near = plainText(scope);
-    // The action is part of the address a form rule may match: a login form
-    // sitting on a homepage still posts to /account/login.
-    const addr = location.hostname + location.pathname + ' ' + (el.getAttribute('action') || '');
-    for (const t of TYPES) {
-      // A field is hard evidence (a password box really is a login) and ignores
-      // `unless`; wording and the page address are softer and can be cancelled.
-      if (t.fields.some(f => el.querySelector('input[type=' + f + ']'))) return t.name;
-      const soft = (t.text && (t.text.test(html) || t.text.test(near)))
-        || (t.url && t.url.test(addr));
-      if (soft && !(t.unless && (t.unless.test(html) || t.unless.test(near)))) return t.name;
-    }
-    return opts.defaultFormType;
-  };
-
-
   // ---- Helpers: where the form is (used in step 6) ---------------------------
 
   // The nearest ancestor that is position:fixed or sticky (popups, sticky bars).
@@ -322,14 +292,7 @@ DETECT_JS = r"""
   };
 
 
-  // ---- Helpers: vendor and CAPTCHA -------------------------------------------
-
-  // The email platform behind the form, from the markup its embed leaves behind.
-  const vendorOf = el => {
-    const h = el.outerHTML.slice(0, 50000).toLowerCase();
-    for (const [needle, name] of (opts.vendors || [])) if (h.includes(needle)) return name;
-    return '';
-  };
+  // ---- Helpers: CAPTCHA -------------------------------------------
 
   // A CAPTCHA widget inside the form. `visible` means it wants the visitor to
   // do something; an invisible one scores the session on its own and does not
@@ -437,19 +400,15 @@ DETECT_JS = r"""
   });
 
 
-  // ---- 5. Ranking ------------------------------------------------------------
-  // The paper's rules, each used only to break ties in the ones before it:
-  //   higher z-index first -> popup-looking first -> login forms last -> more fields first.
+  // ---- 5. Measure the ranking signals -----------------------------------------
+  // The ordering itself is classify.rank() in Python, which also needs the
+  // form's type - so everything here is measurement, nothing is judgement.
 
   cands.forEach(r => {
     r.fi = fieldInfo(r.el);
     r.z = effectiveZ(r.el);
     r.modal = modalHint(r.el);
-    r.type = formType(r.el, scopeFor(r.el, fixedAncestor(r.el)));
-    r.offTarget = r.type === opts.targetFormType ? 0 : 1;    // anything but a subscription form ranks lower
   });
-  cands.sort((a, b) =>
-    (b.z - a.z) || (b.modal - a.modal) || (a.offTarget - b.offTarget) || (b.fi.n - a.fi.n));
 
 
   // ---- 6. Tag and measure ----------------------------------------------------
@@ -460,7 +419,7 @@ DETECT_JS = r"""
   // across phases.
   window.__uxFormSeq = window.__uxFormSeq || 0;
 
-  const describe = (r, i) => {
+  const describe = r => {
     const el = r.el, email = r.email, fi = r.fi;
     if (!el.dataset.uxFormId) el.dataset.uxFormId = prefix + '-' + (++window.__uxFormSeq);
 
@@ -485,13 +444,11 @@ DETECT_JS = r"""
       // which form, and how it was found
       dom_id: el.dataset.uxFormId,
       detection_method: r.method,
-      rank_on_page: i + 1,
 
       // where it is
       placement_guess: placement(rect, fx, landmark(el)),
       z_index: r.z,
       modal_hint: r.modal,
-      form_type: r.type,
       in_shadow_dom: el.getRootNode() !== document,
 
       // its fields
@@ -527,7 +484,16 @@ DETECT_JS = r"""
 
       // What the form is wired to, and what stands in front of it.
       form_action: el.getAttribute('action') || '',
-      vendor: vendorOf(el),
+
+      // For classify.py: the markup and wording its rules read, and every
+      // input type present - including hidden and invisible ones, since a
+      // password box is one whether or not it is on screen yet. Options are
+      // stripped here so a country list cannot decide what the form is.
+      form_html: el.outerHTML.slice(0, 200000)
+        .replace(/<option\b[^>]*>[\s\S]*?<\/option>/gi, ' ').slice(0, 50000),
+      near_text: plainText(scope),
+      input_types: [...new Set(Array.from(el.querySelectorAll('input'))
+        .map(i => (i.getAttribute('type') || 'text').toLowerCase()))],
       captcha_type: captcha ? captcha.type : '',
       captcha_visible: captcha ? captcha.visible : null,
 
@@ -550,7 +516,7 @@ DETECT_JS = r"""
     };
   };
 
-  return cands.map(describe);
+  return cands.map(describe);   // unranked: classify.rank() orders them
 }
 """
 

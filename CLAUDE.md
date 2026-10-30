@@ -50,7 +50,8 @@ Selenium 4 (Chrome via chromedriver), Python 3.8+. Run from the repo root. `src/
 | Module | Contents |
 |---|---|
 | `config.py` | timing budgets, `DETECT_PATTERNS` (form-detection keywords), `FORM_TYPES` (form classification), `LINK_TIERS`, `STOP`, `DATABASE_URL`, `FORM_FIELDS`/`PAGE_FIELDS` |
-| `js.py` | `DETECT_JS`, `LINKS_JS`, `SCROLL_JS`, `EXIT_INTENT_JS` |
+| `js.py` | `DETECT_JS`, `FIELD_INFO_JS`, `OBSERVE_JS`, `LINKS_JS`, `SCROLL_JS`, `EXIT_INTENT_JS` — measurement only since 2026-10-30 |
+| `classify.py` | `form_type()`, `vendor()`, `rank()`, `annotate()` — the rules that decide what a form is, in Python so they can be tested and replayed |
 | `util.py` | `now`, `slug`, `same_site`, `load_sites`, `form_signature`, `link_tier`, ... |
 | `browser.py` | `make_driver()` (`_stealth_driver()` for `--stealth`), `detect_options()`, `rank_links()`, `capture()`, `scan_page()`, `detect_in_all_frames()` |
 | `crawl.py` | `crawl_site()` |
@@ -65,7 +66,8 @@ Selenium 4 (Chrome via chromedriver), Python 3.8+. Run from the repo root. `src/
 - `merge_parts()`: folds other `*.db` files in `--out` into `crawl.db`, for shards run on another machine. Idempotent, and it keeps the source databases.
 - Shutdown is cooperative: SIGINT sets `STOP` and the crawl ends at the next page boundary, so rows are flushed and the driver is quit rather than left orphaned. (Under Playwright this was mandatory for a second reason, now gone: an interrupt landing inside a sync call corrupted its greenlet dispatch and the process span forever.)
 - `scan_page()`: loads a page, then runs detection after four phases in order: `on_load`, `after_delay` (`--popup-wait`), `after_scroll` (`SCROLL_JS`), and `after_exit_intent` (`simulate_exit_intent()`). Detection runs in every frame. New forms are captured and written immediately.
-- `DETECT_JS`: JavaScript evaluated in each frame. Implements top-down detection (`<form>` elements with a visible email input) and bottom-up detection (walk up from an email input outside any form to the first container holding a submit-like element), searches open shadow DOM, ranks candidates, tags each with `data-ux-form-id`, and returns metadata.
+- `DETECT_JS`: JavaScript evaluated in each frame. Implements top-down detection (`<form>` elements with a visible email input) and bottom-up detection (walk up from an email input outside any form to the first container holding a submit-like element), searches open shadow DOM, tags each candidate with `data-ux-form-id`, and returns metadata. **It measures; it does not judge** (since 2026-10-30): what a form *is*, and how the candidates rank, is decided in `classify.py`.
+- `classify.py`: `annotate()` is called by `_scan_frame()` on the list `DETECT_JS` returns, and sets `form_type` and `vendor`, then `rank()` orders the candidates by the paper's rules and numbers them. It works from three fields `DETECT_JS` reports for this purpose and which are dropped afterwards: `form_html` (the form's markup with `<option>` lists stripped, 50 KB), `near_text` (the wording around it, links and buttons excluded), and `input_types` (every input type present, **including hidden and invisible ones**, so a password box counts whether or not it is on screen).
 - `rank_links()` / `link_tier()`: score same-site visible links using `LINK_TIERS` (the paper's Table 1, plus a signup-address group added 2026-10-11) and skip `LINK_BLACKLIST` text matches, `URL_BLACKLIST` address matches and file links.
 - `capture()`: saves outerHTML, an element screenshot, and an in-context viewport screenshot.
 - `form_signature()`: deduplicates forms. The `seen` set persists across pages and phases within a site, so a form is recorded once with the first phase it appeared in.
@@ -117,6 +119,12 @@ Also 2026-10-30: five changes drawn from another study's capture module (an RFC 
 
 Signatures therefore differ either side of this date, as do `form_text` and `form_type` for forms containing a dropdown. No database existed when this landed, so nothing stored was invalidated.
 
+Also 2026-10-30: the form-type, vendor and ranking rules moved out of `DETECT_JS` into `crawler/classify.py`. **No recorded value changes** — verified by running the fixture before and after and comparing all 41 columns of all 19 forms, which were identical. The split is by who needs a rendered page: anything using `getComputedStyle`, a bounding box, `innerText` or a shadow root stays in JavaScript, and what only reads markup and wording is Python.
+
+Three things stay in `js.py` on purpose. CAPTCHA detection walks the DOM by selector and would need an HTML parser in Python, which the project deliberately does not ship. `consent_text_hint` reads the text *including* links, because consent wording is usually inside one, whereas the text `classify.py` is given has links removed — a "Sign in" link beside a newsletter box must not type it `login`. And `SUBMIT_SEL`, sizes, depths and counts are thresholds, which `config.py` has never held.
+
+What this buys: `tests/test_classify.py` checks the rules in **26 ms** without a browser, where the same check through `run_fixture.py` needs a two-minute crawl; and `scripts/replay_form_types.py` re-types every form already collected from the HTML saved beside it, so a rule change can be checked against real pages in under a second. Replaying the current rules over `isec_sample_run5_undetect` reproduces the 2026-10-23 audit exactly — the same 5 rows change, and 46 subscription rows rather than 44 — which is independent evidence that the Python rules behave as the JavaScript ones did. The replay is an indication, not a verdict: the wording *around* a form is not saved, so it stands in `form_text`, and a run from before a rule change was typed by the older rules.
+
 Keep this list current if the method changes, since it belongs in the methods section.
 
 ## Outputs (`--out`, default `outputs/results/`)
@@ -163,14 +171,17 @@ Several columns are heuristics, not ground truth: `placement_guess`, `modal_hint
 
 ## Conventions
 
+- **`js.py` measures, `classify.py` judges** (since 2026-10-30). Anything needing `getComputedStyle`, a bounding box, `innerText` or a shadow root belongs in the page; a rule that only reads markup or wording belongs in Python, where it can be tested without a browser. Adding a new keyword rule to `DETECT_JS` is the wrong place for it.
 - Keep the JavaScript in raw strings (`r"""..."""`) so regex backslashes survive. The page scripts are arrow functions; Selenium's `execute_script` runs statements, so `browser.py` wraps them with `_call()` / `_call_async()` (the async one is for `SCROLL_JS`, via `execute_async_script`). Keep them as arrow functions so both wrappers keep working.
-- Detection keyword patterns live in `DETECT_PATTERNS` in `crawler/config.py` (moved there from the top of `DETECT_JS` on 2026-10-11, unchanged). They are passed into the page through `detect_options()` in `browser.py` and compiled there as case-insensitive JavaScript regexes, so write them in syntax that means the same in Python and JavaScript. The form-type rules live beside them in `FORM_TYPES` and travel the same way. Thresholds (sizes, depths, counts) stay in `DETECT_JS`. Change patterns in `config.py`, not inline, and record the change here.
+- Detection keyword patterns live in `DETECT_PATTERNS` in `crawler/config.py` (moved there from the top of `DETECT_JS` on 2026-10-11, unchanged). They are passed into the page through `detect_options()` in `browser.py` and compiled there as case-insensitive JavaScript regexes, so write them in syntax that means the same in Python and JavaScript. `FORM_TYPES` and `VENDOR_HINTS` are no longer sent into the page at all: since 2026-10-30 they are compiled and applied by `classify.py`, as ordinary Python regexes. Thresholds (sizes, depths, counts) stay in `DETECT_JS`. Change patterns in `config.py`, not inline, and record the change here.
 - Timing budgets are constants in `crawler/config.py`: `LOAD_SETTLE_MS` (3000, replaces a 10s `networkidle` wait), `PAINT_SETTLE_MS` (1000, the settle before `on_load` detection — lowering it shifts `first_seen_phase`), `SCROLL_BUDGET_MS` (5000), `DETECT_BUDGET_MS` (4000), `MAX_SHADOW_SCAN` (15000), plus `BLOCKED_URL_PATTERNS` (audio/video addresses only — never block images, which are the deliverable, fonts, which change layout metrics, or third-party scripts, which host many signup embeds), `MAX_JOBS` (8), `SHUTDOWN_GRACE` (90), `SITE_TIME_LIMIT_PER_PAGE_S` (120) and `SCRIPT_TIMEOUT_S` (30).
 - Catch `SeErr` (Selenium's `WebDriverException`, the base class for every driver error including timeouts) around browser operations; one failing page or frame must never stop a crawl.
 - Keep the module docstring's usage and output sections in sync with the code.
 - `docs/crawl-flow.md` is the step-by-step description of a crawl (phases, timings, constants). Update it whenever the flow, a phase, or a timing constant changes.
 
 ## Testing
+
+Run `python3 tests/test_classify.py` before and after any change to `FORM_TYPES`, `VENDOR_HINTS` or the ranking rules. It takes about 30 ms and needs no browser: 25 checks over the cases those rules have got wrong before, each dated to this file's method history. It does not replace the fixture — it covers only the half of detection that does not need a rendered page.
 
 Run `python3 tests/run_fixture.py` before and after any change to detection or `FORM_TYPES`. It serves `tests/fixture/`, crawls it, and checks the `form_type` of all 20 forms against what each one is built to produce, plus `submit_text` where which element was picked as the submit button is the point (`EXPECTED_SUBMIT`), and `vendor`/`captcha_*` where that is (`EXPECTED_COLS`); it exits non-zero on a mismatch. 28 checks. Every expectation there is a case the rules got wrong at some point, so add one whenever a spot-check finds another.
 

@@ -160,7 +160,8 @@ The full column reference and schema history are in [CLAUDE.md](CLAUDE.md#output
 src/find_forms.py      entry point: command line and the main loop
 src/crawler/
   config.py            timing budgets, keyword regexes, output columns
-  js.py                JavaScript run in the page (form detection, scrolling, exit intent)
+  js.py                JavaScript run in the page: measures what only a rendered page knows
+  classify.py          decides what a form is and how candidates rank (pure Python, testable)
   browser.py           driver setup, page loading, phased detection, screenshots
   crawl.py             per-site flow: landing page, then ranked links
   submit.py            --submit only: filling in and submitting forms
@@ -168,8 +169,9 @@ src/crawler/
   jobs.py              --jobs process supervisor, Ctrl-C handling
   util.py              small shared helpers
 docker/                Dockerfile, entrypoint and notes for the containerised run
-tests/                 fixture site, run_fixture.py (all 20 forms typed right) and
-                       run_submit_fixture.py (--submit, counting POSTs exactly)
+tests/                 test_classify.py (the rules, no browser, ~30ms), run_fixture.py
+                       (all 20 forms typed right) and run_submit_fixture.py (--submit,
+                       counting POSTs exactly)
 inputs/                site lists
 scripts/               misc helper scripts (cleanup, analysis, conversions)
 outputs/               one directory per run (not committed)

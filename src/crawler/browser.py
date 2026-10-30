@@ -21,11 +21,11 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 
 from crawler.config import (
-    BLOCKED_URL_PATTERNS, DEFAULT_FORM_TYPE, DESKTOP_VIEWPORT, DETECT_BUDGET_MS, DETECT_PATTERNS,
-    FORM_TYPES, LINK_BLACKLIST, LOAD_SETTLE_MS, MAX_SHADOW_SCAN, PAINT_SETTLE_MS, SCRIPT_TIMEOUT_S,
-    SCROLL_BUDGET_MS, SKIP_EXTENSIONS, TARGET_FORM_TYPE, URL_BLACKLIST,
-    VENDOR_HINTS,
+    BLOCKED_URL_PATTERNS, DESKTOP_VIEWPORT, DETECT_BUDGET_MS, DETECT_PATTERNS,
+    LINK_BLACKLIST, LOAD_SETTLE_MS, MAX_SHADOW_SCAN, PAINT_SETTLE_MS, SCRIPT_TIMEOUT_S,
+    SCROLL_BUDGET_MS, SKIP_EXTENSIONS, URL_BLACKLIST,
 )
+from crawler.classify import annotate
 from crawler.js import DETECT_JS, EXIT_INTENT_JS, LINKS_JS, SCROLL_JS
 from crawler.util import form_signature, link_tier, now, same_site, short, slug
 
@@ -54,12 +54,12 @@ def detect_options(prefix="ux", with_elements=False):
     `with_elements` also returns the form, email box, fields and submit button
     as WebElements. Only submit.py asks for them; a crawl leaves it off so the
     payload it sends and receives is unchanged.
+
+    The form-type and vendor rules are not sent: they are applied in
+    classify.py, over the markup and wording DETECT_JS reports back.
     """
     return {"prefix": prefix, "budget": DETECT_BUDGET_MS, "maxShadowScan": MAX_SHADOW_SCAN,
-            "patterns": DETECT_PATTERNS, "defaultFormType": DEFAULT_FORM_TYPE,
-            "targetFormType": TARGET_FORM_TYPE, "withElements": with_elements,
-            "formTypes": [dict(rules, name=name) for name, rules in FORM_TYPES],
-            "vendors": VENDOR_HINTS}
+            "patterns": DETECT_PATTERNS, "withElements": with_elements}
 
 
 def _chrome_major(binary):
@@ -290,7 +290,8 @@ def detect_in_all_frames(driver, prefix="ux"):
 
     def walk(path):
         try:
-            found.extend(driver.execute_script(_call(DETECT_JS, 1), detect_options(prefix)))
+            cands = driver.execute_script(_call(DETECT_JS, 1), detect_options(prefix))
+            found.extend(annotate(cands, driver.execute_script("return location.href")))
             n = len(driver.find_elements(By.CSS_SELECTOR, "iframe, frame"))
         except SeErr:
             return
@@ -312,6 +313,9 @@ def _scan_frame(driver, path, phase, page_url, site, output, seen):
     try:
         cands = driver.execute_script(_call(DETECT_JS, 1), detect_options())
         frame_url = driver.execute_script("return location.href")
+        # DETECT_JS measures; classify.py judges. It types and ranks the
+        # candidates, so `cands` arrives here in rank order.
+        cands = annotate(cands, frame_url)
     except SeErr:
         return 0
     for cand in cands:
