@@ -45,11 +45,8 @@ EXPECTED_COLS = {
         "vendor": "mailchimp",                 # from the list-manage.com action
         "captcha_type": "recaptcha_v2",
         "captcha_visible": 1,
-        "eligible": 0,
-        "reject_reason": "phone",              # the phone is checked before the CAPTCHA
     },
-    "a_news": {"eligible": 1, "reject_reason": "", "vendor": ""},
-    "b_login": {"eligible": 0, "reject_reason": "password"},
+    "a_news": {"vendor": "", "captcha_type": ""},
 }
 
 # field name -> expected submit_text. Only where which element was picked as the

@@ -348,8 +348,6 @@ FORM_FIELDS = [
     "vendor",           # the email platform behind it, from VENDOR_HINTS
     "captcha_type",     # recaptcha_v2, turnstile, ... ; empty if none in the form
     "captcha_visible",  # whether that CAPTCHA needs the visitor to interact
-    "eligible",         # could --submit sign up to this form?
-    "reject_reason",    # if not, the first rule it failed
 ]
 
 PAGE_FIELDS = [     # one row per page visited

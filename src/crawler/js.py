@@ -43,9 +43,6 @@ DETECT_JS = r"""
   const MODAL_HTML = re(P.modal_html);   // last-resort popup check on the form's HTML
   const SUBMIT_HINT = re(P.submit);      // text that makes a short clickable element a submit button
   const CONSENT_HINT = re(P.consent);    // -> consent_text_hint
-  // Personal data the study never invents (SUBMIT_REFUSE in config.py). A form
-  // that *requires* one of these cannot be signed up to; the reason is recorded.
-  const REFUSE = (opts.refuse || []).map(r => ({re: re(r.pattern), reason: r.reason}));
   // Elements that might be a submit button; isSubmitLike() decides.
   const SUBMIT_SEL = 'button, input[type=submit], input[type=image], input[type=button], [role=button], a, div, span';
 
@@ -325,7 +322,7 @@ DETECT_JS = r"""
   };
 
 
-  // ---- Helpers: vendor, CAPTCHA, eligibility ---------------------------------
+  // ---- Helpers: vendor and CAPTCHA -------------------------------------------
 
   // The email platform behind the form, from the markup its embed leaves behind.
   const vendorOf = el => {
@@ -369,30 +366,6 @@ DETECT_JS = r"""
     }
     return null;
   };
-
-  // Why --submit could not sign up to this form, or '' if it could. The first
-  // blocking rule wins, and they are ordered hardest evidence first: a password
-  // box is a fact, the form's type is a guess. Recording the reason at capture
-  // time is what makes the forms the study cannot use analysable later, rather
-  // than a silent gap.
-  const rejectReason = (el, fi, type, captcha, nEmail) => {
-    if (nEmail > 2) return 'multiple_email';     // email + confirm is normal; more is not
-    for (let i = 0; i < fi.textLike.length; i++) {
-      const f = fi.textLike[i], t = typeOf(f);
-      if (t === 'password') return 'password';
-      if (t === 'textarea' && isRequired(f)) return 'message_field';
-      if (!isRequired(f) || isEmailInput(f)) continue;
-      const fieldHints = [f.getAttribute('name'), f.id, f.getAttribute('placeholder'),
-                          labelText(f), f.getAttribute('autocomplete')].filter(Boolean).join(' ');
-      for (const r of REFUSE) {
-        if (r.re.test(fieldHints)) return r.reason;
-      }
-    }
-    if (captcha && captcha.visible) return 'interactive_captcha';
-    if (type !== opts.targetFormType) return 'type_' + type;
-    return '';
-  };
-
 
   // ---- Helpers: the form's fields --------------------------------------------
 
@@ -496,8 +469,6 @@ DETECT_JS = r"""
     const scope = scopeFor(el, fx);
     const scopeText = shownText(scope);
     const captcha = captchaIn(el);
-    const nEmail = fi.textLike.filter(isEmailInput).length;
-    const reject = rejectReason(el, fi, r.type, captcha, nEmail);
 
     const submits = Array.from(el.querySelectorAll(SUBMIT_SEL)).slice(0, 300).filter(isSubmitLike)
       // A button's own label <span> qualifies too: it carries the same words and
@@ -554,13 +525,11 @@ DETECT_JS = r"""
 
       form_text: scopeText.slice(0, 600),
 
-      // What the form is wired to, and whether the study may sign up to it.
+      // What the form is wired to, and what stands in front of it.
       form_action: el.getAttribute('action') || '',
       vendor: vendorOf(el),
       captcha_type: captcha ? captcha.type : '',
       captcha_visible: captcha ? captcha.visible : null,
-      eligible: reject === '',
-      reject_reason: reject,
 
       // The elements themselves, for submit.py only (opts.withElements).
       // Selenium turns these into WebElements, which work inside shadow DOM

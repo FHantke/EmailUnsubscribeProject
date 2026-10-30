@@ -110,17 +110,14 @@ def main():
     check("a dry run sent no POST", not Handler.posts, Handler.posts)
 
     print("\n2b. the form demanding a phone number")
-    # Since 2026-10-30 the refusal happens at detection, so --submit never picks
-    # the form up at all: the reason lives in `forms`, not in `submissions`.
-    rows = query("SELECT eligible, reject_reason, form_type FROM forms "
+    rows = query("SELECT outcome, fields_filled FROM submissions "
                  f"WHERE site LIKE '%:{PORT_PHONE}/%'")
-    check("one form found on the phone site", len(rows) == 1, rows)
+    check("one row for the phone site", len(rows) == 1, rows)
     if rows:
-        check("still typed a subscription", rows[0][2] == "subscription", rows[0][2])
-        check("but marked ineligible", rows[0][0] == 0, rows[0][0])
-        check("with the reason recorded", rows[0][1] == "phone", rows[0][1])
-    check("so --submit never opened it at all",
-          not query(f"SELECT 1 FROM submissions WHERE site LIKE '%:{PORT_PHONE}/%'"))
+        check("skipped rather than filled with a made-up number",
+              rows[0][0] == "skipped_phone", rows[0][0])
+        check("no phone number was typed",
+              not any("phone" in f for f in json.loads(rows[0][1] or "[]")), rows[0][1])
 
     print("\n3. --submit (for real)")
     run(base + ["--submit", "--submit-email", EMAIL, "--popup-wait", "2",
