@@ -13,3 +13,7 @@ wheels/
 venv/
 outputs/
 inputs/
+
+# Local only: this branch is the crawler, and the repo it goes to has its own
+# README. Site lists are run inputs, not code.
+README.md
