@@ -1,0 +1,11 @@
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks              # scans only the staged changes
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: detect-private-key    # blocks a committed SSH or TLS key
+      - id: check-added-large-files
+        args: ["--maxkb=5000"]    # stops a database file or a screenshot dump slipping in
