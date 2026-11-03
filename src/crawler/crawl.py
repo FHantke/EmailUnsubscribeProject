@@ -7,18 +7,28 @@ from crawler.config import STOP
 from crawler.util import normalize_site, polite_sleep, strip_www
 
 
+class BrowserStartError(Exception):
+    """The browser would not start, before the site was touched. That is the
+    worker's fault, not the site's (no driver for this CPU, a broken image, out
+    of memory), so the site must not be recorded as failed: see crawl_queue()."""
+
+
 def crawl_site(raw_site, args, output):
     """Crawl one site end to end.
 
     The landing page, then links from rank_links() up to --max-pages, stopping
     at the first page with a form unless --explore is set. Each site gets its own
     driver, so it starts from a clean profile and takes nothing from the last site.
+    Raises BrowserStartError if that driver cannot be started.
     """
     landing = normalize_site(raw_site)
     site = landing
     seen = set()
 
-    driver = make_driver(args)
+    try:
+        driver = make_driver(args)
+    except Exception as e:
+        raise BrowserStartError(str(e)) from e
     try:
         found = scan_page(driver, landing, site, args, output, seen)
         visited = {landing, urldefrag(driver.current_url)[0]}

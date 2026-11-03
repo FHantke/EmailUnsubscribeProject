@@ -16,7 +16,7 @@ from crawler.config import LINK_TIERS
 def setup_logging(path=None):
     """Send the "crawler" logger to the console (message only) and, if `path` is
     given, append to that file too, with a timestamp and level on every line.
-    Console output goes to stdout so --jobs can relay it from each shard."""
+    Console output goes to stdout so --jobs can relay it from each worker."""
     log = logging.getLogger("crawler")
     log.setLevel(logging.INFO)
     console = logging.StreamHandler(sys.stdout)

@@ -12,7 +12,6 @@ import time
 from pathlib import Path
 
 from crawler.config import SHUTDOWN_GRACE, STOP
-from crawler.output import merge_parts
 
 log = logging.getLogger(__name__)
 
@@ -32,23 +31,26 @@ def strip_opt(argv, name):
     return out
 
 
-def run_jobs(args, merge=None, extra_args=()):
-    """Supervise N shard processes. This process never crawls anything.
+def run_jobs(args, child_args, merge=None, tag="s"):
+    """Supervise N child processes. This process never crawls anything.
 
-    Each child is this same command with --jobs replaced by --shard i/N, plus
-    `extra_args`. When they exit, `merge()` combines their output; by default
-    that is merge_parts() on --out. scripts/ pass their own.
+    Each child is this same command with --jobs removed, plus child_args(i, N).
+    The crawler gives each child a worker number, and the children take sites
+    from the run's queue (crawler/workqueue.py) until it is empty; scripts/ that
+    split their own input pass `--shard i/N` instead. When the children exit,
+    `merge()` combines their output, if given. Each child's lines are relayed
+    with `[<tag><i>]` in front.
     """
     n = args.jobs
     argv = strip_opt(sys.argv[1:], "--jobs")
-    cmd = [sys.executable, "-u", os.path.abspath(sys.argv[0])] + argv + list(extra_args)
+    cmd = [sys.executable, "-u", os.path.abspath(sys.argv[0])] + argv
     procs = []
     for i in range(n):
         # -u so each child's progress prints reach our pipe unbuffered.
-        procs.append(subprocess.Popen(cmd + ["--shard", f"{i}/{n}"],
+        procs.append(subprocess.Popen(cmd + list(child_args(i, n)),
                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
         time.sleep(0.5)  # stagger so N Chromiums do not allocate at once
-    log.info(f"started {n} shards")
+    log.info(f"started {n} processes")
 
     state = {"hits": 0, "at": None}
 
@@ -59,7 +61,7 @@ def run_jobs(args, merge=None, extra_args=()):
             # group; this covers the non-tty case. Do not kill yet, or they
             # die mid-flush.
             state["at"] = time.monotonic()
-            log.warning(f"Interrupted; giving {n} shards up to {SHUTDOWN_GRACE}s to flush...")
+            log.warning(f"Interrupted; giving {n} processes up to {SHUTDOWN_GRACE}s to flush...")
             for pr in procs:
                 if pr.poll() is None:
                     try:
@@ -88,7 +90,7 @@ def run_jobs(args, merge=None, extra_args=()):
             chunk = os.read(key.fileobj.fileno(), 65536)
             if not chunk:
                 if bufs[i]:
-                    log.info(f"[s{i}] {bufs[i].decode('utf-8', 'replace')}")
+                    log.info(f"[{tag}{i}] {bufs[i].decode('utf-8', 'replace')}")
                 sel.unregister(key.fileobj)
                 key.fileobj.close()
                 live -= 1
@@ -97,7 +99,7 @@ def run_jobs(args, merge=None, extra_args=()):
             while b"\n" in bufs[i]:
                 line, _, rest = bufs[i].partition(b"\n")
                 bufs[i] = bytearray(rest)
-                log.info(f"[s{i}] {line.decode('utf-8', 'replace')}")
+                log.info(f"[{tag}{i}] {line.decode('utf-8', 'replace')}")
         if state["at"] and time.monotonic() - state["at"] > SHUTDOWN_GRACE:
             for pr in procs:
                 if pr.poll() is None:
@@ -107,11 +109,9 @@ def run_jobs(args, merge=None, extra_args=()):
     codes = [pr.wait() for pr in procs]
     if merge:
         merge()
-    else:
-        merge_parts(clean=args.clean_parts)
     bad = [(i, c) for i, c in enumerate(codes) if c not in (0, 130)]
     for i, c in bad:
-        log.error(f"shard {i} exited {c}")
+        log.error(f"process {tag}{i} exited {c}")
     if all(c == 130 for c in codes):
         log.warning("Interrupted. Progress is saved; rerun the same command to resume." if not merge
                     else "Interrupted. Results for the pages done so far were written.")

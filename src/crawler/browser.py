@@ -5,10 +5,13 @@ Playwright does), so every site starts from a clean profile. `SeErr` is caught
 around every browser call: one failing page or frame must never stop a crawl.
 """
 
+import filecmp
 import logging
 import os
 import re
+import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 from urllib.parse import urldefrag, urlparse
@@ -82,19 +85,65 @@ def prepare_stealth_driver(args):
 
     Its multi-process mode picks the newest driver already in its cache and
     fails on an empty one ("max() arg is an empty sequence"), and downloading
-    from several shards at once races. Call this once, before any crawling, so
+    from several workers at once races. Call this once, before any crawling, so
     the cache is warm and every later driver just copies it. No-op unless
     --stealth, or if the cache is already populated.
+
+    In the Docker image (FIND_FORMS_CHROMEDRIVER set) the cache is filled from
+    the image's own chromedriver instead of a download. undetected_chromedriver
+    only ever downloads Google's x86-64 Linux build, which cannot run in an
+    arm64 container (an Apple Silicon Mac): it died at once with status -5.
+    Debian's driver is built for the Chromium installed beside it, so the pair
+    matches on any architecture, the Mac and an x86 EC2 instance alike.
     """
     if not args.stealth:
         return
     import undetected_chromedriver as uc
     cache = Path(uc.patcher.Patcher.data_path)
+    if os.environ.get("FIND_FORMS_CHROMEDRIVER"):
+        _seed_stealth_driver(uc, Path(os.environ["FIND_FORMS_CHROMEDRIVER"]), cache)
+        return
     if cache.exists() and any(cache.glob("*chromedriver*")):
         return
     major = _chrome_major(os.environ.get("FIND_FORMS_CHROME_BINARY") or uc.find_chrome_executable())
     log.info("  fetching the undetected_chromedriver binary (first run only)")
     uc.patcher.Patcher(version_main=major).auto()
+
+
+def _seed_stealth_driver(uc, source, cache):
+    """Put a patched copy of the chromedriver at `source` into
+    undetected_chromedriver's cache, unless the same one is already there.
+
+    With user_multi_procs, uc.Chrome() runs the newest *chromedriver* file in
+    the cache if it is patched, and deletes the rest. Every worker calls this,
+    so the copy is patched under a name without "chromedriver" in it and moved
+    into place in one step: a worker already running the old file keeps it,
+    and none ever starts a half-written one.
+    """
+    cache.mkdir(parents=True, exist_ok=True)
+    target = cache / "undetected_chromedriver"
+    tmp = cache / f"seed-{os.getpid()}.tmp"
+    shutil.copyfile(source, tmp)
+    os.chmod(tmp, 0o755)
+    patcher = uc.patcher.Patcher(executable_path=str(tmp))
+    patcher.patch_exe()
+    if not patcher.is_binary_patched(str(tmp)):
+        tmp.unlink()
+        raise SystemExit(f"undetected_chromedriver could not patch {source}, so stealth would not "
+                         f"hide the automation. Run with --no-stealth, or rebuild the image.")
+    if sys.platform == "darwin":
+        # Apple Silicon runs an arm64 binary only with a valid signature, and
+        # patching broke the one it had: sign the copy again, ad hoc.
+        subprocess.run(["codesign", "--force", "--sign", "-", str(tmp)],
+                       check=True, capture_output=True)
+    if target.exists() and filecmp.cmp(tmp, target, shallow=False):
+        tmp.unlink()
+        return
+    os.replace(tmp, target)
+    for other in cache.glob("*chromedriver*"):     # e.g. a downloaded build for another CPU
+        if other != target:
+            other.unlink(missing_ok=True)
+    log.info(f"  undetected_chromedriver: using a patched copy of {source}")
 
 
 def _stealth_driver(options):
@@ -113,7 +162,7 @@ def _stealth_driver(options):
     if major is None:
         log.warning("  could not read the browser version; undetected_chromedriver will guess its driver")
     # user_multi_procs gives this process its own copy of the patched driver.
-    # Without it, --jobs shards overwrite one shared binary and all but one die
+    # Without it, --jobs workers overwrite one shared binary and all but one die
     # with RemoteDisconnected, after writing partial rows for the site.
     return uc.Chrome(options=options, version_main=major,
                      browser_executable_path=binary or None,
@@ -153,7 +202,7 @@ def make_driver(args):
         driver = webdriver.Chrome(options=o, service=Service(driver_path) if driver_path else None)
     driver.set_page_load_timeout(args.timeout)
     # Bounds every execute_script. Playwright has no equivalent, which is why a
-    # page with a wedged main thread used to hang a whole shard indefinitely.
+    # page with a wedged main thread used to hang a whole worker indefinitely.
     driver.set_script_timeout(SCRIPT_TIMEOUT_S)
     try:
         driver.execute_cdp_cmd("Emulation.setDeviceMetricsOverride",
@@ -356,8 +405,11 @@ def scan_page(driver, url, site, args, output, seen):
     with the phase it first appeared in. Always writes one pages.csv row and
     returns the number of new forms.
     """
+    # http_status stays None (NULL) when the page reports none - after a
+    # cross-origin redirect, or when it never loaded. It is a number column,
+    # which PostgreSQL will not give an empty string.
     row = {"timestamp": now(), "site": site, "page_url": url, "final_url": "",
-           "http_status": "", "status": "ok", "n_new_forms": 0, "error": ""}
+           "http_status": None, "status": "ok", "n_new_forms": 0, "error": ""}
     try:
         driver.get(url)                       # page_load_strategy "eager": returns at DOMContentLoaded
         deadline = time.monotonic() + LOAD_SETTLE_MS / 1000
@@ -369,7 +421,7 @@ def scan_page(driver, url, site, args, output, seen):
         row["final_url"] = driver.current_url
         row["http_status"] = driver.execute_script(
             "const n = performance.getEntriesByType('navigation')[0];"
-            "return n && n.responseStatus ? n.responseStatus : '';") or ""
+            "return n && n.responseStatus ? n.responseStatus : null;") or None
     except SeErr as e:
         row.update(status="load_error", error=short(e))
         output.page(row)

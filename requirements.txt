@@ -5,9 +5,11 @@ selenium
 undetected-chromedriver
 
 # Database access. The crawler ships with SQLite, which needs nothing extra;
-# SQLAlchemy is what lets DATABASE_URL in config.py point somewhere else
-# (Postgres, MySQL) without changing any code.
-SQLAlchemy
+# SQLAlchemy is what lets DATABASE_URL in config.py point at PostgreSQL instead
+# without changing any code, and psycopg2 is its driver for that (e.g. AWS RDS,
+# or the postgres service in docker-compose.yml for local tests).
+SQLAlchemy>=2.0
+psycopg2-binary
 
 # Needed only to re-render the documentation, not by the crawler:
 #   docs/find-forms-method.pdf and docs/detect-js-flow.png

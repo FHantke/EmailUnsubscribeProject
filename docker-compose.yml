@@ -7,16 +7,48 @@ services:
     # Chromium crashes tabs on the default 64 MB /dev/shm. Raise it rather than
     # relying on --disable-dev-shm-usage alone.
     shm_size: 2gb
-    ports:
+    # ports:
       # Bound to localhost: the VNC screen has no password by default, so do not
       # publish these on a shared machine without setting VNC_PASSWORD below.
-      - "127.0.0.1:5900:5900"   # VNC client (Remmina, TigerVNC, Screen Sharing)
-      - "127.0.0.1:6080:6080"   # noVNC in a browser, no client to install
+      # - "127.0.0.1:5900:5900"   # VNC client (Remmina, TigerVNC, Screen Sharing)
+      # - "127.0.0.1:6080:6080"   # noVNC in a browser, no client to install
+    # The only host folders the container sees. Point them elsewhere with
+    # FIND_FORMS_INPUTS / FIND_FORMS_OUTPUTS (shell or .env), then recreate the
+    # container; inside it they are always inputs/ and outputs/.
     volumes:
-      - ./inputs:/app/inputs:ro
-      - ./outputs:/app/outputs
+      - ${FIND_FORMS_INPUTS:-./inputs}:/app/inputs:ro
+      - ${FIND_FORMS_OUTPUTS:-./outputs}:/app/outputs
     environment:
       # - VNC_PASSWORD=choose-one
       - SCREEN=1600x1000x24
+      # Passed through from the shell when set; unset, the crawler uses SQLite
+      # in outputs/. For the postgres service below:
+      #   FIND_FORMS_DATABASE_URL=postgresql://forms:forms@postgres:5432/forms
+      - FIND_FORMS_DATABASE_URL
+      - FIND_FORMS_DATABASE_PASSWORD
     # --jobs 8 is ~8 browsers; give the container room for them.
-    mem_limit: 8g
+    mem_limit: 24g
+
+  # A local PostgreSQL for tests and trial runs, standing in for AWS RDS. Only
+  # started when asked for: docker compose --profile test up -d postgres
+  # From the host: postgresql://forms:forms@localhost:5432/forms
+  # From the crawler container: postgresql://forms:forms@postgres:5432/forms
+  postgres:
+    image: postgres:16
+    profiles: ["test"]
+    environment:
+      - POSTGRES_USER=forms
+      - POSTGRES_PASSWORD=forms      # local only: the port is bound to localhost
+      - POSTGRES_DB=forms
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forms -d forms"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:

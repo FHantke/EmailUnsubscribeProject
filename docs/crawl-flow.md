@@ -9,10 +9,12 @@ up is the other phase, `--submit`: see [submit-flow.md](submit-flow.md).
 ```
 main()
  ├─ --merge ───────────────> merge_parts() ─> exit
- ├─ --submit ──────────────> submit_run() ─> exit        (see submit-flow.md)
- ├─ --jobs N ──────────────> run_jobs() ─> N × (find_forms.py --shard i/N) ─> merge_parts()
- └─ crawl
-     └─ for each site ─────> crawl_site()
+ ├─ --status ──────────────> show_status() ─> exit
+ ├─ --submit ──────────────> submit_lock() ─> submit_run() ─> exit   (see submit-flow.md)
+ ├─ site list given ───────> queue_sites()                 adds the list to the run's queue
+ ├─ --jobs N ──────────────> run_jobs() ─> N × (find_forms.py --worker i) ─> crawl_queue()
+ └─ crawl_queue()                                          also: the same command on other machines
+     └─ until the queue is empty: claim() ─> crawl_site() ─> finish()
                               ├─ make_driver()              fresh Chrome per site
                               ├─ scan_page(landing)
                               └─ rank_links() ─> scan_page(link) …  up to --max-pages
@@ -23,33 +25,34 @@ main()
 
 ## 1. Start-up: `main()` in [find_forms.py](../src/find_forms.py)
 
-1. **`parse_args()`** reads the options and rejects bad combinations: no site
-   list without `--merge`, `--jobs` outside 1–8, `--jobs` with `--shard`. It
+1. **`parse_args()`** reads the options and rejects bad combinations:
+   `--jobs` outside 1–8, `--submit` with a site list or with `--jobs`. It
    warns above 4 jobs, because of RAM.
-2. **Three run modes:**
+2. **Run modes:**
    - `--merge`: run `merge_parts()` on `--out` and exit. Nothing is crawled.
-   - `--jobs N` (N > 1): hand over to `run_jobs()` (section 6). This parent
-     process never crawls.
-   - Otherwise this process crawls, either the whole list or one
-     `--shard i/N` slice.
-3. **Build the site list:**
+   - `--status`: print the run's queue (pending, running and by whom, done,
+     given up) and exit.
+   - `--jobs N` (N > 1): queue the list, then hand over to `run_jobs()`
+     (section 6). This parent process never crawls.
+   - Otherwise this process is one worker: it queues the list if given one,
+     then crawls from the queue.
+3. **Queue the site list** (`queue_sites()`, only when a list is given, and
+   only in the parent under `--jobs`):
    - `load_sites()` reads the file in order and drops blank lines, `#`
      comments, a Tranco `rank,` header and duplicates.
    - `--limit N` keeps the first N sites.
-   - `--shard i/N` then keeps every N-th site starting at `i`. Applying the
-     limit first means shards always split the same total work.
-   - Under `--jobs`, the shards split only the sites **not done yet**, so a
-     resumed run keeps all N browsers busy. (Before 2026-10-11 they split the
-     whole list, so every unfinished site of a shard that had stopped early went
-     back to that one shard while the others sat idle.) A manual `--shard`
-     keeps the fixed split, because shards on other machines cannot see each
-     other's progress.
-4. **Open outputs and resume.** `Output(out_dir, part)` connects to the shared
-   database (`DATABASE_URL` in [config.py](../src/crawler/config.py), by default
-   `sqlite:///outputs/crawl.db`) and creates the tables if they are new. Every
-   row it writes is tagged with the run's name, which is the name of `out_dir`.
-   It reads the `sites_done` table for that run; any site listed there is
-   skipped, so resume is per run.
+   - The sites go into the `queue` table for this run, keeping their position
+     in the list. A site already queued keeps its state, so a rerun, or the
+     same command on another machine, adds nothing. Sites in the run's
+     `sites_done` from before the queue existed go in as done.
+   - Without a list, the worker joins the run's existing queue, and stops at
+     once if nothing is queued.
+4. **Open outputs.** `Output(out_dir, part)` connects to the shared
+   database (`DATABASE_URL` in [config.py](../src/crawler/config.py) or
+   `FIND_FORMS_DATABASE_URL`, by default `sqlite:///outputs/crawl.db`; the log
+   shows it with the password masked) and creates the tables if they are new.
+   Every row it writes is tagged with the run's name, which is the name of
+   `out_dir`, so resume is per run.
 5. **`install_stop_handler()`:** Ctrl-C or SIGTERM only sets `STOP["now"]`. The
    crawl finishes its current page and stops at the next page boundary, so rows
    are flushed and the driver is quit rather than left orphaned.
@@ -57,22 +60,51 @@ main()
 No browser is launched here: since the move to Selenium on 2026-10-21 each site
 opens and quits its own Chrome inside `crawl_site()`.
 
-## 2. The site loop
+## 2. The site loop: `crawl_queue()`
 
-For each remaining site:
+Until the queue has nothing left:
 
 1. If `STOP` is set, stop.
-2. Print `[n/total] site`.
-4. Call **`crawl_site()`**, with the watchdog timing it: if the site is still
+2. **Give up** on any site whose worker went quiet on its last allowed claim
+   (`QUEUE_MAX_ATTEMPTS`, 3): it is marked failed in the queue, gets a
+   `site_error` row ("worker stopped responding on all 3 attempts") and goes
+   into `sites_done`. Three dead workers on one site make the site the likely
+   cause, so it is not tried a fourth time.
+3. **Claim** the next site (`WorkQueue.claim()`): the first in list order that
+   is pending, or whose worker has not stamped it for `QUEUE_STALE_S` (5
+   minutes). One `UPDATE … RETURNING`, so no other worker, here or on another
+   machine, can get the same site.
+   - Nothing to claim, but other workers still busy: wait `QUEUE_POLL_S` (15
+     s) and try again, since one of them may die and leave its site.
+   - Nothing to claim and nothing running anywhere: the run is over.
+4. Print `[n] site (k left in the queue)`.
+5. Call **`crawl_site()`**, with the watchdog timing it and the heartbeat
+   re-stamping the claim every `QUEUE_HEARTBEAT_S` (30 s): if the site is still
    running after `--site-time-limit` (default 2 minutes per `--max-pages`, so 6
    minutes), Chrome and chromedriver are killed, the site gets a `site_timeout`
    row, and the next site starts a fresh driver. Otherwise any exception becomes a `site_error` row in
-   the `pages` table and the run continues.
-5. Call **`output.mark_done(site)`**, even after an error, so a broken site is
-   not retried forever.
+   the `pages` table and the run continues. The heartbeat gives up at the time
+   limit plus `QUEUE_STALE_S`, so a worker stuck where the watchdog cannot
+   reach lets the site go to another one.
+   - **The browser would not start** (`BrowserStartError`): that is the
+     worker's fault, not the site's, so nothing is recorded. The site goes back
+     to the queue with `release()`, pending and its attempt not counted, and the
+     worker waits `QUEUE_START_RETRY_S` (10 s) in case it was a passing hiccup.
+     After `QUEUE_MAX_START_FAILURES` (2) failed starts in a row it stops, with
+     exit code 1 and a message saying so. Otherwise one broken worker would fail
+     every site in milliseconds and mark it done, draining the queue for all.
+6. Call **`output.mark_done(site)`** and **`queue.finish(site)`**, even after
+   an error, so a broken site is not retried forever. If another worker took
+   the site over meanwhile, `finish()` changes nothing and says so.
 
-At the end it closes the output files first and the browser second, so a hung
-browser teardown cannot lose CSV data. An interrupted run exits with code 130.
+At the end it closes the output first and the browser second, so a hung
+browser teardown cannot lose rows. An interrupted run exits with code 130.
+
+Every write in the loop is its own short transaction (`run_tx()` in
+[output.py](../src/crawler/output.py)). A dropped connection, or a database
+that is away for a moment (an RDS reboot or failover), is retried on a fresh
+connection for up to `DB_RETRY_FOR_S` (3 minutes) before the worker gives up;
+its site then goes stale and another worker takes it.
 There is no delay between sites, because each site is a different host.
 
 ## 3. One site: `crawl_site()` in [crawl.py](../src/crawler/crawl.py)
@@ -364,19 +396,26 @@ venv/bin/python -c "from playwright.sync_api import sync_playwright; import path
      thanks"), heading, consent wording
    - **size:** width, height, viewport coverage
 
-## 6. Parallel runs: `--jobs N`, in [jobs.py](../src/crawler/jobs.py)
+## 6. Parallel runs: `--jobs N`, in [jobs.py](../src/crawler/jobs.py), and more machines
 
-1. `run_jobs()` relaunches the script N times with `--shard i/N`, half a second
-   apart.
-2. It collects each child's output and prefixes every line with `[s<i>]`.
-3. **First Ctrl-C:** every shard gets SIGINT and up to `SHUTDOWN_GRACE` (90 s) to
-   finish its page and flush. A second Ctrl-C terminates the shards; a third
+1. The parent queues the site list (section 1), then `run_jobs()` relaunches
+   the script N times with a hidden `--worker i`, half a second apart. Each
+   child is an ordinary worker: it runs the loop in section 2 on the same
+   queue, writing `run.worker<i>.log`.
+2. It collects each child's output and prefixes every line with `[w<i>]`.
+3. **First Ctrl-C:** every worker gets SIGINT and up to `SHUTDOWN_GRACE` (90 s) to
+   finish its page and flush. A second Ctrl-C terminates the workers; a third
    kills them.
-4. When all shards have exited, `merge_parts()` in
-   [output.py](../src/crawler/output.py) appends rows from the `*.part*` files
-   into the main files, skipping duplicates by `(site, form_sig)`. It refuses to
-   merge a file whose columns differ from the current schema. Part files are
-   kept, so the merge can be rerun at any time.
+4. Nothing is merged afterwards: every worker wrote straight into the database.
+
+**More machines:** run the same command on each, with `FIND_FORMS_DATABASE_URL`
+pointing at one PostgreSQL (e.g. AWS RDS). Their workers share the run's queue
+with this machine's. The split is never decided in advance: whoever is free
+takes the next site, so a slow site or a slow machine holds up nobody else,
+and a machine added halfway through starts helping at once. A machine that
+dies leaves at most one site per worker behind, taken over after
+`QUEUE_STALE_S`. Screenshots and HTML stay on the machine that crawled the
+site, under the paths the database records relative to `--out`.
 
 ## Timing
 

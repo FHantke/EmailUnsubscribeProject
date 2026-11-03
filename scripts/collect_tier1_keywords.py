@@ -276,7 +276,7 @@ def main():
             pages.sort(key=lambda r: order.get(r["url"], len(order)))
             finish(pages, out)
 
-        sys.exit(run_jobs(args, merge))
+        sys.exit(run_jobs(args, lambda i, n: ["--shard", f"{i}/{n}"], merge))
 
     install_stop_handler()
     if args.shard:

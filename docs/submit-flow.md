@@ -186,8 +186,12 @@ record which words fired, so a verdict can always be traced to its evidence.
 
 `--submit-delay` (default `SUBMIT_DELAY_S`, 30s) between sites, ten times
 `--page-delay`, because a submission is a write. `--submit` refuses `--jobs > 1`:
-one writer and one pace, since N shards each enforcing a local limit would give
-N times the limit. Ctrl-C stops at the next site, as in a crawl.
+one writer and one pace, since N workers each enforcing a local limit would give
+N times the limit. Since 2026-11-03 `main()` also takes `submit_lock()` before
+`submit_run()` (a PostgreSQL advisory lock, or a lock file beside a SQLite
+database), so a second `--submit` against the same database, from any machine,
+refuses to start: both would read the same sites as not yet submitted to and
+sign each one up twice. Ctrl-C stops at the next site, as in a crawl.
 
 ## Outcomes
 

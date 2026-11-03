@@ -30,6 +30,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install --no-cache-dir --break-system-packages -r /tmp/requirements.txt
 
+# AWS RDS's certificate authorities, so a connection to RDS can verify it is
+# talking to the real server: add
+#   ?sslmode=verify-full&sslrootcert=/etc/ssl/certs/rds-global-bundle.pem
+# to FIND_FORMS_DATABASE_URL. Readable by the crawler user (ADD from a URL
+# would otherwise leave it 600, root's).
+ADD --chmod=644 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+    /etc/ssl/certs/rds-global-bundle.pem
+
 # noVNC expects to be opened at vnc.html; serve it as the index instead.
 RUN ln -sf /usr/share/novnc/vnc.html /usr/share/novnc/index.html
 
@@ -54,6 +62,16 @@ RUN chmod +x /usr/local/bin/entrypoint.sh && mkdir -p /app/inputs /app/outputs \
     && chown -R crawler:crawler /app
 
 USER crawler
+
+# The stealth driver, ready at install: a patched copy of Debian's chromedriver
+# in undetected_chromedriver's cache, so it is built for this image's CPU
+# whatever the host. The library's own download is Google's x86-64 Linux
+# build only, which dies at once in the arm64 image an Apple Silicon Mac
+# builds. Same function as every crawl calls, which then finds it in place.
+RUN cd /app/src && python3 -c "import argparse; from crawler.browser import prepare_stealth_driver; \
+prepare_stealth_driver(argparse.Namespace(stealth=True))" \
+    && test -x /home/crawler/.local/share/undetected_chromedriver/undetected_chromedriver
+
 EXPOSE 5900 6080
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]

@@ -1,13 +1,16 @@
 """Everything every run records, in the database named by config.DATABASE_URL.
 
-Five tables, whose columns are built from FORM_FIELDS, PAGE_FIELDS and
-SUBMISSION_FIELDS so config.py stays the single source of truth:
+Six tables. Five hold the data, and their columns are built from FORM_FIELDS,
+PAGE_FIELDS and SUBMISSION_FIELDS so config.py stays the single source of truth:
 
     runs         one row per --out, with the command and when it last started
     forms        one row per unique form, keyed (run, site, form_sig)
     pages        one row per page visit
     sites_done   the resume log, per run
     submissions  one row per form --submit filled in, keyed (run, site, form_sig)
+
+The sixth, `queue`, is the work list workers take sites from (crawler/workqueue.py).
+It is state rather than data, so --export-csv and --merge leave it alone.
 
 Every row carries a `run`, which is the name of the --out directory, so runs
 can be compared in SQL rather than by hand:
@@ -16,31 +19,40 @@ can be compared in SQL rather than by hand:
 
 Screenshots and HTML stay as files under --out; the tables hold their paths.
 
-Access goes through SQLAlchemy Core, so pointing DATABASE_URL at Postgres or
-MySQL needs no code change here. Nothing below is dialect-specific: duplicates
-are handled by catching IntegrityError rather than by INSERT OR IGNORE, and the
-SQLite tuning is applied only when the engine is SQLite.
+Access goes through SQLAlchemy Core, on SQLite or PostgreSQL (e.g. AWS RDS).
+Duplicates are handled by catching IntegrityError rather than by INSERT OR
+IGNORE, and the SQLite tuning is applied only when the engine is SQLite.
 
-Shards under --jobs all write here, as do separate runs going at once. On
-SQLite that works because of WAL mode plus a busy timeout: one writer at a
+Every worker writes here: --jobs on this machine, and other machines pointed at
+the same PostgreSQL server. Each write is one short transaction on a connection
+taken from the pool, so nothing is held open between writes. On PostgreSQL the
+pool tests a connection before handing it out, replacing one the server has
+dropped, and a write that meets an outage is retried on a fresh connection for
+up to DB_RETRY_FOR_S. On SQLite, WAL mode plus a busy timeout: one writer at a
 time, the rest queue. The primary key does the de-duplication that the old
-merge step did, so there is nothing to merge afterwards; merge_parts() survives
-only for shards run on machines that cannot reach this database.
+merge step did; merge_parts() survives only for SQLite files from machines that
+could not reach this database.
 """
 
 import csv
 import json
 import logging
 import os
+import socket
 import sys
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
-from sqlalchemy import (Column, Float, Integer, MetaData, String, Table, Text, event,
-                        insert, inspect, select, text)
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy import (Column, Float, Index, Integer, MetaData, String, Table, Text,
+                        create_engine, event, insert, inspect, select, text)
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import (DBAPIError, IntegrityError, InterfaceError, OperationalError,
+                            SQLAlchemyError)
 
-from crawler.config import (DATABASE_URL, FORM_FIELDS, PAGE_FIELDS, SUBMISSION_FIELDS,
-                            TARGET_FORM_TYPE)
+from crawler.config import (DATABASE_URL, DB_CONNECT_TIMEOUT_S, DB_RETRY_FOR_S, FORM_FIELDS,
+                            PAGE_FIELDS, SUBMISSION_FIELDS, TARGET_FORM_TYPE)
+from crawler.util import now, short
 
 log = logging.getLogger(__name__)
 
@@ -57,10 +69,40 @@ _REAL = {"viewport_coverage"}
 _RUN = 128      # a run name is a directory name; keep it bounded for backends that need it
 _KEY = 512      # site and page_url are keys on some backends, which cap index width
 
+# PostgreSQL advisory lock keys: any two fixed 64-bit numbers, as long as
+# nothing else using the same database picks them.
+_SCHEMA_LOCK = 0x66696E645F666F72   # "find_for"
+_SUBMIT_LOCK = 0x7375626D69740000   # "submit"
+
 
 def database_url():
-    """The configured database, overridable per run without editing config.py."""
-    return os.environ.get("FIND_FORMS_DATABASE_URL") or DATABASE_URL
+    """The configured database as a SQLAlchemy URL.
+
+    FIND_FORMS_DATABASE_URL, else DATABASE_URL, with FIND_FORMS_DATABASE_PASSWORD
+    as its password when that is set. Keeping the password out of the URL means
+    it needs no escaping (an RDS password may hold @, # or %) and is never
+    written anywhere the URL is, such as the log.
+    """
+    url = make_url(os.environ.get("FIND_FORMS_DATABASE_URL") or DATABASE_URL)
+    if url.drivername in ("postgres", "postgresql"):   # postgres:// is how some tools print it
+        url = url.set(drivername="postgresql+psycopg2")
+    password = os.environ.get("FIND_FORMS_DATABASE_PASSWORD")
+    if password:
+        url = url.set(password=password)
+    return url
+
+
+def describe_database(url=None):
+    """The database for the log: the URL with its password masked."""
+    return (url or database_url()).render_as_string(hide_password=True)
+
+
+def sqlite_path(url):
+    """The file behind a SQLite URL, or None (another backend, or in memory)."""
+    url = make_url(url)
+    if url.get_backend_name() != "sqlite" or url.database in (None, "", ":memory:"):
+        return None
+    return Path(url.database)
 
 
 def _coltype(name, key=False):
@@ -72,7 +114,7 @@ def _coltype(name, key=False):
 
 
 def build_metadata():
-    """The four tables, with columns taken from config.py."""
+    """The six tables, with the data tables' columns taken from config.py."""
     md = MetaData()
     Table("runs", md,
           Column("run", String(_RUN), primary_key=True),
@@ -94,6 +136,19 @@ def build_metadata():
           Column("run", String(_RUN), primary_key=True),
           *[Column(c, _coltype(c, key=c in ("site", "form_sig")),
                    primary_key=c in ("site", "form_sig")) for c in SUBMISSION_FIELDS])
+    # The work list: one row per site of a run, claimed by one worker at a time.
+    # Its columns are fixed here rather than in config.py, since nothing is
+    # analysed from them.
+    Table("queue", md,
+          Column("run", String(_RUN), primary_key=True),
+          Column("site", String(_KEY), primary_key=True),
+          Column("position", Integer, nullable=False),   # order in the site list
+          Column("status", String(16), nullable=False),  # pending, running, done, failed
+          Column("attempts", Integer, nullable=False),   # claims so far
+          Column("worker", Text),                        # host:pid holding it
+          Column("claimed_at", Text), Column("heartbeat_at", Text),
+          Column("finished_at", Text),
+          Index("queue_next", "run", "status", "position"))
     return md
 
 
@@ -101,25 +156,30 @@ METADATA = build_metadata()
 FORMS, PAGES, RUNS, DONE = (METADATA.tables["forms"], METADATA.tables["pages"],
                             METADATA.tables["runs"], METADATA.tables["sites_done"])
 SUBMISSIONS = METADATA.tables["submissions"]
+QUEUE = METADATA.tables["queue"]
 
 _engines = {}
+_schema_checked = set()
 
 
 def get_engine(url=None):
-    """One engine per URL per process. On SQLite this also turns on the settings
-    that let several shards write at once."""
-    from sqlalchemy import create_engine
-    url = url or database_url()
-    if url in _engines:
-        return _engines[url]
-    kwargs = {"future": True}
-    if url.startswith("sqlite"):
-        path = url.split("///", 1)[-1]
-        if path and path != ":memory:":
-            Path(path).parent.mkdir(parents=True, exist_ok=True)
-        kwargs["connect_args"] = {"timeout": 60}
-    engine = create_engine(url, **kwargs)
-    if engine.dialect.name == "sqlite":
+    """One engine per URL per process.
+
+    On SQLite this also turns on the settings that let several workers write at
+    once. On PostgreSQL the pool is small, since a worker writes one row at a
+    time (plus its queue heartbeat), and checks each connection before use.
+    """
+    url = make_url(url) if url is not None else database_url()
+    key = url.render_as_string(hide_password=False)
+    if key in _engines:
+        return _engines[key]
+    backend = url.get_backend_name()
+    if backend == "sqlite":
+        path = sqlite_path(url)
+        if path:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        engine = create_engine(url, future=True, connect_args={"timeout": 60})
+
         @event.listens_for(engine, "connect")
         def _sqlite_pragmas(dbapi_conn, connection_record):
             cur = dbapi_conn.cursor()
@@ -127,8 +187,58 @@ def get_engine(url=None):
             cur.execute("PRAGMA busy_timeout=60000")  # queue behind another writer
             cur.execute("PRAGMA synchronous=NORMAL")  # a crash costs the last transaction
             cur.close()
-    _engines[url] = engine
+    elif backend == "postgresql":
+        engine = create_engine(
+            url, future=True,
+            pool_size=2, max_overflow=3,
+            pool_pre_ping=True,      # replace a connection the server or network dropped
+            pool_recycle=1800,
+            connect_args={
+                "connect_timeout": DB_CONNECT_TIMEOUT_S,
+                # Shows in pg_stat_activity, so a stuck worker can be found.
+                "application_name": f"find_forms {socket.gethostname()}:{os.getpid()}"[:63],
+                # Notice a dead peer in about two minutes rather than hanging.
+                "keepalives": 1, "keepalives_idle": 60,
+                "keepalives_interval": 10, "keepalives_count": 5,
+            })
+    else:
+        log.error(f"Unsupported database {describe_database(url)}: the crawler supports "
+                  f"SQLite and PostgreSQL (FIND_FORMS_DATABASE_URL, or DATABASE_URL in config.py).")
+        sys.exit(1)
+    _engines[key] = engine
     return engine
+
+
+def _transient(err):
+    """A failure worth retrying: the connection or the server went away, or a
+    SQLite file stayed locked past its busy timeout. Constraint violations and
+    bad SQL are not."""
+    if isinstance(err, DBAPIError) and err.connection_invalidated:
+        return True
+    return isinstance(err, (OperationalError, InterfaceError))
+
+
+def run_tx(engine, work):
+    """Run work(conn) in one transaction and return its result.
+
+    On a transient failure it is run again from the start, on a fresh
+    connection, until DB_RETRY_FOR_S has passed, so a database reboot or
+    failover pauses the crawl instead of losing its rows. Anything else, an
+    IntegrityError included, is raised at once. A retry after a commit whose
+    reply was lost meets its own row as a duplicate, which every writer here
+    treats as already done.
+    """
+    deadline, wait = time.monotonic() + DB_RETRY_FOR_S, 1
+    while True:
+        try:
+            with engine.begin() as conn:
+                return work(conn)
+        except SQLAlchemyError as e:
+            if not _transient(e) or time.monotonic() + wait > deadline:
+                raise
+            log.warning(f"  database unavailable ({short(e)}); retrying in {wait}s")
+            time.sleep(wait)
+            wait = min(wait * 2, 30)
 
 
 def ensure_schema(engine):
@@ -138,23 +248,40 @@ def ensure_schema(engine):
     working and simply has NULL for it. A column *removed* from the config
     cannot be reconciled that way, so the database is refused rather than
     silently read with a stale meaning.
+
+    Checked once per process. On PostgreSQL the check holds a lock, so workers
+    starting at the same moment on several machines do not race to create or
+    alter the same table.
     """
-    METADATA.create_all(engine)
-    insp = inspect(engine)
-    with engine.begin() as conn:
+    if engine in _schema_checked:
+        return
+
+    def work(conn):
+        if conn.dialect.name == "postgresql":
+            conn.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _SCHEMA_LOCK})
+        METADATA.create_all(conn)
+        insp = inspect(conn)
         for table in (FORMS, PAGES, SUBMISSIONS):
             have = [c["name"] for c in insp.get_columns(table.name)]
             for col in table.columns:
                 if col.name not in have:
-                    kind = col.type.compile(engine.dialect)
+                    kind = col.type.compile(conn.dialect)
                     conn.execute(text(f'ALTER TABLE {table.name} ADD COLUMN "{col.name}" {kind}'))
                     log.info(f"  {table.name}: added column {col.name}")
             stale = [c for c in have if c not in table.columns]
             if stale:
-                log.error(f"{table.name}: this database has columns the current schema does not: "
-                          f"{', '.join(stale)}.\n  Point DATABASE_URL (config.py) at a new database "
-                          f"for this version of the crawler, or export the old one to CSV first.")
-                sys.exit(1)
+                return table.name, stale
+        return None
+
+    problem = run_tx(engine, work)
+    if problem:
+        name, stale = problem
+        log.error(f"{name}: this database has columns the current schema does not: "
+                  f"{', '.join(stale)}.\n  Point FIND_FORMS_DATABASE_URL (or DATABASE_URL in "
+                  f"config.py) at a new database for this version of the crawler, or export "
+                  f"the old one to CSV first.")
+        sys.exit(1)
+    _schema_checked.add(engine)
 
 
 def run_label(out_dir):
@@ -171,20 +298,41 @@ def _encode(value):
     return value
 
 
+def _cells(row, columns):
+    """The values of `row` for `columns`, encoded. An empty string in a number
+    column becomes NULL: SQLite stores "" there without complaint, but
+    PostgreSQL refuses the whole row, which on 2026-11-03 cost ganni.com its
+    page row and the rest of its crawl. --export-csv writes NULL as "", so the
+    CSV files are the same either way."""
+    return {c: (None if row[c] == "" and (c in _INTEGER or c in _REAL) else _encode(row[c]))
+            for c in columns if c in row}
+
+
+def _upsert(engine, work):
+    """Run an update-else-insert. Two workers can both find no row and both
+    insert; the one that loses gets an IntegrityError, and on the second try
+    its update finds the winner's row."""
+    try:
+        return run_tx(engine, work)
+    except IntegrityError:
+        return run_tx(engine, work)
+
+
 def record_run(out_dir, command, engine=None):
     """Note this run in the `runs` table. Called once per invocation from main(),
     including the --jobs parent, which never writes rows of its own."""
-    from crawler.util import now
     engine = engine or get_engine()
     ensure_schema(engine)
-    label, stamp = run_label(out_dir), now()
-    with engine.begin() as conn:
+    label, stamp, where = run_label(out_dir), now(), str(Path(out_dir).resolve())
+
+    def work(conn):
         updated = conn.execute(RUNS.update().where(RUNS.c.run == label).values(
-            out_dir=str(Path(out_dir).resolve()), command=command, last_started=stamp)).rowcount
+            out_dir=where, command=command, last_started=stamp)).rowcount
         if not updated:
             conn.execute(RUNS.insert().values(
-                run=label, out_dir=str(Path(out_dir).resolve()), command=command,
+                run=label, out_dir=where, command=command,
                 first_started=stamp, last_started=stamp))
+    _upsert(engine, work)
 
 
 def read_done(out_dir, engine=None):
@@ -222,6 +370,50 @@ def submission_targets(out_dir, engine=None):
     return list(best.values())
 
 
+@contextmanager
+def submit_lock(engine=None):
+    """Let only one --submit at a time run against this database, from any machine.
+
+    Yields True if this process got the lock, False if another holds it. On
+    PostgreSQL it is an advisory lock on a connection kept for the duration; on
+    SQLite, a lock file beside the database (an in-memory database has no
+    other users). Without it, two --submit runs started on two machines would
+    both read the same sites as not yet submitted to, and sign each up twice.
+    """
+    engine = engine or get_engine()
+    if engine.dialect.name == "postgresql":
+        got = False
+        conn = engine.connect()
+        try:
+            got = bool(conn.execute(text("SELECT pg_try_advisory_lock(:k)"),
+                                    {"k": _SUBMIT_LOCK}).scalar())
+            conn.commit()
+            yield got
+        finally:
+            try:
+                if got:
+                    conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": _SUBMIT_LOCK})
+                    conn.commit()
+            finally:
+                conn.close()
+        return
+    path = sqlite_path(engine.url)
+    if path is None:
+        yield True
+        return
+    import fcntl   # POSIX only, like the watchdog; imported here so the rest loads anywhere
+    with open(f"{path}.submit.lock", "w") as f:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
 class Output:
     """Append-only writer for one run. Every row is committed as it is written,
     so a crash loses at most the form in progress, and sites_done makes the next
@@ -231,41 +423,31 @@ class Output:
         self.out = Path(out_dir)
         self.out.mkdir(parents=True, exist_ok=True)
         self.run = run_label(out_dir)
-        self.part = part                 # which shard this is; only used in logging
+        self.part = part                 # which worker this is; only used in logging
         self.engine = get_engine()
         ensure_schema(self.engine)
-        self.conn = self.engine.connect()
-        self.done = {r[0] for r in
-                     self.conn.execute(select(DONE.c.site).where(DONE.c.run == self.run))}
-        self.conn.commit()               # close the transaction that select autobegan
         self.n_forms = 0                 # forms written by this process, for the run summary
 
     def _write(self, table, values, ignore_duplicate):
         """One row, committed. A duplicate is skipped by catching the constraint
-        rather than with INSERT OR IGNORE, which is SQLite-only.
-
-        The connection autobegins its transaction, so this commits rather than
-        opening one of its own.
-        """
+        rather than with INSERT OR IGNORE, which is SQLite-only."""
         try:
-            self.conn.execute(insert(table).values(**values))
-            self.conn.commit()
+            run_tx(self.engine, lambda conn: conn.execute(insert(table).values(**values)))
         except IntegrityError:
-            self.conn.rollback()
             if not ignore_duplicate:
                 raise
 
     def form(self, row):
         """Write one form. A form already recorded for this run and site is left
-        alone, which is what the old merge step did when folding shards together."""
+        alone, so a site crawled again after its worker died adds no duplicates."""
         self.n_forms += 1
         values = {"run": self.run}
-        values.update({c: _encode(row[c]) for c in FORM_FIELDS if c in row})
+        values.update(_cells(row, FORM_FIELDS))
         self._write(FORMS, values, ignore_duplicate=True)
 
     def page(self, row):
         values = {"run": self.run}
-        values.update({c: _encode(row[c]) for c in PAGE_FIELDS if c in row})
+        values.update(_cells(row, PAGE_FIELDS))
         self._write(PAGES, values, ignore_duplicate=True)
 
     def submission(self, row):
@@ -276,24 +458,24 @@ class Output:
         What stops a site being signed up to twice is submitted_sites(), not
         this key, since only outcomes that reached the click count there.
         """
-        values = {c: _encode(row[c]) for c in SUBMISSION_FIELDS if c in row}
-        updated = self.conn.execute(SUBMISSIONS.update().where(
-            SUBMISSIONS.c.run == self.run, SUBMISSIONS.c.site == row["site"],
-            SUBMISSIONS.c.form_sig == row["form_sig"],
-        ).values(**values)).rowcount
-        if not updated:
-            self.conn.execute(SUBMISSIONS.insert().values(run=self.run, **values))
-        self.conn.commit()
+        values = _cells(row, SUBMISSION_FIELDS)
+
+        def work(conn):
+            updated = conn.execute(SUBMISSIONS.update().where(
+                SUBMISSIONS.c.run == self.run, SUBMISSIONS.c.site == row["site"],
+                SUBMISSIONS.c.form_sig == row["form_sig"],
+            ).values(**values)).rowcount
+            if not updated:
+                conn.execute(SUBMISSIONS.insert().values(run=self.run, **values))
+        _upsert(self.engine, work)
 
     def update_submission(self, site, form_sig, **fields):
         """Fill in what the click produced, on the row written before it,
         leaving the rest of that row alone. Returns whether a row was there."""
-        updated = self.conn.execute(SUBMISSIONS.update().where(
+        return bool(run_tx(self.engine, lambda conn: conn.execute(SUBMISSIONS.update().where(
             SUBMISSIONS.c.run == self.run, SUBMISSIONS.c.site == site,
             SUBMISSIONS.c.form_sig == form_sig,
-        ).values(**{k: _encode(v) for k, v in fields.items()})).rowcount
-        self.conn.commit()
-        return bool(updated)
+        ).values(**_cells(fields, fields))).rowcount))
 
     def submitted_sites(self):
         """Sites that have already had something sent to them, in any run.
@@ -301,47 +483,43 @@ class Output:
         Only outcomes that reached the click count, so a site whose form could
         not be found is still open to a later attempt.
         """
-        sites = {r[0] for r in self.conn.execute(
+        return run_tx(self.engine, lambda conn: {r[0] for r in conn.execute(
             select(SUBMISSIONS.c.site).distinct()
-            .where(SUBMISSIONS.c.outcome.in_(("submitted", "submitting"))))}
-        self.conn.commit()
-        return sites
+            .where(SUBMISSIONS.c.outcome.in_(("submitted", "submitting"))))})
 
     def mark_done(self, site):
-        from crawler.util import now
         stamp = now()
-        updated = self.conn.execute(
-            DONE.update().where(DONE.c.run == self.run, DONE.c.site == site)
-            .values(finished_at=stamp)).rowcount
-        if not updated:
-            self.conn.execute(DONE.insert().values(run=self.run, site=site, finished_at=stamp))
-        self.conn.commit()
-        self.done.add(site)
+
+        def work(conn):
+            updated = conn.execute(
+                DONE.update().where(DONE.c.run == self.run, DONE.c.site == site)
+                .values(finished_at=stamp)).rowcount
+            if not updated:
+                conn.execute(DONE.insert().values(run=self.run, site=site, finished_at=stamp))
+        _upsert(self.engine, work)
 
     def rel(self, path):
         """A path relative to --out, as stored in the tables."""
         return str(Path(path).relative_to(self.out))
 
     def close(self):
-        try:
-            self.conn.close()
-        except SQLAlchemyError:
-            pass
+        """Nothing to release: every write returned its connection to the pool."""
 
 
 def merge_parts(clean=False):
-    """Fold databases from machines that cannot reach this one into it.
+    """Fold SQLite databases from machines that could not reach this one into it.
 
     Copy their SQLite file in beside this database as <name>.part<N>.db and run
     --merge. Run labels are carried over, so rows land in the run they belong
-    to. Shards that can reach the configured database already write straight in.
+    to. Machines that can reach the configured database already write straight
+    in, and share its queue. The other machines' queues are not merged: their
+    sites_done is, which is what a later crawl of the run resumes from.
     """
-    url = database_url()
-    if not url.startswith("sqlite"):
-        log.error("--merge folds in SQLite files; DATABASE_URL is not SQLite. "
-                  "Point the other machines at this database instead.")
+    target = sqlite_path(database_url())
+    if target is None:
+        log.error("--merge folds in SQLite files, and the configured database is not a SQLite "
+                  "file. Point the other machines at this database instead.")
         sys.exit(1)
-    target = Path(url.split("///", 1)[-1])
     others = sorted(p for p in target.parent.glob("*.db")
                     if p.name != target.name and "wal" not in p.name and "shm" not in p.name)
     if not others:
@@ -388,8 +566,8 @@ def export_csv(out_dir=None):
     engine = get_engine()
     ensure_schema(engine)
     run = run_label(out_dir) if out_dir else None
-    url = database_url()
-    beside = Path(url.split("///", 1)[-1]).parent if url.startswith("sqlite:///") else Path("outputs")
+    db_file = sqlite_path(database_url())
+    beside = db_file.parent if db_file else Path("outputs")
     dest_dir = Path(out_dir) if out_dir else beside
     dest_dir.mkdir(parents=True, exist_ok=True)
     with engine.connect() as conn:

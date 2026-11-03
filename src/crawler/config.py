@@ -301,27 +301,47 @@ SUBSCRIBE_FAILURE_KEYWORDS = [
 # 5. Parallel runs
 # ---------------------------------------------------------------------------
 
-MAX_JOBS = 8          # each --jobs shard is a browser using ~500-800 MB
-SHUTDOWN_GRACE = 90   # seconds a shard gets after Ctrl-C to finish its page and save
+MAX_JOBS = 8          # each --jobs worker is a browser using ~500-800 MB
+SHUTDOWN_GRACE = 90   # seconds a worker gets after Ctrl-C to finish its page and save
+
+# The run's sites wait in the `queue` table, and every worker - --jobs on this
+# machine, or the same command on another one pointed at the same database -
+# takes the next one from there, so no two ever crawl the same site.
+QUEUE_HEARTBEAT_S = 30    # a worker re-stamps the site it holds this often
+QUEUE_STALE_S = 300       # a site whose stamp is older is taken to be abandoned
+QUEUE_MAX_ATTEMPTS = 3    # claims per site before it is given up as site_error
+QUEUE_POLL_S = 15         # how often an idle worker checks whether others are done
+QUEUE_MAX_START_FAILURES = 2   # browser starts failing in a row before a worker stops
+QUEUE_START_RETRY_S = 10       # pause after one, in case it was a passing hiccup
 
 
 # ---------------------------------------------------------------------------
 # 6. Database
 # ---------------------------------------------------------------------------
 
-# Where every run's rows go. Any SQLAlchemy URL works, so the crawler can be
-# pointed at another database without touching the code — the tables are built
-# from the column lists below, not written out by hand:
+# Where every run's rows go. SQLite or PostgreSQL; the tables are built from the
+# column lists below, not written out by hand:
 #
 #   sqlite:///outputs/crawl.db               a file in the project (the default)
 #   sqlite:////absolute/path/crawl.db        note the four slashes
-#   postgresql+psycopg://user@host/forms     needs: pip install psycopg
-#   mysql+pymysql://user@host/forms          needs: pip install pymysql
+#   postgresql://user@host:5432/forms        PostgreSQL, e.g. AWS RDS (psycopg2)
 #
 # A relative sqlite path is read from wherever the crawler is started, which is
 # the repo root. Set FIND_FORMS_DATABASE_URL in the environment to override
-# this for one run without editing the file.
+# this for one run without editing the file, and FIND_FORMS_DATABASE_PASSWORD
+# for the password, which then needs no URL-escaping and stays out of the URL.
+# TLS settings go in the URL's query, as libpq names them:
+#
+#   postgresql://crawler@forms.abc123.us-east-1.rds.amazonaws.com:5432/forms
+#       ?sslmode=verify-full&sslrootcert=/etc/ssl/certs/rds-global-bundle.pem
+#
+# Several machines can crawl one run only through a shared database server;
+# SQLite is a file on one machine.
 DATABASE_URL = "sqlite:///outputs/crawl.db"
+
+DB_CONNECT_TIMEOUT_S = 10   # give up on one connection attempt after this
+DB_RETRY_FOR_S = 180        # keep retrying a write through an outage this long
+                            # (an RDS reboot or Multi-AZ failover takes 1-2 min)
 
 
 # ---------------------------------------------------------------------------
