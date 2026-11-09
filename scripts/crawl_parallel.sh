@@ -93,7 +93,8 @@ signup() {
   [ $# -eq 4 ] || usage
   local crawl_id=$1 slices=$2 signup_id=$3 sites=$4 i
   [ -f "$sites" ] || { echo "No sites file $sites"; exit 1; }
-  cp "$sites" "$testrun/${signup_id}_sites.txt"
+  # The containers read the list from /data; no copy if it is that file already
+  [ "$sites" -ef "$testrun/${signup_id}_sites.txt" ] || cp "$sites" "$testrun/${signup_id}_sites.txt"
   for i in $(seq 1 "$slices"); do
     local db="${crawl_id}_p$i" name="${signup_id}_p$i" env cases
     [ -e "$testrun/$db.sqlite" ] || { echo "No testrun/$db.sqlite"; exit 1; }
